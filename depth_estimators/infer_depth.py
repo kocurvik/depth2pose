@@ -4,7 +4,7 @@ import cv2
 import h5py
 from tqdm import tqdm
 
-from depth_estimators.MoGe import MoGeV2
+from depth_estimators.MoGe import MoGe
 from depth_estimators.UniDepth import UniDepth
 
 
@@ -24,11 +24,15 @@ def parse_args():
 
 def get_model(args):
     if args.model_name == 'MoGeV2':
-        return MoGeV2(args.pretrained_weights, requires_intrinsics=args.requires_intrinsics)
-    if args.model_name == 'UniDepthV1':
+        return MoGe(args.pretrained_weights, version=2, requires_intrinsics=args.requires_intrinsics)
+    elif args.model_name == 'MoGeV1':
+        return MoGe(args.pretrained_weights, version=1, requires_intrinsics=args.requires_intrinsics)
+    elif args.model_name == 'UniDepthV1':
         return UniDepth(args.pretrained_weights, version='v1')
-    if args.model_name == 'UniDepthV2':
+    elif args.model_name == 'UniDepthV2':
         return UniDepth(args.pretrained_weights, version='v2')
+    else:
+        raise NotImplementedError(f"Model {args.model_name} not implemented")
 
 
 def infer_depth(args):

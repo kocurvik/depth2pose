@@ -4,14 +4,23 @@ import torch
 import torch.nn.functional as F
 
 from depth_estimators.base import BaseDepthEstimator
-from moge.model.v2 import MoGeModel
+from moge.model.v1 import MoGeModel as MoGeModelV1
+from moge.model.v2 import MoGeModel as MoGeModelV2
 
 
-class MoGeV2(BaseDepthEstimator):
-    def __init__(self, checkpoint_name, *args, requires_intrinsics=False, max_dim=None, **kwargs):
+class MoGe(BaseDepthEstimator):
+    def __init__(self, checkpoint_name, *args, version=2, requires_intrinsics=False, max_dim=None, **kwargs):
         super().__init__(*args, max_dim=max_dim, requires_intrinsics=requires_intrinsics, **kwargs)
         self.checkpoint_name = checkpoint_name
-        self.model = MoGeModel.from_pretrained(checkpoint_name)
+
+        self.version = version
+
+        if version == 2:
+            self.model = MoGeModelV2.from_pretrained(checkpoint_name)
+        elif version == 1:
+            self.model = MoGeModelV1.from_pretrained(checkpoint_name)
+        else:
+            raise ValueError('MoGe version must be 1 or 2')
 
         self.num_tokens = None
         self.resolution_level = 9
@@ -20,7 +29,7 @@ class MoGeV2(BaseDepthEstimator):
     @property
     def name(self):
         intrinsics = '-known_focal' if self.requires_intrinsics else ''
-        return f'MoGeV2-{self.checkpoint_name.split("/")[1]}{intrinsics}'
+        return f'MoGeV{self.version}-{self.checkpoint_name.split("/")[1]}{intrinsics}'
 
     @staticmethod
     def upsample(image, h, w):
