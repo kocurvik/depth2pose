@@ -28,9 +28,9 @@ def get_model(args):
     elif args.model_name == 'MoGeV1':
         return MoGe(args.pretrained_weights, version=1, requires_intrinsics=args.requires_intrinsics)
     elif args.model_name == 'UniDepthV1':
-        return UniDepth(args.pretrained_weights, version='v1')
+        return UniDepth(args.pretrained_weights, version=1)
     elif args.model_name == 'UniDepthV2':
-        return UniDepth(args.pretrained_weights, version='v2')
+        return UniDepth(args.pretrained_weights, version=2)
     else:
         raise NotImplementedError(f"Model {args.model_name} not implemented")
 
@@ -52,7 +52,8 @@ def infer_depth(args):
         img_path = os.path.join(args.dataset_path, image_name)
         out_dict = model.infer(img_path, K=K)
         f_depth.create_dataset(f'{image_name}_depth', data=out_dict['depth'], compression='gzip', chunks=True)
-        f_depth.create_dataset(f'{image_name}_inference_K', data=out_dict['inference_K'], compression='gzip', chunks=True)
+        if 'inference_K' in out_dict.keys():
+            f_depth.create_dataset(f'{image_name}_inference_K', data=out_dict['inference_K'], compression='gzip', chunks=True)
         f_depth.create_dataset(f'{image_name}_K', data=out_dict['K'], compression='gzip', chunks=True)
 
 
