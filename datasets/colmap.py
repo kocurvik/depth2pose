@@ -10,6 +10,8 @@ import h5py
 import numpy as np
 
 from scipy.spatial.transform import Rotation
+from tqdm import tqdm
+
 from datasets.colmap_utils import cam_to_K, read_model
 
 
@@ -17,12 +19,12 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--num_samples', type=int, default=None)
     parser.add_argument('-s', '--seed', type=int, default=100)
-    parser.add_argument('-mi', '--max_images', type=int, default=50)
-    parser.add_argument('-mp', '--max_pairs', type=int, default=200)
+    parser.add_argument('-mi', '--max_images', type=int, default=None)
+    parser.add_argument('-mp', '--max_pairs', type=int, default=None)
     parser.add_argument('--min_keypoint_overlap', type=int, default=20)
     parser.add_argument('--min_area_overlap', type=float, default=0.1)
     parser.add_argument('--name', type=str, default='dataset')
-    parser.add_argument('-o','--overlap', action='store_true', default=False)
+    parser.add_argument('--check_images', action='store_true', default=False)
     parser.add_argument('out_path')
     parser.add_argument('dataset_path')
 
@@ -52,7 +54,7 @@ def get_overlap_areas(image_1, image_2, cameras):
 
 def get_dataset_paths(basename, dataset_path, subset):
     subset_path = os.path.join(dataset_path, subset)
-    if basename.lower() == 'phototourism':
+    if basename.lower() == 'phototourism' or 'pt' in basename.lower():
         model_path = os.path.join('dense', 'sparse')
         img_path = os.path.join('dense', 'images')
     elif basename.lower() == 'urban':
@@ -107,7 +109,8 @@ def valid_pairs(model, image_ids, args):
 
     cameras = model['cameras']
 
-    for img_id_1, img_id_2 in itertools.combinations(image_ids, 2):
+    for img_id_1, img_id_2 in tqdm(itertools.combinations(image_ids, 2),
+                                   total=len(image_ids) * (len(image_ids) - 1) // 2):
         keypoints_overlap, area_overlap = get_overlap_areas(model['images'][img_id_1], model['images'][img_id_1], cameras)
 
         if keypoints_overlap < args.min_keypoint_overlap or area_overlap < args.min_area_overlap:
@@ -123,9 +126,13 @@ def valid_pairs(model, image_ids, args):
 
 
 def enforce_max_images_pairs(model, args):
-    if len(model['images']) <= args.max_images:
+    if args.max_images is None or len(model['images']) <= args.max_images:
         # if there are fewer than max images we keep all
         image_ids = list(model['images'].keys())
+        pairs = valid_pairs(model, image_ids, args)
+    elif args.max_pairs is None:
+        # if we don't care about max pairs just choose randomly
+        image_ids = random.sample(list(model['images'].keys()), args.max_images)
         pairs = valid_pairs(model, image_ids, args)
     else:
         # if there are more we ensure that we select such images that we can get 2 * max_pairs to choose from
@@ -148,8 +155,6 @@ def order_pairs_approx(pairs):
 
     # Weighted sample without replacement for the first max_pairs
     indices = np.random.choice(range(len(pairs)), p=weights, size=args.max_pairs, replace=False)
-    # seen = set(indices)
-    # rest = [p for i, p in enumerate(pairs) if i not in seen]
 
     return [pairs[i] for i in indices]
 
@@ -194,7 +199,7 @@ def process_subsets(args, subsets):
 
         create_gt_h5(model, image_ids, subset, f, f_txt, args)
 
-        if len(pairs) > args.max_pairs:
+        if args.max_pairs is not None and len(pairs) > args.max_pairs:
             pairs = order_pairs_approx(pairs)[:args.max_pairs]
 
         create_gt_pairs(model, pairs, subset, f_pairs)
@@ -213,10 +218,19 @@ def get_model(args, subset):
     dataset_path = Path(args.dataset_path)
     basename = os.path.basename(dataset_path)
     img_path, model_path, subset_path = get_dataset_paths(basename, dataset_path, subset)
+    print(f"Reading model at {model_path}")
     cameras, images, points = read_model(os.path.join(subset_path, model_path))
 
+    if args.check_images:
+        prev_images_len = len(images)
+        full_img_path = ntpath.normpath(os.path.join(args.dataset_path, subset, img_path))
+        images = {k: v for k, v in images.items() if os.path.exists(os.path.join(full_img_path, v.name))}
+        print(f"Model has {prev_images_len} images, but only {len(images)} found in {full_img_path}. "
+              f"Using only found images.")
+
     # add dict for easier computation of overlap
-    for image in images.values():
+    print(f"Processing 3D points")
+    for image in tqdm(images.values()):
         pts_dict = {}
         for id, xy in zip(image.point3D_ids, image.xys):
             if id == -1:
@@ -237,6 +251,9 @@ def get_model(args, subset):
 def process_colmap_dataset(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
+
+    if args.name is None:
+        args.name = os.path.basename(args.dataset_path)
 
 
     out_dir = os.path.join(args.out_path)

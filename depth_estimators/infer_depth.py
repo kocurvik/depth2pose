@@ -49,13 +49,14 @@ def infer_depth(args):
     f_depth = h5py.File(f'{name_path}_depth_{model.name}.h5', 'w')
 
     for image_name in tqdm(image_list):
-        K = f_images[f'{image_name}_K']
+        K = np.array(f_images[f'{image_name}_K'])
         img_path = os.path.join(args.dataset_path, image_name)
         out_dict = model.infer(img_path, K=K)
         f_depth.create_dataset(f'{image_name}_depth', data=out_dict['depth'].astype(np.float16), compression='gzip', chunks=True)
         if 'inference_K' in out_dict.keys():
             f_depth.create_dataset(f'{image_name}_inference_K', data=out_dict['inference_K'], compression='gzip', chunks=True)
-        f_depth.create_dataset(f'{image_name}_K', data=out_dict['K'], compression='gzip', chunks=True)
+        if 'K' in out_dict.keys():
+            f_depth.create_dataset(f'{image_name}_K', data=out_dict['K'], compression='gzip', chunks=True)
 
 
 if __name__ == '__main__':

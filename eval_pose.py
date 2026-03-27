@@ -84,9 +84,8 @@ def eval_experiment(x):
 
     shift = 'shift' in experiment
 
-    bundle_dict = {'max_iterations': 100, 'verbose': False, 'loss_type': 'TRUNCATED_CAUCHY'}
-    ransac_dict = {'max_iterations': 10000, 'min_iterations': 10000, 'progressive_sampling': False}
-    monodepth_dict = {'max_errors': [t, r],  'estimate_shift': shift, 'ransac': ransac_dict, 'bundle': bundle_dict}
+    bundle_dict = {'max_iterations': 100, 'verbose': False}
+    ransac_dict = {'max_iterations': 1000, 'min_iterations': 1000, 'progressive_sampling': False}
 
     if 'mdecalib' in experiment:
         camera1 = {'model': 'PINHOLE', 'width': -1, 'height': -1,
@@ -104,6 +103,8 @@ def eval_experiment(x):
     camera2 = poselib.Camera(camera2)
 
     if 'calib' in experiment:
+        bundle_dict['loss_type'] = 'TRUNCATED_CAUCHY'
+        monodepth_dict = {'max_errors': [r, t], 'estimate_shift': shift, 'ransac': ransac_dict}
         monodepth_pose, info = poselib.estimate_monodepth_relative_pose(kp1, kp2, d1, d2,
                                                                         camera1, camera2,
                                                                         monodepth_dict)
@@ -114,7 +115,6 @@ def eval_experiment(x):
         relpose_dict = {'max_error': t, 'ransac': ransac_dict, 'bundle': bundle_dict}
         pose, info = poselib.estimate_relative_pose(kp1, kp2, camera1, camera2, relpose_dict)
         monodepth_pair = poselib.MonoDepthImagePair(poselib.MonoDepthTwoViewGeometry(pose), camera1, camera2)
-
 
     result_dict = get_result_dict(info, monodepth_pair, R_gt, t_gt, f1_gt, f2_gt, camera1=camera1, camera2=camera2)
     result_dict['experiment'] = experiment
@@ -157,6 +157,36 @@ def run_with_timeout(x, timeout=20):
         return result_queue.get()
     else:
         return get_exception_result_dict(x)
+
+
+def get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt):
+    # implement a function that triangulates the points to obtain depth for each of the two views
+
+    kp1_norm = np.linalg.inv(K1_gt) @ np.hstack((kp1, np.ones((kp1.shape[0], 1)))).T
+    kp2_norm = np.linalg.inv(K2_gt) @ np.hstack((kp2, np.ones((kp2.shape[0], 1)))).T
+
+    # Triangulate to get 3D points in camera 1 coordinate system
+    # Using the standard triangulation formula for relative pose
+    # x2 ~ R*x1 + t  =>  lambda2 * x2 = lambda1 * R * x1 + t
+    # [R*x1  -x2] [lambda1; lambda2] = -t
+
+    d1 = np.zeros(kp1.shape[0])
+    d2 = np.zeros(kp1.shape[0])
+
+    for i in range(kp1.shape[0]):
+        A = np.zeros((3, 2))
+        A[:, 0] = R_gt @ kp1_norm[:, i]
+        A[:, 1] = -kp2_norm[:, i]
+        b = -t_gt.flatten()
+
+        # Solve least squares for depths (lambdas)
+        depths, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
+        d1[i] = depths[0]
+        d2[i] = depths[1]
+
+    return d1, d2
+
+
 
 
 def eval(args):
@@ -202,7 +232,11 @@ def eval(args):
 
         f_images = h5py.File(f'{name_path}.h5')
         f_matches = h5py.File(f'{name_path}_{args.matches}.h5')
-        f_depth = h5py.File(f'{name_path}_depth_{args.depths}.h5', 'r')
+        if args.depths != 'gt':
+            f_depth = h5py.File(f'{name_path}_depth_{args.depths}.h5', 'r')
+        else:
+            f_depth = None
+
 
 
         if args.first is not None:
@@ -226,11 +260,20 @@ def eval(args):
                 kp1 = kps[:, :2]
                 kp2 = kps[:, 2:4]
 
-                depth_map1 = np.array(f_depth[f'{img_name_1}_depth'])
-                depth_map2 = np.array(f_depth[f'{img_name_2}_depth'])
+                if args.depths != 'gt':
+                    depth_map1 = np.array(f_depth[f'{img_name_1}_depth'])
+                    depth_map2 = np.array(f_depth[f'{img_name_2}_depth'])
 
-                d1 = get_kp_depth(kp1, depth_map1, interpolation='linear')
-                d2 = get_kp_depth(kp2, depth_map2, interpolation='linear')
+                    d1 = get_kp_depth(kp1, depth_map1, interpolation='nearest')
+                    d2 = get_kp_depth(kp2, depth_map2, interpolation='nearest')
+
+                    l = np.logical_and(np.isfinite(d1), np.isfinite(d2))
+                    kp1 = kp1[l]
+                    kp2 = kp2[l]
+                    d1 = d1[l]
+                    d2 = d2[l]
+                else:
+                    d1, d2 = get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt)
 
                 try:
                     mde_K1 = np.array(f_depth[f'{img_name_1}_K'])

@@ -28,7 +28,7 @@ def print_results_focal(experiments, results):
 
 
         tab.add_row([exp_name, np.median(p_errs), np.median(f_errs),
-                     np.mean(p_res), np.mean(f_res),
+                     100 * np.mean(p_res), 100 * np.mean(f_res),
                      # np.mean(times),
                      np.mean(inliers)])
     print(tab)
