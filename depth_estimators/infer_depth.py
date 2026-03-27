@@ -2,6 +2,7 @@ import os
 
 import cv2
 import h5py
+import numpy as np
 from tqdm import tqdm
 
 from depth_estimators.MoGe import MoGe
@@ -51,7 +52,7 @@ def infer_depth(args):
         K = f_images[f'{image_name}_K']
         img_path = os.path.join(args.dataset_path, image_name)
         out_dict = model.infer(img_path, K=K)
-        f_depth.create_dataset(f'{image_name}_depth', data=out_dict['depth'], compression='gzip', chunks=True)
+        f_depth.create_dataset(f'{image_name}_depth', data=out_dict['depth'].astype(np.float16), compression='gzip', chunks=True)
         if 'inference_K' in out_dict.keys():
             f_depth.create_dataset(f'{image_name}_inference_K', data=out_dict['inference_K'], compression='gzip', chunks=True)
         f_depth.create_dataset(f'{image_name}_K', data=out_dict['K'], compression='gzip', chunks=True)

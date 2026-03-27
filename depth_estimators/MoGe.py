@@ -75,7 +75,7 @@ class MoGe(BaseDepthEstimator):
         K[0, :] *= img_w
         K[1, :] *= img_h
 
-        depth = output_original['depth'][0].cpu().numpy().astype(np.float16)
+        depth = output_original['depth'][0].cpu().numpy()
 
         return {'depth': depth, 'inference_K': inference_K, 'K': K}
 

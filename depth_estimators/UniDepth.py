@@ -24,9 +24,10 @@ class UniDepth(BaseDepthEstimator):
 
         output = self.model.infer(input_image)
 
-        K = output['intrinsics'].cpu().numpy()
+        depth = output['depth'][0, 0].cpu().numpy()
+        K = output['intrinsics'][0].cpu().numpy()
 
-        return {'depth': output['depth'][0].cpu().numpy(), 'K': K}
+        return {'depth': depth, 'K': K}
 
 
 
