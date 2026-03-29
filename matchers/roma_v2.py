@@ -6,6 +6,9 @@ import numpy as np
 from tqdm import tqdm
 
 import torch
+
+from utils.system_info import save_metadata
+
 os.environ["TORCH_COMPILE_DISABLE"] = "1"
 
 from romav2 import RoMaV2
@@ -35,6 +38,7 @@ def match_roma(args):
     model.apply_setting('base')
 
     f = h5py.File(f'{name_path}_roma_v2_base_{args.max_features}.h5','w')
+    save_metadata(f)
 
     f_images = h5py.File(f'{name_path}.h5')
 

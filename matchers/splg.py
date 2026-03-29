@@ -8,6 +8,8 @@ from lightglue import LightGlue, SuperPoint
 from lightglue.utils import load_image, rbd
 from tqdm import tqdm
 
+from utils.system_info import save_metadata
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -74,6 +76,7 @@ def match_pairs(feature_dict, args):
     matcher = LightGlue(features='superpoint', depth_confidence=-1, width_confidence=-1).eval().cuda()
 
     f = h5py.File(f'{name_path}_splg_{args.max_features}_{args.resize if args.resize is not None else "noresize"}.h5', 'w')
+    save_metadata(f)
 
     print("Matching features")
     with torch.no_grad():

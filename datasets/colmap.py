@@ -13,6 +13,7 @@ from scipy.spatial.transform import Rotation
 from tqdm import tqdm
 
 from datasets.colmap_utils import cam_to_K, read_model
+from utils.system_info import save_metadata
 
 
 def parse_args():
@@ -199,6 +200,7 @@ def process_subsets(args, subsets):
     h5_path = f'{out_path}.h5'
     f = h5py.File(h5_path, 'w')
     print(f"Writing GT info to {h5_path}")
+    save_metadata(f)
 
     txt_path = f'{out_path}_image_list.txt'
     f_txt = open(txt_path, 'w')
@@ -212,7 +214,6 @@ def process_subsets(args, subsets):
 
     pairs_path = f'{out_path}_image_pairs.txt'
     f_pairs = open(pairs_path, 'w')
-
 
     for subset in subsets:
         print(f"Processing subset: {subset}")

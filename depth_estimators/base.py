@@ -7,21 +7,11 @@ class BaseDepthEstimator(torch.nn.Module):
         self.requires_intrinsics = requires_intrinsics
         self.max_dim = max_dim
 
+    def load_model(self):
+        raise NotImplementedError
+
     def name(self):
         return "BaseDepthEstimator"
-
-    def enforce_max_dim(self, image):
-        if self.max_dim is None:
-            return image, 1.0
-
-        height, width = image.shape[0], image.shape[1]
-
-        if self.max_dim < max(width, height):
-            return image, 1.0
-
-        scale = self.max_dim / max(width, height)
-
-        return cv2.resize(image, None, fx=scale, fy=scale), scale
 
     def infer(self, image, **kwargs):
         raise NotImplementedError

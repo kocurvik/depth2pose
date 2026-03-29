@@ -1,3 +1,5 @@
+from time import perf_counter_ns
+
 import cv2
 import numpy as np
 import torch
@@ -9,27 +11,23 @@ from moge.model.v2 import MoGeModel as MoGeModelV2
 
 
 class MoGe(BaseDepthEstimator):
-    def __init__(self, checkpoint_name, *args, version=2, requires_intrinsics=False, max_dim=None, **kwargs):
-        super().__init__(*args, max_dim=max_dim, requires_intrinsics=requires_intrinsics, **kwargs)
+    def __init__(self, checkpoint_name, *args, version=2, requires_intrinsics=False, **kwargs):
+        super().__init__(*args, requires_intrinsics=requires_intrinsics, **kwargs)
         self.checkpoint_name = checkpoint_name
-
         self.version = version
 
-        if version == 2:
-            self.model = MoGeModelV2.from_pretrained(f'Ruicheng/{checkpoint_name}')
-        elif version == 1:
-            self.model = MoGeModelV1.from_pretrained(f'Ruicheng/{checkpoint_name}')
+    def load_model(self):
+        if self.version == 2:
+            self.model = MoGeModelV2.from_pretrained(f'Ruicheng/{self.checkpoint_name}')
+        elif self.version == 1:
+            self.model = MoGeModelV1.from_pretrained(f'Ruicheng/{self.checkpoint_name}')
         else:
             raise ValueError('MoGe version must be 1 or 2')
 
-        self.num_tokens = None
-        self.resolution_level = 9
-        self.num_tokens_range = [1200, 3600]
-
     @property
     def name(self):
-        intrinsics = '-known_focal' if self.requires_intrinsics else ''
-        return f'MoGeV{self.version}-{self.checkpoint_name}{intrinsics}'
+        intrinsics = 'K' if self.requires_intrinsics else ''
+        return f'MoGeV{self.version}{intrinsics}-{self.checkpoint_name}'
 
     @staticmethod
     def upsample(image, h, w):
@@ -47,14 +45,24 @@ class MoGe(BaseDepthEstimator):
         input_image = torch.tensor(input_image / 255, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0).to(self.model.device)
 
         img_h, img_w = input_image.shape[-2:]
-        output_original = self.model.infer(input_image, use_fp16=True)
+
+        if self.requires_intrinsics:
+            fov_x = 2 * np.arctan(img_w / (2 * kwargs['K'][0, 0])) * 180 / np.pi
+
+            start_time = perf_counter_ns()
+            output_original = self.model.infer(input_image, fov_x=fov_x, use_fp16=True)
+            runtime = perf_counter_ns() - start_time
+        else:
+            start_time = perf_counter_ns()
+            output_original = self.model.infer(input_image, use_fp16=True)
+            runtime = perf_counter_ns() - start_time
         inference_K = output_original['intrinsics'].cpu().numpy()[0]
         K = np.copy(inference_K)
         K[0, :] *= img_w
         K[1, :] *= img_h
         depth = output_original['depth'][0].cpu().numpy()
 
-        return {'depth': depth, 'inference_K': inference_K, 'K': K}
+        return {'depth': depth, 'inference_K': inference_K, 'K': K, 'runtime': runtime}
 
 
 

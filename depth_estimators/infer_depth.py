@@ -7,6 +7,16 @@ from tqdm import tqdm
 
 from depth_estimators.MoGe import MoGe
 from depth_estimators.UniDepth import UniDepth
+from utils.system_info import save_metadata
+
+ALL_MDEs = {'MoGeV1': ['moge-vitl'],
+            'MoGeV2': ['moge-2-vitl'],
+            'MoGeV1K': ['moge-vitl'],
+            'MoGeV2K': ['moge-2-vitl'],
+            'UniDepthV1': ['vitl14', 'v1-cnvnxtl'],
+            'UniDepthV2': ['v2-vits14', 'unidepth-v2-vitb14', 'unidepth-v2-vitl14']}
+
+
 
 
 def parse_args():
@@ -14,7 +24,7 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description='Inference script for depth estimation.')
     parser.add_argument('--model_name', type=str, default='MoGeV2', help='Name of the depth estimation model.')
-    parser.add_argument('--requires_intrinsics', action='store_true', default=False, help='Whether inference requires intrinsics on input')
+    parser.add_argument('--recalc', action='store_true', default=False, help='Whether inference requires intrinsics on input')
     parser.add_argument('--device', type=str, default='cuda', help='Device to run inference on (cuda or cpu).')
     parser.add_argument('--name', type=str, default='dataset')
     parser.add_argument('--pretrained_weights', type=str, help='Path to pretrained model weights.')
@@ -23,39 +33,45 @@ def parse_args():
 
     return parser.parse_args()
 
-def get_model(args):
-    if args.model_name == 'MoGeV2':
-        return MoGe(args.pretrained_weights, version=2, requires_intrinsics=args.requires_intrinsics)
-    elif args.model_name == 'MoGeV1':
-        return MoGe(args.pretrained_weights, version=1, requires_intrinsics=args.requires_intrinsics)
-    elif args.model_name == 'UniDepthV1':
-        return UniDepth(args.pretrained_weights, version=1)
-    elif args.model_name == 'UniDepthV2':
-        return UniDepth(args.pretrained_weights, version=2)
+def get_model(model_name, weights):
+    if model_name == 'MoGeV2':
+        return MoGe(weights, version=2, requires_intrinsics=False)
+    elif model_name == 'MoGeV2K':
+        return MoGe(weights, version=2, requires_intrinsics=True)
+
+    elif model_name == 'MoGeV1':
+        return MoGe(weights, version=1, requires_intrinsics=False)
+    elif model_name == 'MoGeV1K':
+        return MoGe(weights, version=1, requires_intrinsics=True)
+
+    elif model_name == 'UniDepthV1':
+        return UniDepth(weights, version=1)
+    elif model_name == 'UniDepthV2':
+        return UniDepth(weights, version=2)
     else:
-        raise NotImplementedError(f"Model {args.model_name} not implemented")
+        raise NotImplementedError(f"Model {model_name} not implemented")
 
 
-def get_all_mdes():
-    return {'MoGeV1': ['moge-vitl'],
-            'MoGeV2': ['moge-2-vitl'],
-            'UniDepthV1': ['unidepth-v1-vitl14', 'unidepth-v1-cnvnxtl'],
-            'UniDepthV2': ['unidepth-v2-vits14', 'unidepth-v2-vitb14', 'unidepth-v2-vitl14']}
-
-
-
-
-def infer_depth(args):
-    model = get_model(args).cuda()
-
+def infer_depth(model, args):
     name_path = os.path.join(args.out_path, args.name)
+
+    f_depth_path = f'{name_path}_depth_{model.name}.h5'
+    if os.path.exists(f_depth_path) and not args.recalc:
+        print(f"File {f_depth_path} already exists. Skipping. Use --recalc arg to force recalculation.")
+        return
+
+    print("Loading Model")
+    model.load_model()
+
+    f_images = h5py.File(f'{name_path}.h5', 'r')
+
+    f_depth = h5py.File(f_depth_path, 'w')
+    save_metadata(f_depth)
 
     image_list_path = f'{name_path}_image_list.txt'
     with open(image_list_path, 'r') as f:
         image_list = [x.strip() for x in f.readlines()]
 
-    f_images = h5py.File(f'{name_path}.h5')
-    f_depth = h5py.File(f'{name_path}_depth_{model.name}.h5', 'w')
 
     for image_name in tqdm(image_list):
         K = np.array(f_images[f'{image_name}_K'])
@@ -69,6 +85,7 @@ def infer_depth(args):
             out_dict = model.infer(img_path, K=K)
 
         f_depth.create_dataset(f'{image_name}_depth', data=out_dict['depth'].astype(np.float16), compression='gzip', chunks=True)
+        f_depth.create_dataset(f'{image_name}_runtime', data=out_dict['runtime'])
 
         if 'inference_K' in out_dict.keys():
             f_depth.create_dataset(f'{image_name}_inference_K', data=out_dict['inference_K'], compression='gzip', chunks=True)
@@ -79,7 +96,17 @@ def infer_depth(args):
     f_depth.close()
 
 
+def run(args):
+    if args.model_name == 'all':
+        for model_name, weight_list in ALL_MDEs.items():
+            for weights in weight_list:
+                print(f"Running for model {model_name} with weights {weights}")
+                model = get_model(model_name, weights).cuda()
+                infer_depth(model, args)
+    else:
+        model = get_model(args.model_name, args.pretrained_weights).cuda()
+        infer_depth(model, args)
+
 if __name__ == '__main__':
     args = parse_args()
-
-    infer_depth(args)
+    run(args)
