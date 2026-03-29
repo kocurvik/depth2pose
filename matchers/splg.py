@@ -34,6 +34,8 @@ def extract_features(args):
     with open(image_list_path, 'r') as f:
         image_list = [x.strip() for x in f.readlines()]
 
+    f_images = h5py.File(f'{name_path}.h5')
+
     extractor = SuperPoint(max_num_keypoints=args.max_features).eval().cuda()
 
     print("Extracting features")
@@ -41,7 +43,16 @@ def extract_features(args):
 
     for img_name in tqdm(image_list):
         img_path = os.path.join(args.dataset_path, img_name)
-        image_tensor = load_image(img_path).cuda()
+
+        size = np.array(f_images[f'{img_name}_size'])
+        size_orig = np.array(f_images[f'{img_name}_size_orig'])
+
+        if (size != size_orig).any():
+            # if we resized during dataset creation and call this without specific resizing then we need to resize here
+            image_tensor = load_image(img_path, resize=tuple(size[::-1])).cuda()
+        else:
+            image_tensor = load_image(img_path).cuda()
+
         kp_tensor = extractor.extract(image_tensor, resize=args.resize)
         feature_dict[img_name] = kp_tensor
 

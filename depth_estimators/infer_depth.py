@@ -36,6 +36,15 @@ def get_model(args):
         raise NotImplementedError(f"Model {args.model_name} not implemented")
 
 
+def get_all_mdes():
+    return {'MoGeV1': ['moge-vitl'],
+            'MoGeV2': ['moge-2-vitl'],
+            'UniDepthV1': ['unidepth-v1-vitl14', 'unidepth-v1-cnvnxtl'],
+            'UniDepthV2': ['unidepth-v2-vits14', 'unidepth-v2-vitb14', 'unidepth-v2-vitl14']}
+
+
+
+
 def infer_depth(args):
     model = get_model(args).cuda()
 
@@ -51,8 +60,16 @@ def infer_depth(args):
     for image_name in tqdm(image_list):
         K = np.array(f_images[f'{image_name}_K'])
         img_path = os.path.join(args.dataset_path, image_name)
-        out_dict = model.infer(img_path, K=K)
+        size = np.array(f_images[f'{image_name}_size'])
+        size_orig = np.array(f_images[f'{image_name}_size_orig'])
+        if (size != size_orig).any():
+            # if we resized during dataset generation we need to resize here
+            out_dict = model.infer(img_path, size=size, K=K)
+        else:
+            out_dict = model.infer(img_path, K=K)
+
         f_depth.create_dataset(f'{image_name}_depth', data=out_dict['depth'].astype(np.float16), compression='gzip', chunks=True)
+
         if 'inference_K' in out_dict.keys():
             f_depth.create_dataset(f'{image_name}_inference_K', data=out_dict['inference_K'], compression='gzip', chunks=True)
         if 'K' in out_dict.keys():

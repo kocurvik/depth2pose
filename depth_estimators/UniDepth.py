@@ -17,13 +17,14 @@ class UniDepth(BaseDepthEstimator):
     def name(self):
         return f'UniDepth{self.version}-{self.checkpoint_name}'
 
-    def infer(self, image, **kwargs):
+    def infer(self, image, size=None, **kwargs):
         input_image = cv2.cvtColor(cv2.imread(image), cv2.COLOR_BGR2RGB)
+
+        if size is not None:
+            input_image = cv2.resize(input_image, (int(size[0]), int(size[1])))
+
         input_image = torch.tensor(input_image, dtype=torch.float32, device=self.model.device).permute(2, 0, 1)
-
-
         output = self.model.infer(input_image)
-
         depth = output['depth'][0, 0].cpu().numpy()
         K = output['intrinsics'][0].cpu().numpy()
 

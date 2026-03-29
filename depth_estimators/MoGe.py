@@ -16,9 +16,9 @@ class MoGe(BaseDepthEstimator):
         self.version = version
 
         if version == 2:
-            self.model = MoGeModelV2.from_pretrained(checkpoint_name)
+            self.model = MoGeModelV2.from_pretrained(f'Ruicheng/{checkpoint_name}')
         elif version == 1:
-            self.model = MoGeModelV1.from_pretrained(checkpoint_name)
+            self.model = MoGeModelV1.from_pretrained(f'Ruicheng/{checkpoint_name}')
         else:
             raise ValueError('MoGe version must be 1 or 2')
 
@@ -29,17 +29,21 @@ class MoGe(BaseDepthEstimator):
     @property
     def name(self):
         intrinsics = '-known_focal' if self.requires_intrinsics else ''
-        return f'MoGeV{self.version}-{self.checkpoint_name.split("/")[1]}{intrinsics}'
+        return f'MoGeV{self.version}-{self.checkpoint_name}{intrinsics}'
 
     @staticmethod
     def upsample(image, h, w):
         return F.interpolate(image, (h, w), mode="bilinear", align_corners=False, antialias=False)
 
-    def infer(self, image, **kwargs):
+    def infer(self, image, size=None, **kwargs):
         if self.requires_intrinsics and 'K' not in kwargs.keys():
             raise ValueError("Intrinsics are required as input to inference when MoGe is used with known focal")
 
         input_image = cv2.cvtColor(cv2.imread(image), cv2.COLOR_BGR2RGB)
+
+        if size is not None:
+            input_image = cv2.resize(input_image, (int(size[0]), int(size[1])))
+
         input_image = torch.tensor(input_image / 255, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0).to(self.model.device)
 
         img_h, img_w = input_image.shape[-2:]

@@ -17,14 +17,14 @@ from datasets.colmap_utils import cam_to_K, read_model
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--num_samples', type=int, default=None)
     parser.add_argument('-s', '--seed', type=int, default=100)
-    parser.add_argument('-mi', '--max_images', type=int, default=None)
-    parser.add_argument('-mp', '--max_pairs', type=int, default=None)
-    parser.add_argument('--min_keypoint_overlap', type=int, default=20)
-    parser.add_argument('--min_area_overlap', type=float, default=0.1)
-    parser.add_argument('--name', type=str, default='dataset')
-    parser.add_argument('--check_images', action='store_true', default=False)
+    parser.add_argument('-mi', '--max_images', type=int, default=None, help='Maximum images per scene')
+    parser.add_argument('-mp', '--max_pairs', type=int, default=None, help='Maximum pairs per scene')
+    parser.add_argument('-mr', '--max_resolution', type=int, default=None, help='Maximum resolution in the larger side of the image')
+    parser.add_argument('--min_keypoint_overlap', type=int, default=20, help='Minimum number of gt 3D keypoints overlap')
+    parser.add_argument('--min_area_overlap', type=float, default=0.1, help='Minimum overlap area based on gt 3D keypoints')
+    parser.add_argument('--name', type=str, default='dataset', help='Path to dataset files')
+    parser.add_argument('--check_images', action='store_true', default=False, help='Keep only images that are actually available on disk')
     parser.add_argument('out_path')
     parser.add_argument('dataset_path')
 
@@ -72,6 +72,28 @@ def get_dataset_paths(basename, dataset_path, subset):
     return img_path, model_path, subset_path
 
 
+def enforce_max_resolution(camera, args):
+    w = camera.width
+    h = camera.height
+    K = cam_to_K(camera)
+
+    if args.max_resolution is None or max(w,h) < args.max_resolution:
+        return w, h, K, w, h, K
+
+    if w > h:
+        scale = args.max_resolution / w
+    else:
+        scale = args.max_resolution / h
+
+    new_w, new_h = int(scale * w), int(scale * h)
+    new_K = np.copy(K)
+    new_K[0, :] *= new_w / w
+    new_K[1, :] *= new_h / h
+
+    return new_w, new_h, new_K, w, h, K
+
+
+
 def create_gt_h5(model, image_ids, subset, f, f_txt, args):
     images = model['images']
     cameras = model['cameras']
@@ -88,20 +110,21 @@ def create_gt_h5(model, image_ids, subset, f, f_txt, args):
         t = img.tvec
         R = Rotation.from_quat([q[1], q[2], q[3], q[0]]).as_matrix()
 
-        w = camera.width
-        h = camera.height
-        size = np.array([[int(w)], [int(h)]])
-        K = cam_to_K(camera)
+        w, h, K, w_orig, h_orig, K_orig = enforce_max_resolution(camera, args)
+        size = np.array([int(w), int(h)], dtype=int)
+        size_orig = np.array([int(w_orig), int(h_orig)], dtype=int)
 
         K_name = f'{name}_K'
         R_name = f'{name}_R'
         T_name = f'{name}_T'
         size_name = f'{name}_size'
 
-        f.create_dataset(K_name, data=K, compression='gzip', chunks=True)
         f.create_dataset(R_name, data=R, compression='gzip', chunks=True)
         f.create_dataset(T_name, data=t, compression='gzip', chunks=True)
         f.create_dataset(size_name, data=size, compression='gzip', chunks=True)
+        f.create_dataset(K_name, data=K, compression='gzip', chunks=True)
+        f.create_dataset(size_name + '_orig', data=size_orig, compression='gzip', chunks=True)
+        f.create_dataset(K_name + '_orig', data=K_orig, compression='gzip', chunks=True)
 
 
 def valid_pairs(model, image_ids, args):
@@ -111,7 +134,7 @@ def valid_pairs(model, image_ids, args):
 
     for img_id_1, img_id_2 in tqdm(itertools.combinations(image_ids, 2),
                                    total=len(image_ids) * (len(image_ids) - 1) // 2):
-        keypoints_overlap, area_overlap = get_overlap_areas(model['images'][img_id_1], model['images'][img_id_1], cameras)
+        keypoints_overlap, area_overlap = get_overlap_areas(model['images'][img_id_1], model['images'][img_id_2], cameras)
 
         if keypoints_overlap < args.min_keypoint_overlap or area_overlap < args.min_area_overlap:
             continue
