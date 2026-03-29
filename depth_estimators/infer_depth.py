@@ -75,6 +75,9 @@ def infer_depth(args):
         if 'K' in out_dict.keys():
             f_depth.create_dataset(f'{image_name}_K', data=out_dict['K'], compression='gzip', chunks=True)
 
+    f_images.close()
+    f_depth.close()
+
 
 if __name__ == '__main__':
     args = parse_args()

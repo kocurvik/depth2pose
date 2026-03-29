@@ -34,7 +34,7 @@ def match_roma(args):
     model = RoMaV2().eval().cuda()
     model.apply_setting('base')
 
-    f = h5py.File(f'{name_path}_romav2_base_{args.max_features}.h5','w')
+    f = h5py.File(f'{name_path}_roma_v2_base_{args.max_features}.h5','w')
 
     f_images = h5py.File(f'{name_path}.h5')
 
@@ -62,6 +62,7 @@ def match_roma(args):
 
             match_positions = np.hstack([kpts_1[:, :2], kpts_2[:, :2]])
             f.create_dataset(f"{img_name_1}-{img_name_2}", data=match_positions, compression='gzip', chunks=True)
+    f_images.close()
     f.close()
 
 
