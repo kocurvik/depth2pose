@@ -4,6 +4,8 @@ from multiprocessing import Process, Queue, Pool
 import time
 import os
 import signal
+from time import perf_counter_ns
+
 # from time import perf_counter
 
 import h5py
@@ -13,7 +15,8 @@ from tqdm import tqdm
 
 from utils.geometry import R_err_fun, t_err_fun, get_kp_depth
 from utils.multiprocessing import NoDaemonProcessPool
-from utils.results import print_results_focal, draw_cumplots
+from utils.results import print_results_focal, draw_cumplots, get_summary_metrics
+from utils.system_info import save_metadata
 
 MDE_K_WARNING_SHOWN = False
 
@@ -34,7 +37,7 @@ def parse_args():
     parser.add_argument('data_path')
     parser.add_argument('name')
     parser.add_argument('matches')
-    parser.add_argument('depths')
+    parser.add_argument('depth')
 
     return parser.parse_args()
 
@@ -44,10 +47,10 @@ def get_result_dict(info, monodepth_pose, R_gt, t_gt, f1_gt, f2_gt, camera1=None
     pose_est = monodepth_pose.geometry.pose
     R_est, t_est = pose_est.R, pose_est.t
 
-    out['R'] = R_est.tolist()
-    out['R_gt'] = R_gt.tolist()
-    out['t'] = t_est.tolist()
-    out['t_gt'] = t_gt.tolist()
+    out['R'] = R_est
+    out['R_gt'] = R_gt
+    out['t'] = t_est
+    out['t_gt'] = t_gt
     out['f1_gt'] = f1_gt
     out['f2_gt'] = f2_gt
 
@@ -64,7 +67,7 @@ def get_result_dict(info, monodepth_pose, R_gt, t_gt, f1_gt, f2_gt, camera1=None
     out['f2_err'] = np.abs(out['f2'] - f2_gt) / f2_gt
     out['f_err'] = np.sqrt(out['f1_err'] * out['f2_err'])
 
-    info['inliers'] = []
+    info['inliers'] = np.array(info['inliers'])
     out['info'] = info
 
     return out
@@ -77,7 +80,7 @@ def get_exception_result_dict(x):
 
 
 def eval_experiment(x):
-    experiment, kp1, kp2, d1, d2, K1_mde, K2_mde, R_gt, t_gt, K1_gt, K2_gt, t, r = x
+    experiment, kp1, kp2, d1, d2, K1_mde, K2_mde, R_gt, t_gt, K1_gt, K2_gt, img_name_1, img_name_2, t, r = x
 
     f1_gt = (K1_gt[0, 0] + K1_gt[1, 1]) / 2
     f2_gt = (K2_gt[0, 0] + K2_gt[1, 1]) / 2
@@ -105,19 +108,26 @@ def eval_experiment(x):
     if 'calib' in experiment:
         bundle_dict['loss_type'] = 'TRUNCATED_CAUCHY'
         monodepth_dict = {'max_errors': [r, t], 'estimate_shift': shift, 'ransac': ransac_dict}
+        start_time = perf_counter_ns()
         monodepth_pose, info = poselib.estimate_monodepth_relative_pose(kp1, kp2, d1, d2,
                                                                         camera1, camera2,
                                                                         monodepth_dict)
+        runtime = perf_counter_ns() - start_time
 
         monodepth_pair = poselib.MonoDepthImagePair(monodepth_pose, camera1, camera2)
 
     if 'baseline' == experiment:
         relpose_dict = {'max_error': t, 'ransac': ransac_dict, 'bundle': bundle_dict}
+        start_time = perf_counter_ns()
         pose, info = poselib.estimate_relative_pose(kp1, kp2, camera1, camera2, relpose_dict)
+        runtime = perf_counter_ns() - start_time
         monodepth_pair = poselib.MonoDepthImagePair(poselib.MonoDepthTwoViewGeometry(pose), camera1, camera2)
 
     result_dict = get_result_dict(info, monodepth_pair, R_gt, t_gt, f1_gt, f2_gt, camera1=camera1, camera2=camera2)
     result_dict['experiment'] = experiment
+    result_dict['runtime'] = runtime
+    result_dict['image_name_1'] = img_name_1
+    result_dict['image_name_2'] = img_name_2
 
     return result_dict
 
@@ -187,6 +197,23 @@ def get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt):
     return d1, d2
 
 
+def save_summary_results(experiments, full_results, args):
+    json_path = f'summary_results/{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r.json'
+    metrics = get_summary_metrics(experiments, full_results)
+    print_results_focal(metrics)
+    if os.path.exists(json_path):
+        with open(json_path, 'r') as f:
+            summary_dict = json.load(f)
+    else:
+        summary_dict = {}
+    if args.depth in summary_dict.keys():
+        summary_dict = summary_dict[args.depth]
+        summary_dict.update(metrics)
+    else:
+        summary_dict[args.depth] = metrics
+    with open(json_path, 'w') as f:
+        json.dump(summary_dict, f, indent=4)
+
 
 
 def eval(args):
@@ -210,21 +237,33 @@ def eval(args):
     print(experiments)
 
 
-    basename = f'{args.name}_{args.matches}_{args.depths}_{args.sampson_threshold}t_{args.reprojection_threshold}r'
+    basename = f'{args.name}_{args.matches}_{args.depth}_{args.sampson_threshold}t_{args.reprojection_threshold}r'
 
-    json_string = f'{basename}.json'
-    json_path = json_string
+    h5_path = f'full_results/{basename}.h5'
+
+    os.makedirs('full_results', exist_ok=True)
+    os.makedirs('summary_results', exist_ok=True)
 
     if args.load:
-        print("Loading: ", json_string)
-        with open(json_path, 'r') as f:
-            results = json.load(f)
+        print("Loading: ", h5_path)
+        f_results = h5py.File(h5_path, 'r')
+        full_results = []
+        for group_name in f_results.keys():
+            group = f_results[group_name]
+            for exp_name in group.keys():
+                exp_group = group[exp_name]
+                res = {'experiment': exp_name}
+                for key in exp_group.keys():
+                    if isinstance(exp_group[key], h5py.Group):
+                        res[key] = {k: np.array(v) for k, v in exp_group[key].items()}
+                    else:
+                        res[key] = np.array(exp_group[key])
+                full_results.append(res)
     else:
         name_path = os.path.join(args.data_path, args.name)
 
-        # image_list_path = f'{name_path}_image_list.txt'
-        # with open(image_list_path, 'r') as f:
-        #     image_list = [x.strip() for x in f.readlines()]
+        f_results = h5py.File(h5_path, 'w')
+        save_metadata(f_results)
 
         image_pair_list_path = f'{name_path}_image_pairs.txt'
         with open(image_pair_list_path, 'r') as f:
@@ -232,11 +271,10 @@ def eval(args):
 
         f_images = h5py.File(f'{name_path}.h5')
         f_matches = h5py.File(f'{name_path}_{args.matches}.h5')
-        if args.depths != 'gt':
-            f_depth = h5py.File(f'{name_path}_depth_{args.depths}.h5', 'r')
+        if args.depth != 'gt':
+            f_depth = h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r')
         else:
             f_depth = None
-
 
 
         if args.first is not None:
@@ -260,7 +298,7 @@ def eval(args):
                 kp1 = kps[:, :2]
                 kp2 = kps[:, 2:4]
 
-                if args.depths != 'gt':
+                if args.depth != 'gt':
                     depth_map1 = np.array(f_depth[f'{img_name_1}_depth'])
                     depth_map2 = np.array(f_depth[f'{img_name_2}_depth'])
 
@@ -287,7 +325,7 @@ def eval(args):
 
                 for experiment in experiments:
                     yield (experiment, np.copy(kp1), np.copy(kp2), np.copy(d1), np.copy(d2),
-                           mde_K1, mde_K2, R_gt, t_gt, K1_gt, K2_gt,
+                           mde_K1, mde_K2, R_gt, t_gt, K1_gt, K2_gt, img_name_1, img_name_2,
                            args.sampson_threshold, args.reprojection_threshold)
 
         total_length = len(experiments) * len(pair_list)
@@ -295,40 +333,44 @@ def eval(args):
         print(f"Total runs: {total_length} for {len(pair_list)} samples")
 
         if args.num_workers == 1:
-            results = [eval_experiment(x) for x in tqdm(gen_data(), total=total_length)]
+            full_results = [eval_experiment(x) for x in tqdm(gen_data(), total=total_length)]
         else:
             if args.timeout_pool:
                 pool = NoDaemonProcessPool(args.num_workers)
-                results = [x for x in pool.imap(run_with_timeout, tqdm(gen_data(), total=total_length))]
+                full_results = [x for x in pool.imap(run_with_timeout, tqdm(gen_data(), total=total_length))]
             else:
                 pool = Pool(args.num_workers)
-                results = [x for x in pool.imap(eval_experiment, tqdm(gen_data(), total=total_length))]
+                full_results = [x for x in pool.imap(eval_experiment, tqdm(gen_data(), total=total_length))]
 
-        # os.makedirs('results', exist_ok=True)
+        save_full_results(f_results, full_results)
+        f_results.close()
 
-        # if args.append:
-        #     print(f"Appending from: {json_path}")
-        #     try:
-        #         with open(json_path, 'r') as f:
-        #             prev_results = json.load(f)
-        #     except Exception:
-        #         print("Prev results not found!")
-        #         prev_results = []
-        #
-        #     if args.overwrite:
-        #         print("Overwriting old results")
-        #         prev_results = [x for x in prev_results if not isinstance(x, tuple) and not isinstance(x, list)]
-        #         prev_results = [x for x in prev_results if x['experiment'] not in experiments]
-        #
-        #     results.extend(prev_results)
+    save_summary_results(experiments, full_results, args)
 
-        with open(json_path, 'w') as f:
-            json.dump(results, f)
+    # draw_cumplots(experiments, full_results)
 
-        print("Done")
 
-    print_results_focal(experiments, results)
-    draw_cumplots(experiments, results)
+def save_full_results(f_results, full_results):
+    for result in full_results:
+        # write into f_results the result in group by image_name_1_image_name_2
+        group_name = f"{result['image_name_1']}-{result['image_name_2']}"
+        if group_name not in f_results:
+            group = f_results.create_group(group_name)
+        else:
+            group = f_results[group_name]
+
+        exp_group = group.create_group(result['experiment'])
+        for key, value in result.items():
+            if key in ['experiment', 'image_name_1', 'image_name_2']:
+                continue
+            if isinstance(value, dict):
+                # Handle nested info dict
+                info_group = exp_group.create_group(key)
+                for k, v in value.items():
+                    info_group.create_dataset(k, data=v)
+            else:
+                exp_group.create_dataset(key, data=value)
+
 
 if __name__ == '__main__':
     args = parse_args()
