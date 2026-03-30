@@ -57,12 +57,19 @@ def infer_depth(model, args):
 
     f_depth_path = f'{name_path}_depth_{model.name}.h5'
     if os.path.exists(f_depth_path) and not args.recalc:
-        print(f"File {f_depth_path} already exists. Skipping. Use --recalc arg to force recalculation.")
-        return
+        try:
+            with h5py.File(f_depth_path, 'r') as f_check:
+                if 'completed' in f_check:
+                    print(f"File {f_depth_path} already exists and is completed. Skipping. Use --recalc arg to force recalculation.")
+                    return
+                print(f"File {f_depth_path} exists but is incomplete. Recalculating...")
+        except Exception:
+            print(f"File {f_depth_path} exists but is broken. Recalculating...")
 
     print("Loading Model")
     model.load_model()
 
+    print(f"Creating {f_depth_path}")
     f_images = h5py.File(f'{name_path}.h5', 'r')
 
     f_depth = h5py.File(f_depth_path, 'w')
@@ -92,6 +99,8 @@ def infer_depth(model, args):
         if 'K' in out_dict.keys():
             f_depth.create_dataset(f'{image_name}_K', data=out_dict['K'], compression='gzip', chunks=True)
 
+    f_depth.create_group('completed')
+    print(f"{f_depth} completed")
     f_images.close()
     f_depth.close()
 

@@ -14,7 +14,7 @@ class UniDepth(BaseDepthEstimator):
 
     def load_model(self):
         self.model = torch.hub.load("lpiccinelli-eth/UniDepth", "UniDepth", version=f'v{self.version}',
-                                    backbone=self.checkpoint_name, pretrained=True, trust_repo=True)
+                                    backbone=self.checkpoint_name, pretrained=True, trust_repo=True).cuda()
 
     @property
     def name(self):
