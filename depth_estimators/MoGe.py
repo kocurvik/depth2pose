@@ -26,7 +26,7 @@ class MoGe(BaseDepthEstimator):
 
     @property
     def name(self):
-        intrinsics = 'K' if self.requires_intrinsics else ''
+        intrinsics = 'Calib' if self.requires_intrinsics else ''
         return f'MoGeV{self.version}{intrinsics}-{self.checkpoint_name}'
 
     @staticmethod
