@@ -29,7 +29,7 @@ def parse_args():
     import argparse
 
     parser = argparse.ArgumentParser(description='Inference script for depth estimation.')
-    parser.add_argument('--model_name', type=str, default='all', help='Name of the depth estimation model.')
+    parser.add_argument('--model_name', type=str, default=None, help='Name of the depth estimation model.')
     parser.add_argument('--recalc', action='store_true', default=False, help='Whether inference requires intrinsics on input')
     parser.add_argument('--device', type=str, default='cuda', help='Device to run inference on (cuda or cpu).')
     parser.add_argument('--name', type=str, default='dataset')
@@ -117,7 +117,7 @@ def infer_depth(model, args):
 
 
 def run(args):
-    if args.model_name == 'all':
+    if args.model_name is None:
         failed_models = []
 
         for model_name, weight_list in ALL_MDEs.items():
