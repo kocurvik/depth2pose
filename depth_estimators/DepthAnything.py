@@ -40,24 +40,26 @@ class DepthAnything(BaseDepthEstimator):
         if size is not None:
             input_image = cv2.resize(input_image, (int(size[0]), int(size[1])))
 
-        img_h, img_w = input_image.shape[:2]
+        # img_h, img_w = input_image.shape[:2]
 
         input_image = Image.fromarray(input_image)
 
         if self.requires_intrinsics:
 
             start_time = perf_counter_ns()
-            prediction = self.model.inference(input_image, intrinsics_array=kwargs['K'][np.newaxis, :, :])
+            prediction = self.model.inference([input_image], intrinsics_array=kwargs['K'][np.newaxis, :, :])
             runtime = perf_counter_ns() - start_time
+            depth = prediction.depth[0]
+            K = prediction.intrinsics[0]
+
+            return {'depth': depth, 'K': K, 'runtime': runtime}
         else:
             start_time = perf_counter_ns()
-            prediction = self.model.inference(input_image)
+            prediction = self.model.inference([input_image])
             runtime = perf_counter_ns() - start_time
 
         depth = prediction.depth[0]
-        K = prediction.intrinsics[0]
-
-        return {'depth': depth, 'K': K, 'runtime': runtime}
+        return {'depth': depth, 'runtime': runtime}
 
 
 
