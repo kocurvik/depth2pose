@@ -6,12 +6,13 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 
+from depth_estimators.DepthAnything import DepthAnything
 from depth_estimators.MoGe import MoGe
 from depth_estimators.UniDepth import UniDepth
 from utils.system_info import save_metadata
 
 ALL_MDEs = {
-    # 'DepthAnything3': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
+    'DepthAnythingV3': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'MoGeV1': ['moge-vitl'],
     'MoGeV2': ['moge-2-vitl'],
     'MoGeV1Calib': ['moge-vitl'],
@@ -52,6 +53,11 @@ def get_mde_model(model_name, weights):
         return UniDepth(weights, version=1)
     elif model_name == 'UniDepthV2':
         return UniDepth(weights, version=2)
+
+    elif model_name == 'DepthAnythingV3':
+        return DepthAnything(weights, version=3)
+    elif model_name == 'DepthAnythingV3Calib':
+        return DepthAnything(weights, version=3, requires_intrinsics=True)
     else:
         raise NotImplementedError(f"Model {model_name} not implemented")
 

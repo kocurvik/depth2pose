@@ -29,10 +29,6 @@ class MoGe(BaseDepthEstimator):
         intrinsics = 'Calib' if self.requires_intrinsics else ''
         return f'MoGeV{self.version}{intrinsics}-{self.checkpoint_name}'
 
-    @staticmethod
-    def upsample(image, h, w):
-        return F.interpolate(image, (h, w), mode="bilinear", align_corners=False, antialias=False)
-
     def infer(self, image, size=None, **kwargs):
         if self.requires_intrinsics and 'K' not in kwargs.keys():
             raise ValueError("Intrinsics are required as input to inference when MoGe is used with known focal")
