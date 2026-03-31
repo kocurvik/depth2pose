@@ -260,7 +260,7 @@ def eval(args):
             f_depth = h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r')
             if 'completed' not in f_depth:
                 raise ValueError(f'{name_path}_depth_{args.depth}.h5 does not have the completed. Aborting.')
-            mde_runtimes = [f_depth[f'{x}_runtime'][()] for x in image_list]
+            mde_runtimes = [f_depth[f'{x}_runtime'][()] / 1e6 for x in image_list]
         else:
             f_depth = None
             mde_runtimes = [0 for x in image_list]
