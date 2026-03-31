@@ -33,10 +33,11 @@ def parse_args():
     parser.add_argument('-nw', '--num_workers', type=int, default=1)
     parser.add_argument('-l', '--load', action='store_true', default=False)
     parser.add_argument('-f', '--first', type=int, default=None)
+    parser.add_argument('--depth', type=str, default=None)
     parser.add_argument('data_path')
     parser.add_argument('name')
     parser.add_argument('matches')
-    parser.add_argument('depth')
+
 
     return parser.parse_args()
 
@@ -366,7 +367,7 @@ def save_full_results(f_results, full_results):
 
 if __name__ == '__main__':
     args = parse_args()
-    if args.depth == 'all':
+    if args.depth is None:
         mde_list = [x.split('_depth_')[1].split('.h5')[0] for x in os.listdir(args.data_path)
                     if x.startswith(f'{args.name}_depth_') and x.endswith('.h5')]
         for depth_name in mde_list:
