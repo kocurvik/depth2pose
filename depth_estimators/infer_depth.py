@@ -1,5 +1,5 @@
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import cv2
 import h5py
@@ -86,7 +86,7 @@ def infer_depth(model, args):
 
     for image_name in tqdm(image_list):
         K = np.array(f_images[f'{image_name}_K'])
-        img_path = os.path.join(args.dataset_path, Path(image_name))
+        img_path = os.path.join(args.dataset_path, Path(PureWindowsPath(image_name)))
         size = np.array(f_images[f'{image_name}_size'])
         size_orig = np.array(f_images[f'{image_name}_size_orig'])
         if (size != size_orig).any():
