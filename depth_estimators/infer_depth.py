@@ -13,8 +13,9 @@ ALL_MDEs = {'MoGeV1': ['moge-vitl'],
             'MoGeV2': ['moge-2-vitl'],
             'MoGeV1K': ['moge-vitl'],
             'MoGeV2K': ['moge-2-vitl'],
-            'UniDepthV1': ['vitl14', 'v1-cnvnxtl'],
-            'UniDepthV2': ['v2-vits14', 'unidepth-v2-vitb14', 'unidepth-v2-vitl14']}
+            'UniDepthV2': ['v2-vits14', 'unidepth-v2-vitb14', 'unidepth-v2-vitl14'],
+            'UniDepthV1': ['vitl14', 'v1-cnvnxtl']
+            }
 
 
 
@@ -33,7 +34,7 @@ def parse_args():
 
     return parser.parse_args()
 
-def get_model(model_name, weights):
+def get_mde_model(model_name, weights):
     if model_name == 'MoGeV2':
         return MoGe(weights, version=2, requires_intrinsics=False)
     elif model_name == 'MoGeV2K':
@@ -110,10 +111,10 @@ def run(args):
         for model_name, weight_list in ALL_MDEs.items():
             for weights in weight_list:
                 print(f"Running for model {model_name} with weights {weights}")
-                model = get_model(model_name, weights).cuda()
+                model = get_mde_model(model_name, weights)
                 infer_depth(model, args)
     else:
-        model = get_model(args.model_name, args.pretrained_weights).cuda()
+        model = get_mde_model(args.model_name, args.pretrained_weights)
         infer_depth(model, args)
 
 if __name__ == '__main__':

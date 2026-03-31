@@ -1,5 +1,4 @@
 import argparse
-import json
 from multiprocessing import Process, Queue, Pool
 import time
 import os
@@ -15,7 +14,7 @@ from tqdm import tqdm
 
 from utils.geometry import R_err_fun, t_err_fun, get_kp_depth
 from utils.multiprocessing import NoDaemonProcessPool
-from utils.results import print_results_focal, draw_cumplots, get_summary_metrics
+from utils.results import save_summary_results, print_results_all
 from utils.system_info import save_metadata
 
 MDE_K_WARNING_SHOWN = False
@@ -88,7 +87,7 @@ def eval_experiment(x):
     shift = 'shift' in experiment
 
     bundle_dict = {'max_iterations': 100, 'verbose': False}
-    ransac_dict = {'max_iterations': 1000, 'min_iterations': 1000, 'progressive_sampling': False}
+    ransac_dict = {'max_iterations': 10000, 'min_iterations': 10000, 'progressive_sampling': False}
 
     if 'mdecalib' in experiment:
         camera1 = {'model': 'PINHOLE', 'width': -1, 'height': -1,
@@ -197,25 +196,6 @@ def get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt):
     return d1, d2
 
 
-def save_summary_results(experiments, full_results, args):
-    json_path = f'summary_results/{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r.json'
-    metrics = get_summary_metrics(experiments, full_results)
-    print_results_focal(metrics)
-    if os.path.exists(json_path):
-        with open(json_path, 'r') as f:
-            summary_dict = json.load(f)
-    else:
-        summary_dict = {}
-    if args.depth in summary_dict.keys():
-        summary_dict = summary_dict[args.depth]
-        summary_dict.update(metrics)
-    else:
-        summary_dict[args.depth] = metrics
-    with open(json_path, 'w') as f:
-        json.dump(summary_dict, f, indent=4)
-
-
-
 def eval(args):
     experiments = ['calib']
 
@@ -273,6 +253,8 @@ def eval(args):
         f_matches = h5py.File(f'{name_path}_{args.matches}.h5')
         if args.depth != 'gt':
             f_depth = h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r')
+            if 'completed' not in f_depth:
+                raise ValueError(f'{name_path}_depth_{args.depth}.h5 does not have the completed. Aborting.')
         else:
             f_depth = None
 
@@ -374,4 +356,24 @@ def save_full_results(f_results, full_results):
 
 if __name__ == '__main__':
     args = parse_args()
-    eval(args)
+    if args.depth == 'all':
+        mde_list = [x.split('_depth_')[1].split('.h5')[0] for x in os.listdir(args.data_path)
+                    if x.startswith(f'{args.name}_depth_') and x.endswith('.h5')]
+        for depth_name in mde_list:
+            print(f"Running for MDE: {depth_name}")
+            args.depth = depth_name
+            try:
+                eval(args)
+            except ValueError as e:
+                print(e)
+                print("Skipping...")
+
+
+        print("Running for GT depth")
+        args.depth = 'gt'
+        args.include_baseline_solver = True
+        eval(args)
+
+        print_results_all(args)
+    else:
+        eval(args)

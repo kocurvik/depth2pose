@@ -1,3 +1,6 @@
+import json
+import os
+
 import numpy as np
 from matplotlib import pyplot as plt
 from prettytable import PrettyTable
@@ -49,6 +52,23 @@ def print_results_focal(metrics):
     print(tab)
 
 
+def print_results_all(args):
+    json_path = f'summary_results/{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r.json'
+    with open(json_path, 'r') as f:
+        all_metrics = json.load(f)
+
+    tab = PrettyTable(['MDE', 'solver', 'median pose err', 'median f err',
+                       'pose mAA(10)', 'f mAA(0.1)', 'mean runtime', 'mean inliers'])
+    tab.align["solver"] = "l"
+    tab.float_format = '0.2'
+
+    for mde_name, metrics in all_metrics.items():
+        for exp_name, m in metrics.items():
+            tab.add_row([mde_name, exp_name, m['median_pose_err'], m['median_f_err'],
+                         m['pose_mAA_10'], m['f_mAA_10'], m['mean_runtime'], m['mean_inliers']])
+    print(tab)
+
+
 def draw_cumplots(experiments, results):
     plt.figure()
     plt.xlabel('Pose error')
@@ -69,3 +89,20 @@ def draw_cumplots(experiments, results):
     plt.figure()
     plt.xlabel('k error')
     plt.ylabel('Portion of samples')
+
+
+def save_summary_results(experiments, full_results, args):
+    json_path = f'summary_results/{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r.json'
+    metrics = get_summary_metrics(experiments, full_results)
+    print_results_focal(metrics)
+    if os.path.exists(json_path):
+        with open(json_path, 'r') as f:
+            summary_dict = json.load(f)
+    else:
+        summary_dict = {}
+    if args.depth in summary_dict.keys():
+        summary_dict[args.depth].update(metrics)
+    else:
+        summary_dict[args.depth] = metrics
+    with open(json_path, 'w') as f:
+        json.dump(summary_dict, f, indent=4)
