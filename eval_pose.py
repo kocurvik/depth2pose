@@ -300,9 +300,13 @@ def eval(args):
                     mde_K2 = np.array(f_depth[f'{img_name_2}_K'])
                 except Exception:
                     global MDE_K_WARNING_SHOWN
+
                     if not MDE_K_WARNING_SHOWN:
                         print("Warning: MDE K matrices not found in depth file. Using None.")
                         MDE_K_WARNING_SHOWN = True
+                        print("Removing variants using MDE K from experiments.")
+                        experiments[:] = [e for e in experiments if 'mdecalib' not in e]
+                        print(f'Experiments {experiments}')
                     mde_K1, mde_K2 = None, None
 
                 for experiment in experiments:
