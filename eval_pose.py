@@ -249,14 +249,20 @@ def eval(args):
         with open(image_pair_list_path, 'r') as f:
             pair_list = [x.strip().split(',')[:2] for x in f.readlines()]
 
+        image_list_path = f'{name_path}_image_list.txt'
+        with open(image_list_path, 'r') as f:
+            image_list = [x.strip() for x in f.readlines()]
+
         f_images = h5py.File(f'{name_path}.h5')
         f_matches = h5py.File(f'{name_path}_{args.matches}.h5')
         if args.depth != 'gt':
             f_depth = h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r')
             if 'completed' not in f_depth:
                 raise ValueError(f'{name_path}_depth_{args.depth}.h5 does not have the completed. Aborting.')
+            mde_runtimes = [f_depth[f'{x}_runtime'][()] for x in image_list]
         else:
             f_depth = None
+            mde_runtimes = [0 for x in image_list]
 
 
         if args.first is not None:
@@ -331,7 +337,7 @@ def eval(args):
         save_full_results(f_results, full_results)
         f_results.close()
 
-    save_summary_results(experiments, full_results, args)
+        save_summary_results(experiments, full_results, mde_runtimes, args)
 
     # draw_cumplots(experiments, full_results)
 

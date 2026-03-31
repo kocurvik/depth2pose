@@ -42,13 +42,13 @@ def get_summary_metrics(experiments, results):
 
 def print_results_focal(metrics):
     tab = PrettyTable(['solver', 'median pose err', 'median f err',
-                       'pose mAA(10)', 'f mAA(0.1)', 'mean runtime', 'mean inliers'])
+                       'pose mAA(10)', 'f mAA(0.1)', 'mean mde runtime', 'mean pose runtime', 'mean inliers'])
     tab.align["solver"] = "l"
     tab.float_format = '0.2'
 
     for exp_name, m in metrics.items():
         tab.add_row([exp_name, m['median_pose_err'], m['median_f_err'],
-                     m['pose_mAA_10'], m['f_mAA_10'], m['mean_runtime'], m['mean_inliers']])
+                     m['pose_mAA_10'], m['f_mAA_10'], m['mean_mde_runtime'], m['mean_runtime'], m['mean_inliers']])
     print(tab)
 
 
@@ -91,9 +91,11 @@ def draw_cumplots(experiments, results):
     plt.ylabel('Portion of samples')
 
 
-def save_summary_results(experiments, full_results, args):
+def save_summary_results(experiments, full_results, mde_runtimes, args):
     json_path = f'summary_results/{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r.json'
     metrics = get_summary_metrics(experiments, full_results)
+    for exp in experiments:
+        metrics[exp]['mean_mde_runtime'] = np.mean(mde_runtimes)
     print_results_focal(metrics)
     if os.path.exists(json_path):
         with open(json_path, 'r') as f:
