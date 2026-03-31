@@ -29,7 +29,7 @@ def parse_args():
     import argparse
 
     parser = argparse.ArgumentParser(description='Inference script for depth estimation.')
-    parser.add_argument('--model_name', type=str, default='MoGeV2', help='Name of the depth estimation model.')
+    parser.add_argument('--model_name', type=str, default='all:wq', help='Name of the depth estimation model.')
     parser.add_argument('--recalc', action='store_true', default=False, help='Whether inference requires intrinsics on input')
     parser.add_argument('--device', type=str, default='cuda', help='Device to run inference on (cuda or cpu).')
     parser.add_argument('--name', type=str, default='dataset')
