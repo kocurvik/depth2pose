@@ -1,5 +1,6 @@
 import argparse
 import os
+from pathlib import Path, PureWindowsPath
 
 import h5py
 import numpy as np
@@ -44,7 +45,7 @@ def extract_features(args):
     feature_dict = {}
 
     for img_name in tqdm(image_list):
-        img_path = os.path.join(args.dataset_path, img_name)
+        img_path = os.path.join(args.dataset_path, Path(PureWindowsPath(img_name)))
 
         size = np.array(f_images[f'{img_name}_size'])
         size_orig = np.array(f_images[f'{img_name}_size_orig'])

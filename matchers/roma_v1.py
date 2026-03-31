@@ -1,5 +1,6 @@
 import argparse
 import os
+from pathlib import Path, PureWindowsPath
 
 import h5py
 import numpy as np
@@ -47,8 +48,8 @@ def match_roma(args):
     print("Matching features")
     with torch.no_grad():
         for img_name_1, img_name_2 in tqdm(pair_list):
-            img_path_1 = os.path.join(args.dataset_path, img_name_1)
-            img_path_2 = os.path.join(args.dataset_path, img_name_2)
+            img_path_1 = os.path.join(args.dataset_path, Path(PureWindowsPath(img_name_1)))
+            img_path_2 = os.path.join(args.dataset_path, Path(PureWindowsPath(img_name_2)))
 
             W_A, H_A = f_images[f'{img_name_1}_size']
             W_B, H_B = f_images[f'{img_name_2}_size']
