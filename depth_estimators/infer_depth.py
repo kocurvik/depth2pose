@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import cv2
 import h5py
@@ -9,13 +10,15 @@ from depth_estimators.MoGe import MoGe
 from depth_estimators.UniDepth import UniDepth
 from utils.system_info import save_metadata
 
-ALL_MDEs = {'MoGeV1': ['moge-vitl'],
-            'MoGeV2': ['moge-2-vitl'],
-            'MoGeV1K': ['moge-vitl'],
-            'MoGeV2K': ['moge-2-vitl'],
-            'UniDepthV2': ['v2-vits14', 'unidepth-v2-vitb14', 'unidepth-v2-vitl14'],
-            'UniDepthV1': ['vitl14', 'v1-cnvnxtl']
-            }
+ALL_MDEs = {
+    # 'DepthAnything3': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
+    'MoGeV1': ['moge-vitl'],
+    'MoGeV2': ['moge-2-vitl'],
+    'MoGeV1K': ['moge-vitl'],
+    'MoGeV2K': ['moge-2-vitl'],
+    'UniDepthV2': ['vits14', 'vitb14', 'vitl14'],
+    'UniDepthV1': ['vitl14', 'v1-cnvnxtl']
+    }
 
 
 
@@ -83,7 +86,7 @@ def infer_depth(model, args):
 
     for image_name in tqdm(image_list):
         K = np.array(f_images[f'{image_name}_K'])
-        img_path = os.path.join(args.dataset_path, image_name)
+        img_path = os.path.join(args.dataset_path, Path(image_name))
         size = np.array(f_images[f'{image_name}_size'])
         size_orig = np.array(f_images[f'{image_name}_size_orig'])
         if (size != size_orig).any():
@@ -108,11 +111,20 @@ def infer_depth(model, args):
 
 def run(args):
     if args.model_name == 'all':
+        failed_models = []
+
         for model_name, weight_list in ALL_MDEs.items():
             for weights in weight_list:
+
                 print(f"Running for model {model_name} with weights {weights}")
                 model = get_mde_model(model_name, weights)
-                infer_depth(model, args)
+                try:
+                    infer_depth(model, args)
+                except Exception as e:
+                    print(f"Model {model_name} with weights {weights} failed with error: {e}")
+                    failed_models.append((model_name, weights))
+
+        print(f'Inference failed for some cases: {failed_models}')
     else:
         model = get_mde_model(args.model_name, args.pretrained_weights)
         infer_depth(model, args)
