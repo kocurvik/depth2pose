@@ -45,14 +45,12 @@ class DepthAnything(BaseDepthEstimator):
         input_image = Image.fromarray(input_image)
 
         if self.requires_intrinsics:
-
             start_time = perf_counter_ns()
-            prediction = self.model.inference([input_image], intrinsics_array=kwargs['K'][np.newaxis, :, :])
+            prediction = self.model.inference([input_image], intrinsics=kwargs['K'][np.newaxis, :, :])
             runtime = perf_counter_ns() - start_time
             depth = prediction.depth[0]
-            K = prediction.intrinsics[0]
 
-            return {'depth': depth, 'K': K, 'runtime': runtime}
+            return {'depth': depth, 'runtime': runtime}
         else:
             start_time = perf_counter_ns()
             prediction = self.model.inference([input_image])
