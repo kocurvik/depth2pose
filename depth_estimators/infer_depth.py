@@ -14,8 +14,8 @@ ALL_MDEs = {
     # 'DepthAnything3': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'MoGeV1': ['moge-vitl'],
     'MoGeV2': ['moge-2-vitl'],
-    'MoGeV1K': ['moge-vitl'],
-    'MoGeV2K': ['moge-2-vitl'],
+    'MoGeV1Calib': ['moge-vitl'],
+    'MoGeV2Calib': ['moge-2-vitl'],
     'UniDepthV2': ['vits14', 'vitb14', 'vitl14'],
     'UniDepthV1': ['vitl14', 'v1-cnvnxtl']
     }
@@ -40,12 +40,12 @@ def parse_args():
 def get_mde_model(model_name, weights):
     if model_name == 'MoGeV2':
         return MoGe(weights, version=2, requires_intrinsics=False)
-    elif model_name == 'MoGeV2K':
+    elif model_name == 'MoGeV2Calib':
         return MoGe(weights, version=2, requires_intrinsics=True)
 
     elif model_name == 'MoGeV1':
         return MoGe(weights, version=1, requires_intrinsics=False)
-    elif model_name == 'MoGeV1K':
+    elif model_name == 'MoGeV1Calib':
         return MoGe(weights, version=1, requires_intrinsics=True)
 
     elif model_name == 'UniDepthV1':
