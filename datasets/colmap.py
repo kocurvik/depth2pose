@@ -248,7 +248,8 @@ def get_model(args, subset):
     if args.check_images:
         prev_images_len = len(images)
         full_img_path = ntpath.normpath(os.path.join(args.dataset_path, subset, img_path))
-        images = {k: v for k, v in images.items() if os.path.exists(os.path.join(full_img_path, v.name))}
+        images = {k: v for k, v in images.items() if os.path.exists(os.path.join(os.path.normpath(full_img_path),
+                                                                                 full_img_path, v.name))}
         print(f"Model has {prev_images_len} images, but only {len(images)} found in {full_img_path}. "
               f"Using only found images.")
 
