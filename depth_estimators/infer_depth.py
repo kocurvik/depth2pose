@@ -19,11 +19,9 @@ from depth_estimators.DepthPro import DepthPro
 from utils.system_info import save_metadata
 
 ALL_MDEs = {
-    # 'DepthPro': ['vitl'],
-    # 'DepthProCalib': ['vitl'],
-    # 'UniK3D': ['vitl'],
-    # 'UniK3DCalib': ['vitl'],
-    # 'Metric3DV2': ['vit_small', 'vit_large', 'vit_giant2'],
+    'UniK3D': ['vitl'],
+    'UniK3DCalib': ['vitl'],
+    'Metric3DV2': ['vit_small', 'vit_large', 'vit_giant2'],
     'DepthAnythingV2': ['vits', 'vitb', 'vitl'],
     'DepthAnythingV3': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'DepthAnythingV3Calib': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
@@ -34,7 +32,9 @@ ALL_MDEs = {
     'UniDepthV2': ['vits14', 'vitb14', 'vitl14'],
     'UniDepthV2Calib': ['vits14', 'vitb14', 'vitl14'],
     'UniDepthV1': ['vitl14', 'v1-cnvnxtl'],
-    'UniDepthV1Calib': ['vitl14', 'v1-cnvnxtl']
+    'UniDepthV1Calib': ['vitl14', 'v1-cnvnxtl'],
+    'DepthPro': ['vitl'],
+    'DepthProCalib': ['vitl'],
     }
 
 
