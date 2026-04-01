@@ -226,10 +226,10 @@ def eval(args):
 
     basename = f'{args.name}_{args.matches}_{args.depth}_{args.sampson_threshold}t_{args.reprojection_threshold}r'
 
-    os.makedirs(os.path.join(args.dataset_path, 'full_results'), exist_ok=True)
-    os.makedirs(os.path.join(args.dataset_path, 'summary_results'), exist_ok=True)
+    os.makedirs(os.path.join(args.data_path, 'full_results'), exist_ok=True)
+    os.makedirs(os.path.join(args.data_path, 'summary_results'), exist_ok=True)
 
-    h5_path = os.path.join(args.dataset_path, f'full_results/{basename}.h5')
+    h5_path = os.path.join(args.data_path, f'full_results/{basename}.h5')
 
     if args.load:
         print("Loading: ", h5_path)
