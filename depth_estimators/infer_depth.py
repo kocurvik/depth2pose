@@ -19,11 +19,12 @@ from depth_estimators.DepthPro import DepthPro
 from utils.system_info import save_metadata
 
 ALL_MDEs = {
-    'DepthPro': ['vitl'],
-    'DepthProCalib': ['vitl'],
-    'UniK3D': ['vitl'],
-    'UniK3DCalib': ['vitl'],
-    'Metric3DV2': ['vit_small', 'vit_large', 'vit_giant2'],
+    # 'DepthPro': ['vitl'],
+    # 'DepthProCalib': ['vitl'],
+    # 'UniK3D': ['vitl'],
+    # 'UniK3DCalib': ['vitl'],
+    # 'Metric3DV2': ['vit_small', 'vit_large', 'vit_giant2'],
+    'DepthAnythingV2': ['vits', 'vitb', 'vitl'],
     'DepthAnythingV3': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'DepthAnythingV3Calib': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'MoGeV1': ['moge-vitl'],
@@ -87,6 +88,8 @@ def get_mde_model(model_name, weights):
     elif model_name == 'UniDepthV2Calib':
         return UniDepth(weights, version=2, requires_intrinsics=True)
 
+    elif model_name == 'DepthAnythingV2':
+        return DepthAnything(weights, version=2)
     elif model_name == 'DepthAnythingV3':
         return DepthAnything(weights, version=3)
     elif model_name == 'DepthAnythingV3Calib':
