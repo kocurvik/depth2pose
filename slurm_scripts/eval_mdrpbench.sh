@@ -9,6 +9,10 @@
 #SBATCH -o /home/kocurvik/logs/eval_mdrpbench.001.std.out
 #SBATCH -e /home/kocurvik/logs/eval_mdrpbench.001.err.out
 
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+
 # Go to your project directory
 cd /home/kocurvik/code/mdrpbench
 export PYTHONPATH=/home/kocurvik/code/mdrpbench
