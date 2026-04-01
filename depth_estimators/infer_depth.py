@@ -16,7 +16,7 @@ from depth_estimators.DepthPro import DepthPro
 from utils.system_info import save_metadata
 
 ALL_MDEs = {
-    # 'DepthPro': ['vitl'],
+    'DepthPro': ['vitl'],
     'DepthProCalib': ['vitl'],
     'UniK3D': ['vitl'],
     'UniK3DCalib': ['vitl'],
