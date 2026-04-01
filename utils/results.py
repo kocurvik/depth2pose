@@ -92,7 +92,8 @@ def draw_cumplots(experiments, results):
 
 
 def save_summary_results(experiments, full_results, mde_runtimes, args):
-    json_path = f'summary_results/{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r.json'
+    json_path = os.path.join(args.data_path, 'summary_results',
+                             f'{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r.json')
     metrics = get_summary_metrics(experiments, full_results)
     for exp in experiments:
         metrics[exp]['mean_mde_runtime'] = np.mean(mde_runtimes)
