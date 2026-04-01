@@ -1,21 +1,13 @@
 addict==2.4.0
 aiofiles==24.1.0
 annotated-doc==0.0.4
-annotated-types @ file:///home/conda/feedstock_root/build_artifacts/annotated-types_1733247046149/work
 antlr4-python3-runtime==4.9.3
 anyio==4.13.0
-appdirs @ file:///home/conda/feedstock_root/build_artifacts/appdirs_1733753955715/work
 argcomplete==3.6.3
 asttokens==3.0.1
 attrs==26.1.0
-backports.zstd @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_backports.zstd_1767044984/work
 blinker==1.9.0
-Brotli @ file:///home/conda/feedstock_root/build_artifacts/brotli-split_1764016952863/work
-cached-property @ file:///home/conda/feedstock_root/build_artifacts/cached_property_1615209429212/work
-certifi @ file:///home/conda/feedstock_root/build_artifacts/certifi_1772001073725/work/certifi
 cfgv==3.5.0
-charset-normalizer @ file:///home/conda/feedstock_root/build_artifacts/charset-normalizer_1773659966602/work
-click @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_click_1764518652/work
 colorama==0.4.6
 comm==0.2.3
 ConfigArgParse==1.7.5
@@ -30,8 +22,6 @@ depth-anything-3 @ git+https://github.com/ByteDance-Seed/Depth-Anything-3.git@41
 distlib==0.4.0
 docker-pycreds==0.4.0
 e3nn==0.6.0
-einops @ file:///home/conda/feedstock_root/build_artifacts/einops_1769426878011/work
-eval_type_backport @ file:///home/conda/feedstock_root/build_artifacts/eval_type_backport_1764679206270/work
 evo==1.34.3
 exceptiongroup==1.3.1
 executing==2.2.1
@@ -42,24 +32,17 @@ filelock==3.25.2
 Flask==3.1.3
 fonttools==4.62.1
 fsspec==2026.2.0
-gitdb @ file:///home/conda/feedstock_root/build_artifacts/gitdb_1735887193964/work
-GitPython @ file:///home/conda/feedstock_root/build_artifacts/gitpython_1767358723114/work
 glcontext==3.0.0
 gradio==6.10.0
 gradio_client==2.4.0
 groovy==0.1.2
 h11==0.16.0
-h2 @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_h2_1756364871/work
-h5py @ file:///home/conda/feedstock_root/build_artifacts/h5py_1774712049671/work
 hf-gradio==0.3.0
 hf-xet==1.4.2
-hpack @ file:///home/conda/feedstock_root/build_artifacts/hpack_1737618293087/work
 httpcore==1.0.9
 httpx==0.28.1
 huggingface_hub==1.8.0
-hyperframe @ file:///home/conda/feedstock_root/build_artifacts/hyperframe_1737618333194/work
 identify==2.6.18
-idna @ file:///home/conda/feedstock_root/build_artifacts/idna_1760286409563/work
 ImageIO==2.37.3
 imageio-ffmpeg==0.6.0
 importlib_metadata==9.0.0
@@ -77,7 +60,6 @@ kiwisolver==1.5.0
 kornia==0.8.2
 kornia_rs==0.1.10
 lightglue @ git+https://github.com/cvg/LightGlue.git@eb42fee2d71449efb0aa5c10549752b5d75384d8
-loguru @ file:///home/conda/feedstock_root/build_artifacts/loguru_1746634721458/work
 lz4==4.4.5
 markdown-it-py==4.0.0
 MarkupSafe==3.0.3
@@ -118,40 +100,31 @@ opencv-python-headless==4.13.0.92
 opt-einsum-fx==0.1.4
 opt_einsum==3.4.0
 orjson==3.11.7
-packaging @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_packaging_1769093650/work
 pandas==2.3.3
 parso==0.8.6
 pexpect==4.9.0
 pillow==12.1.1
 pillow_heif==1.3.0
+pip-chill==1.0.5
 pipeline @ git+https://github.com/EasternJournalist/pipeline.git@866f059d2a05cde05e4a52211ec5051fd5f276d6
-platformdirs @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_platformdirs_1773199142/work
 plotly==6.6.0
 plyfile==1.1.3
-poselib @ file:///home/kocurvik/code/PoseLib
 pre_commit==4.5.1
 prettytable==3.17.0
 proglog==0.1.12
 prompt_toolkit==3.0.52
-protobuf @ file:///home/conda/feedstock_root/build_artifacts/protobuf_1773265050642/work/bazel-bin/python/dist/protobuf-6.33.5-cp310-abi3-linux_x86_64.whl#sha256=d3537a024cdfb6a072154648414eb9d0d27cb7bcde7a23954b9bfe10c1c43284
-psutil @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_psutil_1769678154/work
 ptyprocess==0.7.0
 pure_eval==0.2.3
 pycolmap==4.0.2
-pydantic @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_pydantic_1764434463/work
-pydantic_core @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_pydantic-core_1762989015/work
 pydub==0.25.1
 Pygments==2.20.0
 pyparsing==3.3.2
 pyquaternion==0.9.9
-PySocks @ file:///home/conda/feedstock_root/build_artifacts/pysocks_1733217236728/work
 python-dateutil==2.9.0.post0
 python-discovery==1.2.1
 python-multipart==0.0.22
 pytz==2026.1.post1
-PyYAML @ file:///home/conda/feedstock_root/build_artifacts/pyyaml_1770223234623/work
 referencing==0.37.0
-requests @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_requests_1774894783/work
 retrying==1.4.2
 rich==14.3.3
 romatch==0.1.2
@@ -162,14 +135,9 @@ ruamel.yaml==0.19.1
 safehttpx==0.1.7
 safetensors==0.7.0
 scikit-learn==1.7.2
-scipy @ file:///home/conda/feedstock_root/build_artifacts/scipy-split_1739790642651/work/dist/scipy-1.15.2-cp310-cp310-linux_x86_64.whl#sha256=9e52bad6c3294d1a5b04a13632118ca2157130603c6c018c2d710162b223b27e
 seaborn==0.13.2
 semantic-version==2.10.0
-sentry-sdk @ file:///home/conda/feedstock_root/build_artifacts/sentry-sdk_1774958479940/work
-setproctitle @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_setproctitle_1766684434/work
 shellingham==1.5.4
-six @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_six_1753199211/work
-smmap @ file:///home/conda/feedstock_root/build_artifacts/smmap_1739781697784/work
 stack-data==0.6.3
 starlette==0.52.1
 sympy==1.14.0
@@ -179,20 +147,15 @@ tomlkit==0.13.3
 torch==2.4.1+cu124
 torchaudio==2.4.1+cu124
 torchvision==0.19.1+cu124
-tqdm @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_tqdm_1770153424/work
 traitlets==5.14.3
 trimesh==4.11.5
 triton==3.0.0
 typer==0.24.1
-typing-inspection @ file:///home/conda/feedstock_root/build_artifacts/typing-inspection_1764158251755/work
-typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_typing_extensions_1756220668/work
 tzdata==2025.3
 unidepth @ git+https://github.com/lpiccinelli-eth/UniDepth@8d8cfe4c7ee15297099983607febf0d4f32eb3d6
-urllib3 @ file:///home/conda/feedstock_root/build_artifacts/urllib3_1767817748113/work
 utils3d @ git+https://github.com/EasternJournalist/utils3d.git@3fab839f0be9931dac7c8488eb0e1600c236e183
 uvicorn==0.42.0
 virtualenv==21.2.0
-wandb @ file:///home/conda/feedstock_root/build_artifacts/wandb_1773356986564/work
 wcwidth==0.6.0
 Werkzeug==3.1.7
 widgetsnbextension==4.0.15
