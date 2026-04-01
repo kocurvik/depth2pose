@@ -13,8 +13,8 @@ from depth_estimators.UniDepth import UniDepth
 from utils.system_info import save_metadata
 
 ALL_MDEs = {
-    'DepthAnythingV3Calib': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'DepthAnythingV3': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
+    'DepthAnythingV3Calib': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'MoGeV1': ['moge-vitl'],
     'MoGeV2': ['moge-2-vitl'],
     'MoGeV1Calib': ['moge-vitl'],

@@ -40,7 +40,7 @@ class DepthAnything(BaseDepthEstimator):
         if size is not None:
             input_image = cv2.resize(input_image, (int(size[0]), int(size[1])))
 
-        # img_h, img_w = input_image.shape[:2]
+        img_h, img_w = input_image.shape[:2]
 
         input_image = Image.fromarray(input_image)
 
@@ -48,15 +48,14 @@ class DepthAnything(BaseDepthEstimator):
             start_time = perf_counter_ns()
             prediction = self.model.inference([input_image], intrinsics=kwargs['K'][np.newaxis, :, :])
             runtime = perf_counter_ns() - start_time
-            depth = prediction.depth[0]
-
-            return {'depth': depth, 'runtime': runtime}
         else:
             start_time = perf_counter_ns()
             prediction = self.model.inference([input_image])
             runtime = perf_counter_ns() - start_time
 
-        depth = prediction.depth[0]
+        # based on code in depth_anything_v3.utils.io.input_processor there is no cropping
+        depth = cv2.resize(prediction.depth[0], (img_w, img_h), cv2.INTER_CUBIC)
+
         return {'depth': depth, 'runtime': runtime}
 
 
