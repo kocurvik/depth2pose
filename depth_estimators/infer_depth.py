@@ -7,6 +7,9 @@ import traceback
 
 from tqdm import tqdm
 
+import torch
+torch.backends.cudnn.benchmark = True  # Pick fastest kernels
+
 from depth_estimators.Metric3D import Metric3D
 from depth_estimators.DepthAnything import DepthAnything
 from depth_estimators.MoGe import MoGe

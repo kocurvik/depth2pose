@@ -16,8 +16,7 @@ class DepthPro(BaseDepthEstimator):
 
     def load_model(self):
         if self.version == 1:
-            torch.backends.cudnn.benchmark = True  # Pick fastest kernels
-            torch.set_float32_matmul_precision('high')
+            # torch.set_float32_matmul_precision('high')
             model, self.transform = depth_pro.create_model_and_transforms(device=torch.device('cuda'))
             self.model = torch.compile(model, mode="reduce-overhead").eval()
 
