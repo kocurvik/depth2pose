@@ -53,7 +53,8 @@ class DepthAnything(BaseDepthEstimator):
             prediction = self.model.inference([input_image])
             runtime = perf_counter_ns() - start_time
 
-        # based on code in depth_anything_v3.utils.io.input_processor there is no cropping
+        # based on code in depth_anything_v3.utils.io.input_processor
+        # there is no cropping and upscaling uses cubic interpolation
         depth = cv2.resize(prediction.depth[0], (img_w, img_h), cv2.INTER_CUBIC)
 
         return {'depth': depth, 'runtime': runtime}
