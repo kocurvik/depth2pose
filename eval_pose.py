@@ -88,7 +88,7 @@ def eval_experiment(x):
     shift = 'shift' in experiment
 
     bundle_dict = {'max_iterations': 100, 'verbose': False}
-    ransac_dict = {'max_iterations': 10000, 'min_iterations': 10000, 'progressive_sampling': False}
+    ransac_dict = {'max_iterations': 1000, 'min_iterations': 1000, 'progressive_sampling': False}
 
     if 'mdecalib' in experiment:
         camera1 = {'model': 'PINHOLE', 'width': -1, 'height': -1,
