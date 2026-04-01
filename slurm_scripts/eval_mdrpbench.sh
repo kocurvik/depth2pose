@@ -28,7 +28,7 @@ mkdir -p "$WORK"
 rsync -a "$SRC/" "$WORK/"
 
 # Run processing on /work
-python eval_pose.py -ss -nw 64 WORK pt splg_2048_noresize
+python eval_pose.py -ss -nw 64 $WORK pt splg_2048_noresize
 
 # Copy results back
 echo "Copying results back..."
