@@ -18,6 +18,7 @@ class DepthPro(BaseDepthEstimator):
     def load_model(self):
         if self.version == 1:
             self.model, self.transform = depth_pro.create_model_and_transforms(device=torch.device('cuda'))
+            self.model.cuda().eval()
         else:
             raise ValueError("DepthPro available only in v1")
 
