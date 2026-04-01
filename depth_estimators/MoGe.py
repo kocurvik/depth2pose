@@ -18,9 +18,9 @@ class MoGe(BaseDepthEstimator):
 
     def load_model(self):
         if self.version == 2:
-            self.model = MoGeModelV2.from_pretrained(f'Ruicheng/{self.checkpoint_name}').cuda()
+            self.model = MoGeModelV2.from_pretrained(f'Ruicheng/{self.checkpoint_name}').cuda().eval()
         elif self.version == 1:
-            self.model = MoGeModelV1.from_pretrained(f'Ruicheng/{self.checkpoint_name}').cuda()
+            self.model = MoGeModelV1.from_pretrained(f'Ruicheng/{self.checkpoint_name}').cuda().eval()
         else:
             raise ValueError('MoGe version must be 1 or 2')
 

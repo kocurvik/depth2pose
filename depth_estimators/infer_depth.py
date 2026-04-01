@@ -1,18 +1,26 @@
 import os
 from pathlib import Path, PureWindowsPath
 
-import cv2
 import h5py
 import numpy as np
 import traceback
+
 from tqdm import tqdm
 
+from depth_estimators.Metric3D import Metric3D
 from depth_estimators.DepthAnything import DepthAnything
 from depth_estimators.MoGe import MoGe
 from depth_estimators.UniDepth import UniDepth
+from depth_estimators.UniK3D import UniK3D
+from depth_estimators.DepthPro import DepthPro
 from utils.system_info import save_metadata
 
 ALL_MDEs = {
+    # 'DepthPro': ['vitl'],
+    'DepthProCalib': ['vitl'],
+    'UniK3D': ['vitl'],
+    'UniK3DCalib': ['vitl'],
+    'Metric3DV2': ['vit_small', 'vit_large', 'vit_giant2'],
     'DepthAnythingV3': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'DepthAnythingV3Calib': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'MoGeV1': ['moge-vitl'],
@@ -47,12 +55,24 @@ def get_mde_model(model_name, weights):
         return MoGe(weights, version=2, requires_intrinsics=False)
     elif model_name == 'MoGeV2Calib':
         return MoGe(weights, version=2, requires_intrinsics=True)
-        return MoGe(weights, version=2, requires_intrinsics=True)
+
+    elif model_name == 'Metric3DV2':
+        return Metric3D(weights, version=2, requires_intrinsics=False)
 
     elif model_name == 'MoGeV1':
         return MoGe(weights, version=1, requires_intrinsics=False)
     elif model_name == 'MoGeV1Calib':
         return MoGe(weights, version=1, requires_intrinsics=True)
+
+    elif model_name == 'UniK3D':
+        return UniK3D(weights, version=1, requires_intrinsics=False)
+    elif model_name == 'UniK3DCalib':
+        return UniK3D(weights, version=1, requires_intrinsics=True)
+
+    elif model_name == 'DepthPro':
+        return DepthPro(weights, version=1, requires_intrinsics=False)
+    elif model_name == 'DepthProCalib':
+        return DepthPro(weights, version=1, requires_intrinsics=True)
 
     elif model_name == 'UniDepthV1':
         return UniDepth(weights, version=1)

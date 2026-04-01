@@ -21,7 +21,7 @@ class DepthAnything(BaseDepthEstimator):
         elif self.version == 2:
             raise NotImplementedError
         elif self.version == 3:
-            self.model = DepthAnything3.from_pretrained(f"depth-anything/{self.checkpoint_name}").cuda()
+            self.model = DepthAnything3.from_pretrained(f"depth-anything/{self.checkpoint_name}").cuda().eval()
         else:
             raise ValueError("Wrong version of DepthAnything")
 
