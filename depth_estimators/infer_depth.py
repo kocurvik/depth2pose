@@ -31,8 +31,8 @@ ALL_MDEs = {
     'MoGeV2Calib': ['moge-2-vitl'],
     'UniDepthV2': ['vits14', 'vitb14', 'vitl14'],
     'UniDepthV2Calib': ['vits14', 'vitb14', 'vitl14'],
-    'UniDepthV1': ['vitl14', 'v1-cnvnxtl'],
-    'UniDepthV1Calib': ['vitl14', 'v1-cnvnxtl'],
+    'UniDepthV1': ['vitl14', 'cnvnxtl'],
+    'UniDepthV1Calib': ['vitl14', 'cnvnxtl'],
     'DepthPro': ['vitl'],
     'DepthProCalib': ['vitl'],
     }
