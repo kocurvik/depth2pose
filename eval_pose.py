@@ -204,10 +204,16 @@ def eval(args):
         experiments.append('mdecalib')
 
     if args.include_shared_focal:
-        experiments.append('sf')
+        if 'Calib' in args.depth:
+            print("Shared focal solver requested, but MDE used GT calibration. Skipping.")
+        else:
+            experiments.append('sf')
 
     if args.include_varying_focal:
-        experiments.append('vf')
+        if 'Calib' in args.depth:
+            print("Varying focal solver requested, but MDE used GT calibration. Skipping.")
+        else:
+            experiments.append('vf')
 
     if args.include_shift_solvers:
         experiments.extend([f'{x}_shift' for x in experiments])
