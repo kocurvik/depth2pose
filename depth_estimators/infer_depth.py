@@ -4,6 +4,7 @@ from pathlib import Path, PureWindowsPath
 import cv2
 import h5py
 import numpy as np
+import traceback
 from tqdm import tqdm
 
 from depth_estimators.DepthAnything import DepthAnything
@@ -19,7 +20,9 @@ ALL_MDEs = {
     'MoGeV1Calib': ['moge-vitl'],
     'MoGeV2Calib': ['moge-2-vitl'],
     'UniDepthV2': ['vits14', 'vitb14', 'vitl14'],
-    'UniDepthV1': ['vitl14', 'v1-cnvnxtl']
+    'UniDepthV2Calib': ['vits14', 'vitb14', 'vitl14'],
+    'UniDepthV1': ['vitl14', 'v1-cnvnxtl'],
+    'UniDepthV1Calib': ['vitl14', 'v1-cnvnxtl']
     }
 
 
@@ -44,6 +47,7 @@ def get_mde_model(model_name, weights):
         return MoGe(weights, version=2, requires_intrinsics=False)
     elif model_name == 'MoGeV2Calib':
         return MoGe(weights, version=2, requires_intrinsics=True)
+        return MoGe(weights, version=2, requires_intrinsics=True)
 
     elif model_name == 'MoGeV1':
         return MoGe(weights, version=1, requires_intrinsics=False)
@@ -54,6 +58,11 @@ def get_mde_model(model_name, weights):
         return UniDepth(weights, version=1)
     elif model_name == 'UniDepthV2':
         return UniDepth(weights, version=2)
+
+    elif model_name == 'UniDepthV1Calib':
+        return UniDepth(weights, version=1, requires_intrinsics=True)
+    elif model_name == 'UniDepthV2Calib':
+        return UniDepth(weights, version=2, requires_intrinsics=True)
 
     elif model_name == 'DepthAnythingV3':
         return DepthAnything(weights, version=3)
@@ -129,6 +138,8 @@ def run(args):
                     infer_depth(model, args)
                 except Exception as e:
                     print(f"Model {model_name} with weights {weights} failed with error: {e}")
+                    traceback.print_exc()
+
                     failed_models.append((model_name, weights))
 
         print(f'Inference failed for some cases: {failed_models}')
