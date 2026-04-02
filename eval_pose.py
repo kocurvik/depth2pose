@@ -30,6 +30,7 @@ def parse_args():
     parser.add_argument('-sf',  '--include_shared_focal', action='store_true', default=False)
     parser.add_argument('-vf',  '--include_varying_focal', action='store_true', default=False)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
+    parser.add_argument('--recalc', action='store_true', default=False)
     parser.add_argument('-nw', '--num_workers', type=int, default=1)
     parser.add_argument('-l', '--load', action='store_true', default=False)
     parser.add_argument('-f', '--first', type=int, default=None)
@@ -357,7 +358,15 @@ if __name__ == '__main__':
     if args.depth is None:
         mde_list = [x.split('_depth_')[1].split('.h5')[0] for x in os.listdir(args.data_path)
                     if x.startswith(f'{args.name}_depth_') and x.endswith('.h5')]
+
         for depth_name in mde_list:
+            print(f"Checking if MDE {depth_name} results are available!")
+            basename = f'{args.name}_{args.matches}_{args.depth}_{args.sampson_threshold}t_{args.reprojection_threshold}r'
+            h5_path = os.path.join(args.data_path, f'full_results/{basename}.h5')
+            if os.path.exists(h5_path) and not args.recalc:
+                print(f"Results in {h5_path} available. Skipping")
+                continue
+
             print(f"Running for MDE: {depth_name}")
             args.depth = depth_name
             try:
