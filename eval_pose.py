@@ -13,13 +13,8 @@ import poselib
 from tqdm import tqdm
 
 from utils.geometry import R_err_fun, t_err_fun, get_kp_depth
-<<<<<<< HEAD
 from mdrpbench.utils.multiprocess import NoDaemonProcessPool
 from utils.results import save_summary_results, print_results_all
-=======
-from utils.multiprocessing import NoDaemonProcessPool
-from utils.results import save_summary_results, print_results_all, save_full_results, load_full_results
->>>>>>> refs/remotes/origin/main
 from utils.system_info import save_metadata
 
 MDE_K_WARNING_SHOWN = False
