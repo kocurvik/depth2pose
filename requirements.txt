@@ -19,6 +19,8 @@ cycler==0.12.1
 dash==4.1.0
 decorator==4.4.2
 depth-anything-3 @ git+https://github.com/ByteDance-Seed/Depth-Anything-3.git@41736238f5bced4debf3f2a12375d2466874866d
+depth-anything-v2 @ git+https://github.com/badayvedat/Depth-Anything-V2.git@2ca8cd3dd7dc8b0a7386126ad65e58c7fc44e925
+depth_pro @ git+https://github.com/apple/ml-depth-pro@9efe5c1def37a26c5367a71df664b18e1306c708
 distlib==0.4.0
 docker-pycreds==0.4.0
 e3nn==0.6.0
@@ -45,7 +47,6 @@ huggingface_hub==1.8.0
 identify==2.6.18
 ImageIO==2.37.3
 imageio-ffmpeg==0.6.0
-importlib_metadata==9.0.0
 ipython==8.39.0
 ipywidgets==8.1.8
 itsdangerous==2.2.0
@@ -153,6 +154,7 @@ triton==3.0.0
 typer==0.24.1
 tzdata==2025.3
 unidepth @ git+https://github.com/lpiccinelli-eth/UniDepth@8d8cfe4c7ee15297099983607febf0d4f32eb3d6
+unik3d @ git+https://github.com/kocurvik/UniK3D@9042169b98d9f68357a504150640e0e13c1b0a08
 utils3d @ git+https://github.com/EasternJournalist/utils3d.git@3fab839f0be9931dac7c8488eb0e1600c236e183
 uvicorn==0.42.0
 virtualenv==21.2.0
@@ -160,5 +162,4 @@ wcwidth==0.6.0
 Werkzeug==3.1.7
 widgetsnbextension==4.0.15
 xformers==0.0.28
-zipp==3.23.0
 zstandard==0.25.0

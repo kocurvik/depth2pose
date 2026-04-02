@@ -16,4 +16,8 @@ dependencies:
   - certifi
   - cmake
   - eigen
+  - mmengine
+  - mmcv
+  - yapf
+  - termcolor
 prefix: /home/kocurvik/mambaforge/envs/mdrpbench
