@@ -1,0 +1,23 @@
+name: mdrpbench
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - h5py
+  - ca-certificates
+  - openssl
+  - scipy
+  - tqdm
+  - psutil
+  - gitpython
+  - einops
+  - wandb
+  - loguru
+  - certifi
+  - cmake
+  - eigen
+  - mmengine
+  - mmcv
+  - yapf
+  - termcolor
+prefix: /home/kocurvik/mambaforge/envs/mdrpbench
