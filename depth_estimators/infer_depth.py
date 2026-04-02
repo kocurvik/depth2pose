@@ -7,6 +7,9 @@ import traceback
 
 from tqdm import tqdm
 
+import torch
+torch.backends.cudnn.benchmark = True  # Pick fastest kernels
+
 from depth_estimators.Metric3D import Metric3D
 from depth_estimators.DepthAnything import DepthAnything
 from depth_estimators.MoGe import MoGe
@@ -16,11 +19,10 @@ from depth_estimators.DepthPro import DepthPro
 from utils.system_info import save_metadata
 
 ALL_MDEs = {
-    'DepthPro': ['vitl'],
-    'DepthProCalib': ['vitl'],
     'UniK3D': ['vitl'],
     'UniK3DCalib': ['vitl'],
     'Metric3DV2': ['vit_small', 'vit_large', 'vit_giant2'],
+    'DepthAnythingV2': ['vits', 'vitb', 'vitl'],
     'DepthAnythingV3': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'DepthAnythingV3Calib': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'MoGeV1': ['moge-vitl'],
@@ -29,8 +31,10 @@ ALL_MDEs = {
     'MoGeV2Calib': ['moge-2-vitl'],
     'UniDepthV2': ['vits14', 'vitb14', 'vitl14'],
     'UniDepthV2Calib': ['vits14', 'vitb14', 'vitl14'],
-    'UniDepthV1': ['vitl14', 'v1-cnvnxtl'],
-    'UniDepthV1Calib': ['vitl14', 'v1-cnvnxtl']
+    'UniDepthV1': ['vitl14', 'cnvnxtl'],
+    'UniDepthV1Calib': ['vitl14', 'cnvnxtl'],
+    'DepthPro': ['vitl'],
+    'DepthProCalib': ['vitl'],
     }
 
 
@@ -84,6 +88,8 @@ def get_mde_model(model_name, weights):
     elif model_name == 'UniDepthV2Calib':
         return UniDepth(weights, version=2, requires_intrinsics=True)
 
+    elif model_name == 'DepthAnythingV2':
+        return DepthAnything(weights, version=2)
     elif model_name == 'DepthAnythingV3':
         return DepthAnything(weights, version=3)
     elif model_name == 'DepthAnythingV3Calib':

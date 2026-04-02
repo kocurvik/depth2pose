@@ -6,7 +6,6 @@ import numpy as np
 import torch
 from depth_estimators.base import BaseDepthEstimator
 
-
 class DepthPro(BaseDepthEstimator):
     def __init__(self, checkpoint_name, *args, version=1, requires_intrinsics=False, max_dim=None, **kwargs):
         super().__init__(*args, max_dim=max_dim, requires_intrinsics=requires_intrinsics, **kwargs)
@@ -17,8 +16,10 @@ class DepthPro(BaseDepthEstimator):
 
     def load_model(self):
         if self.version == 1:
-            self.model, self.transform = depth_pro.create_model_and_transforms(device=torch.device('cuda'))
-            self.model.cuda().eval()
+            # torch.set_float32_matmul_precision('high')
+            model, self.transform = depth_pro.create_model_and_transforms(device=torch.device('cuda'))
+            self.model = torch.compile(model, mode="reduce-overhead").eval()
+
         else:
             raise ValueError("DepthPro available only in v1")
 
@@ -29,6 +30,8 @@ class DepthPro(BaseDepthEstimator):
         return f'DepthPro-{self.checkpoint_name}'
 
     def infer(self, image, size=None, **kwargs):
+
+
         if self.requires_intrinsics and 'K' not in kwargs.keys():
             raise ValueError("Intrinsics are required as input to inference when UniDepth is used with known focal")
 
@@ -42,10 +45,11 @@ class DepthPro(BaseDepthEstimator):
             f_px = None
 
 
-        transformed_image = self.transform(image).cuda()
-        start_time = perf_counter_ns()
-        prediction = self.model.infer(transformed_image, f_px=f_px)
-        runtime = perf_counter_ns() - start_time
+        with torch.autocast('cuda'):
+            transformed_image = self.transform(image).cuda()
+            start_time = perf_counter_ns()
+            prediction = self.model.infer(transformed_image, f_px=f_px)
+            runtime = perf_counter_ns() - start_time
 
         depth = prediction["depth"]  # Depth in [m].
         focallength_px = prediction["focallength_px"].cpu().numpy()[()]
