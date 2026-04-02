@@ -53,7 +53,7 @@ def print_results_focal(metrics):
 
 
 def print_results_all(args):
-    json_path = f'summary_results/{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r.json'
+    json_path = os.path.join(args.data_path,f'{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r.json')
     with open(json_path, 'r') as f:
         all_metrics = json.load(f)
 
