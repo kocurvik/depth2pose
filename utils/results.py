@@ -1,6 +1,7 @@
 import json
 import os
 
+import h5py
 import numpy as np
 from matplotlib import pyplot as plt
 from prettytable import PrettyTable
@@ -69,6 +70,8 @@ def print_results_all(args):
                          m['pose_mAA_10'], m['f_mAA_10'], m['mean_runtime'], m['mean_inliers']])
     print(tab)
 
+def print_results_depth()
+
 
 def draw_cumplots(experiments, results):
     plt.figure()
@@ -110,3 +113,40 @@ def save_summary_results(experiments, full_results, mde_runtimes, args):
         summary_dict[args.depth] = metrics
     with open(json_path, 'w') as f:
         json.dump(summary_dict, f, indent=4)
+
+
+def save_full_results(f_results, full_results):
+    for result in full_results:
+        # write into f_results the result in group by image_name_1_image_name_2
+        group_name = f"{result['image_name_1']}-{result['image_name_2']}"
+        if group_name not in f_results:
+            group = f_results.create_group(group_name)
+        else:
+            group = f_results[group_name]
+
+        exp_group = group.create_group(result['experiment'])
+        for key, value in result.items():
+            if key in ['experiment', 'image_name_1', 'image_name_2']:
+                continue
+            if isinstance(value, dict):
+                # Handle nested info dict
+                info_group = exp_group.create_group(key)
+                for k, v in value.items():
+                    info_group.create_dataset(k, data=v)
+            else:
+                exp_group.create_dataset(key, data=value)
+
+
+def load_full_results(f_results):
+    full_results = []
+    for group_name in f_results.keys():
+        group = f_results[group_name]
+        for exp_name in group.keys():
+            exp_group = group[exp_name]
+            res = {'experiment': exp_name}
+            for key in exp_group.keys():
+                if isinstance(exp_group[key], h5py.Group):
+                    res[key] = {k: np.array(v) for k, v in exp_group[key].items()}
+                else:
+                    res[key] = np.array(exp_group[key])
+            full_results.append(res)

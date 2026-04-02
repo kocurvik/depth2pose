@@ -13,7 +13,7 @@ import poselib
 from tqdm import tqdm
 
 from utils.geometry import R_err_fun, t_err_fun, get_kp_depth
-from utils.multiprocessing import NoDaemonProcessPool
+from mdrpbench.utils.multiprocess import NoDaemonProcessPool
 from utils.results import save_summary_results, print_results_all
 from utils.system_info import save_metadata
 
@@ -30,6 +30,7 @@ def parse_args():
     parser.add_argument('-sf',  '--include_shared_focal', action='store_true', default=False)
     parser.add_argument('-vf',  '--include_varying_focal', action='store_true', default=False)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
+    parser.add_argument('--recalc', action='store_true', default=False)
     parser.add_argument('-nw', '--num_workers', type=int, default=1)
     parser.add_argument('-l', '--load', action='store_true', default=False)
     parser.add_argument('-f', '--first', type=int, default=None)
@@ -197,7 +198,7 @@ def get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt):
     return d1, d2
 
 
-def eval(args):
+def eval_single_mde(args):
     experiments = ['calib']
 
     if args.include_mde_K:
@@ -221,8 +222,7 @@ def eval(args):
     if args.include_baseline_solver:
         experiments.append('baseline')
 
-    print(experiments)
-
+    print(f"Running: {experiments}")
 
     basename = f'{args.name}_{args.matches}_{args.depth}_{args.sampson_threshold}t_{args.reprojection_threshold}r'
 
@@ -232,25 +232,11 @@ def eval(args):
     h5_path = os.path.join(args.data_path, f'full_results/{basename}.h5')
 
     if args.load:
-        print("Loading: ", h5_path)
-        f_results = h5py.File(h5_path, 'r')
-        full_results = []
-        for group_name in f_results.keys():
-            group = f_results[group_name]
-            for exp_name in group.keys():
-                exp_group = group[exp_name]
-                res = {'experiment': exp_name}
-                for key in exp_group.keys():
-                    if isinstance(exp_group[key], h5py.Group):
-                        res[key] = {k: np.array(v) for k, v in exp_group[key].items()}
-                    else:
-                        res[key] = np.array(exp_group[key])
-                full_results.append(res)
+        print("Loading: ", h5_path)        
+        with h5py.File(h5_path, 'r') as f_results:
+            load_full_results(f_results)
     else:
         name_path = os.path.join(args.data_path, args.name)
-
-        f_results = h5py.File(h5_path, 'w')
-        save_metadata(f_results)
 
         image_pair_list_path = f'{name_path}_image_pairs.txt'
         with open(image_pair_list_path, 'r') as f:
@@ -259,14 +245,33 @@ def eval(args):
         image_list_path = f'{name_path}_image_list.txt'
         with open(image_list_path, 'r') as f:
             image_list = [x.strip() for x in f.readlines()]
+        
+        with h5py.File(f'{name_path}.h5') as f_images_h5:        
+            f_images = {}
+            for image_name in image_list:
+                f_images[f'{image_name}_K'] = np.array(f_images_h5[f'{image_name}_K'])
+                f_images[f'{image_name}_R'] = np.array(f_images_h5[f'{image_name}_R'])
+                f_images[f'{image_name}_T'] = np.array(f_images_h5[f'{image_name}_T'])
+            
+        with h5py.File(f'{name_path}_{args.matches}.h5') as f_matches_h5:
+            f_matches = {}
+            for image_name_1, image_name_2 in pair_list:
+                f_matches[f"{image_name_1}-{image_name_2}"] = np.array(f_matches_h5[f"{image_name_1}-{image_name_2}"])
 
-        f_images = h5py.File(f'{name_path}.h5')
-        f_matches = h5py.File(f'{name_path}_{args.matches}.h5')
-        if args.depth != 'gt':
-            f_depth = h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r')
-            if 'completed' not in f_depth:
-                raise ValueError(f'{name_path}_depth_{args.depth}.h5 does not have the completed. Aborting.')
-            mde_runtimes = [f_depth[f'{x}_runtime'][()] / 1e6 for x in image_list]
+        
+        if args.depth != 'gt':            
+            with h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r') as f_depth_h5:
+                if 'completed' not in f_depth_h5:
+                    raise ValueError(f'{name_path}_depth_{args.depth}.h5 does not have the completed tag. Aborting.')
+
+                mde_runtimes = [f_depth_h5[f'{x}_runtime'][()] / 1e6 for x in image_list]
+                
+                f_depth = {}
+                for image_name in image_list:
+                    f_depth[f'{image_name}_depth'] = np.array(f_depth_h5[f'{image_name}_depth'])
+                    if f'{image_name}_K' in f_depth_h5:
+                        f_depth[f'{image_name}_K'] = np.array(f_depth_h5[f'{image_name}_K'])
+            
         else:
             f_depth = None
             mde_runtimes = [0 for x in image_list]
@@ -294,8 +299,8 @@ def eval(args):
                 kp2 = kps[:, 2:4]
 
                 if args.depth != 'gt':
-                    depth_map1 = np.array(f_depth[f'{img_name_1}_depth'])
-                    depth_map2 = np.array(f_depth[f'{img_name_2}_depth'])
+                    depth_map1 = f_depth[f'{img_name_1}_depth']
+                    depth_map2 = f_depth[f'{img_name_2}_depth']
 
                     d1 = get_kp_depth(kp1, depth_map1, interpolation='nearest')
                     d2 = get_kp_depth(kp2, depth_map2, interpolation='nearest')
@@ -341,34 +346,11 @@ def eval(args):
                 pool = Pool(args.num_workers)
                 full_results = [x for x in pool.imap(eval_experiment, tqdm(gen_data(), total=total_length))]
 
-        save_full_results(f_results, full_results)
-        f_results.close()
+        with h5py.File(h5_path, 'w') as f_results:
+            save_metadata(f_results)
+            save_full_results(f_results, full_results)        
 
         save_summary_results(experiments, full_results, mde_runtimes, args)
-
-    # draw_cumplots(experiments, full_results)
-
-
-def save_full_results(f_results, full_results):
-    for result in full_results:
-        # write into f_results the result in group by image_name_1_image_name_2
-        group_name = f"{result['image_name_1']}-{result['image_name_2']}"
-        if group_name not in f_results:
-            group = f_results.create_group(group_name)
-        else:
-            group = f_results[group_name]
-
-        exp_group = group.create_group(result['experiment'])
-        for key, value in result.items():
-            if key in ['experiment', 'image_name_1', 'image_name_2']:
-                continue
-            if isinstance(value, dict):
-                # Handle nested info dict
-                info_group = exp_group.create_group(key)
-                for k, v in value.items():
-                    info_group.create_dataset(k, data=v)
-            else:
-                exp_group.create_dataset(key, data=value)
 
 
 if __name__ == '__main__':
@@ -376,11 +358,19 @@ if __name__ == '__main__':
     if args.depth is None:
         mde_list = [x.split('_depth_')[1].split('.h5')[0] for x in os.listdir(args.data_path)
                     if x.startswith(f'{args.name}_depth_') and x.endswith('.h5')]
+
         for depth_name in mde_list:
+            print(f"Checking if MDE {depth_name} results are available!")
+            basename = f'{args.name}_{args.matches}_{args.depth}_{args.sampson_threshold}t_{args.reprojection_threshold}r'
+            h5_path = os.path.join(args.data_path, f'full_results/{basename}.h5')
+            if os.path.exists(h5_path) and not args.recalc:
+                print(f"Results in {h5_path} available. Skipping")
+                continue
+
             print(f"Running for MDE: {depth_name}")
             args.depth = depth_name
             try:
-                eval(args)
+                eval_single_mde(args)
             except ValueError as e:
                 print(e)
                 print("Skipping...")
@@ -389,8 +379,8 @@ if __name__ == '__main__':
         print("Running for GT depth")
         args.depth = 'gt'
         args.include_baseline_solver = True
-        eval(args)
+        eval_single_mde(args)
 
         print_results_all(args)
     else:
-        eval(args)
+        eval_single_mde(args)
