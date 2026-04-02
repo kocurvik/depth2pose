@@ -70,6 +70,8 @@ def print_results_all(args):
                          m['pose_mAA_10'], m['f_mAA_10'], m['mean_runtime'], m['mean_inliers']])
     print(tab)
 
+def print_results_depth()
+
 
 def draw_cumplots(experiments, results):
     plt.figure()

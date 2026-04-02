@@ -16,4 +16,3 @@ dependencies:
   - certifi
   - cmake
   - eigen
-prefix: /home/kocurvik/mambaforge/envs/mdrpbench
