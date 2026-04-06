@@ -17,4 +17,7 @@ pip install --no-deps git+https://github.com/badayvedat/Depth-Anything-V2.git@ba
 wget "https://huggingface.co/depth-anything/Depth-Anything-V2-Small/resolve/main/depth_anything_v2_vits.pth?download=true" -O checkpoints/depth_anything_v2_vits.pth
 wget "https://huggingface.co/depth-anything/Depth-Anything-V2-Base/resolve/main/depth_anything_v2_vitb.pth?download=true" -O checkpoints/depth_anything_v2_vitb.pth
 wget "https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth?download=true" -O checkpoints/depth_anything_v2_vitl.pth
+
+# poselib with all solvers
+pip install git+https://github.com/kocurvik/PoseLib.git@mdrpbench
 ```

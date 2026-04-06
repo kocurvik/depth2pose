@@ -13,8 +13,8 @@ import poselib
 from tqdm import tqdm
 
 from utils.geometry import R_err_fun, t_err_fun, get_kp_depth
-from mdrpbench.utils.multiprocess import NoDaemonProcessPool
-from utils.results import save_summary_results, print_results_all
+from utils.mp import NoDaemonProcessPool
+from utils.results import save_summary_results, print_results_all, save_full_results
 from utils.system_info import save_metadata
 
 MDE_K_WARNING_SHOWN = False
@@ -42,7 +42,7 @@ def parse_args():
 
     return parser.parse_args()
 
-def get_result_dict(info, monodepth_pose, R_gt, t_gt, f1_gt, f2_gt, camera1=None, camera2=None):
+def get_result_dict(info, monodepth_pose, R_gt, t_gt, f1_gt, f2_gt):
     out = {}
 
     pose_est = monodepth_pose.geometry.pose
@@ -55,10 +55,8 @@ def get_result_dict(info, monodepth_pose, R_gt, t_gt, f1_gt, f2_gt, camera1=None
     out['f1_gt'] = f1_gt
     out['f2_gt'] = f2_gt
 
-    if camera1 is None:
-        camera1 = monodepth_pose.camera1
-    if camera2 is None:
-        camera2 = monodepth_pose.camera2
+    camera1 = monodepth_pose.camera1
+    camera2 = monodepth_pose.camera2
     out['f1'] = camera1.focal()
     out['f2'] = camera2.focal()
     out['R_err'] = R_err_fun(R_est, R_gt)
@@ -86,9 +84,12 @@ def eval_experiment(x):
     f1_gt = (K1_gt[0, 0] + K1_gt[1, 1]) / 2
     f2_gt = (K2_gt[0, 0] + K2_gt[1, 1]) / 2
 
+    pp1 = K1_gt[:2, 2]
+    pp2 = K2_gt[:2, 2]
+
     shift = 'shift' in experiment
 
-    bundle_dict = {'max_iterations': 100, 'verbose': False}
+    bundle_dict = {'max_iterations': 0, 'verbose': False, 'loss_type': 'TRUNCATED_CAUCHY'}
     ransac_dict = {'max_iterations': 1000, 'min_iterations': 1000, 'progressive_sampling': False}
 
     if 'mdecalib' in experiment:
@@ -106,9 +107,32 @@ def eval_experiment(x):
     camera1 = poselib.Camera(camera1)
     camera2 = poselib.Camera(camera2)
 
-    if 'calib' in experiment:
-        bundle_dict['loss_type'] = 'TRUNCATED_CAUCHY'
-        monodepth_dict = {'max_errors': [r, t], 'estimate_shift': shift, 'ransac': ransac_dict}
+    monodepth_dict = {'max_errors': [r, t], 'estimate_shift': shift, 'ransac': ransac_dict}
+
+    if 'baseline_calib' == experiment:
+        bundle_dict['loss_type'] = 'CAUCHY'
+        relpose_dict = {'max_error': t, 'ransac': ransac_dict, 'bundle': bundle_dict}
+        start_time = perf_counter_ns()
+        pose, info = poselib.estimate_relative_pose(kp1, kp2, camera1, camera2, relpose_dict)
+        runtime = perf_counter_ns() - start_time
+        monodepth_pair = poselib.MonoDepthImagePair(poselib.MonoDepthTwoViewGeometry(pose), camera1, camera2)
+    elif 'baseline_sf' == experiment:
+        bundle_dict['loss_type'] = 'CAUCHY'
+        relpose_dict = {'max_error': t, 'ransac': ransac_dict, 'bundle': bundle_dict}
+        start_time = perf_counter_ns()
+        image_pair, info = poselib.estimate_shared_focal_relative_pose(kp1, kp2, (pp1 + pp2) / 2, relpose_dict)
+        runtime = perf_counter_ns() - start_time
+        monodepth_pair = poselib.MonoDepthImagePair(poselib.MonoDepthTwoViewGeometry(image_pair.pose),
+                                                    image_pair.camera1, image_pair.camera2)
+    elif 'baseline_vf' == experiment:
+        bundle_dict['loss_type'] = 'CAUCHY'
+        relpose_dict = {'max_error': t, 'ransac': ransac_dict, 'bundle': bundle_dict}
+        start_time = perf_counter_ns()
+        image_pair, info = poselib.estimate_varying_focal_relative_pose(kp1, kp2, pp1, pp2, relpose_dict)
+        runtime = perf_counter_ns() - start_time
+        monodepth_pair = poselib.MonoDepthImagePair(poselib.MonoDepthTwoViewGeometry(image_pair.pose),
+                                                    image_pair.camera1, image_pair.camera2)
+    elif 'calib' in experiment:
         start_time = perf_counter_ns()
         monodepth_pose, info = poselib.estimate_monodepth_relative_pose(kp1, kp2, d1, d2,
                                                                         camera1, camera2,
@@ -117,18 +141,27 @@ def eval_experiment(x):
 
         monodepth_pair = poselib.MonoDepthImagePair(monodepth_pose, camera1, camera2)
 
-    if 'baseline' == experiment:
-        relpose_dict = {'max_error': t, 'ransac': ransac_dict, 'bundle': bundle_dict}
+    elif 'sf' in experiment:
         start_time = perf_counter_ns()
-        pose, info = poselib.estimate_relative_pose(kp1, kp2, camera1, camera2, relpose_dict)
+        monodepth_pair, info = poselib.estimate_monodepth_shared_focal_relative_pose(kp1 - pp1, kp2 - pp2, d1, d2,
+                                                                                     monodepth_dict)
         runtime = perf_counter_ns() - start_time
-        monodepth_pair = poselib.MonoDepthImagePair(poselib.MonoDepthTwoViewGeometry(pose), camera1, camera2)
 
-    result_dict = get_result_dict(info, monodepth_pair, R_gt, t_gt, f1_gt, f2_gt, camera1=camera1, camera2=camera2)
+    elif 'vf' in experiment:
+        start_time = perf_counter_ns()
+        monodepth_pair, info = poselib.estimate_monodepth_varying_focal_relative_pose(kp1 - pp1, kp2 - pp2, d1, d2,
+                                                                                      monodepth_dict)
+        runtime = perf_counter_ns() - start_time
+
+    result_dict = get_result_dict(info, monodepth_pair, R_gt, t_gt, f1_gt, f2_gt)
     result_dict['experiment'] = experiment
     result_dict['runtime'] = runtime
     result_dict['image_name_1'] = img_name_1
     result_dict['image_name_2'] = img_name_2
+
+    # if runtime / 1e6 > 300:
+    #     print(info)
+    # print(f'For experimet: {experiment} runtime: {runtime / 1e6}')
 
     return result_dict
 
@@ -202,7 +235,10 @@ def eval_single_mde(args):
     experiments = ['calib']
 
     if args.include_mde_K:
-        experiments.append('mdecalib')
+        if 'Calib' in args.depth:
+            print("Solver using MDE inferred camera params requested, but MDE used GT calibration. Skipping.")
+        else:
+            experiments.append('mdecalib')
 
     if args.include_shared_focal:
         if 'Calib' in args.depth:
@@ -220,7 +256,13 @@ def eval_single_mde(args):
         experiments.extend([f'{x}_shift' for x in experiments])
 
     if args.include_baseline_solver:
-        experiments.append('baseline')
+        experiments.append('baseline_calib')
+
+        if args.include_shared_focal:
+            experiments.append('baseline_sf')
+
+        if args.include_varying_focal:
+            experiments.append('baseline_vf')
 
     print(f"Running: {experiments}")
 
@@ -360,15 +402,16 @@ if __name__ == '__main__':
                     if x.startswith(f'{args.name}_depth_') and x.endswith('.h5')]
 
         for depth_name in mde_list:
+            args.depth = depth_name
             print(f"Checking if MDE {depth_name} results are available!")
-            basename = f'{args.name}_{args.matches}_{args.depth}_{args.sampson_threshold}t_{args.reprojection_threshold}r'
+            basename = f'{depth_name}_{args.matches}_{args.depth}_{args.sampson_threshold}t_{args.reprojection_threshold}r'
             h5_path = os.path.join(args.data_path, f'full_results/{basename}.h5')
             if os.path.exists(h5_path) and not args.recalc:
                 print(f"Results in {h5_path} available. Skipping")
                 continue
 
             print(f"Running for MDE: {depth_name}")
-            args.depth = depth_name
+
             try:
                 eval_single_mde(args)
             except ValueError as e:
