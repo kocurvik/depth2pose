@@ -35,6 +35,7 @@ def parse_args():
     parser.add_argument('-l', '--load', action='store_true', default=False)
     parser.add_argument('-f', '--first', type=int, default=None)
     parser.add_argument('--depth', type=str, default=None)
+    parser.add_argument('--explicit_solvers', type=str, default=None)
     parser.add_argument('data_path')
     parser.add_argument('name')
     parser.add_argument('matches')
@@ -232,37 +233,7 @@ def get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt):
 
 
 def eval_single_mde(args):
-    experiments = ['calib']
-
-    if args.include_mde_K:
-        if 'Calib' in args.depth:
-            print("Solver using MDE inferred camera params requested, but MDE used GT calibration. Skipping.")
-        else:
-            experiments.append('mdecalib')
-
-    if args.include_shared_focal:
-        if 'Calib' in args.depth:
-            print("Shared focal solver requested, but MDE used GT calibration. Skipping.")
-        else:
-            experiments.append('sf')
-
-    if args.include_varying_focal:
-        if 'Calib' in args.depth:
-            print("Varying focal solver requested, but MDE used GT calibration. Skipping.")
-        else:
-            experiments.append('vf')
-
-    if args.include_shift_solvers:
-        experiments.extend([f'{x}_shift' for x in experiments])
-
-    if args.include_baseline_solver:
-        experiments.append('baseline_calib')
-
-        if args.include_shared_focal:
-            experiments.append('baseline_sf')
-
-        if args.include_varying_focal:
-            experiments.append('baseline_vf')
+    experiments = get_solvers(args)
 
     print(f"Running: {experiments}")
 
@@ -393,6 +364,40 @@ def eval_single_mde(args):
             save_full_results(f_results, full_results)        
 
         save_summary_results(experiments, full_results, mde_runtimes, args)
+
+
+def get_solvers(args):
+    if args.explicit_solvers is not None:
+        experiments = args.explicit_solvers.split(',')
+        return experiments
+
+    experiments = ['calib']
+    if args.include_mde_K:
+        if 'Calib' in args.depth:
+            print("Solver using MDE inferred camera params requested, but MDE used GT calibration. Skipping.")
+        else:
+            experiments.append('mdecalib')
+    if args.include_shared_focal:
+        if 'Calib' in args.depth:
+            print("Shared focal solver requested, but MDE used GT calibration. Skipping.")
+        else:
+            experiments.append('sf')
+    if args.include_varying_focal:
+        if 'Calib' in args.depth:
+            print("Varying focal solver requested, but MDE used GT calibration. Skipping.")
+        else:
+            experiments.append('vf')
+    if args.include_shift_solvers:
+        experiments.extend([f'{x}_shift' for x in experiments])
+    if args.include_baseline_solver:
+        experiments.append('baseline_calib')
+
+        if args.include_shared_focal:
+            experiments.append('baseline_sf')
+
+        if args.include_varying_focal:
+            experiments.append('baseline_vf')
+    return experiments
 
 
 if __name__ == '__main__':
