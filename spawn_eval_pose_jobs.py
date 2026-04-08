@@ -4,7 +4,7 @@ import os
 import submitit
 
 from eval_pose import eval_single_mde
-from utils.results import get_basename
+from utils.results import get_basename, get_full_results_h5_path
 
 
 def parse_args():
@@ -80,8 +80,12 @@ def main():
 
     array_job_arguments = []
 
-    for depth_name in depths_to_run:
+    for depth_name in mde_list:
         job_args = copy.copy(args)
+        h5_path = get_full_results_h5_path(args)
+        if os.path.exists(h5_path) and not args.recalc:
+            print(f"Results for {depth_name} already available at {h5_path}. Skipping.")
+            continue
         job_args.depth = depth_name
         array_job_arguments.append(job_args)
 

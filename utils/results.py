@@ -116,10 +116,7 @@ def save_summary_results(experiments, full_results, mde_runtimes, args):
 def save_full_results(args, full_results):
     # Cache groups to avoid repeated lookups and string formatting
 
-    results_dir = get_results_dir(args, 'full')
-
-    os.makedirs(results_dir, exist_ok=True)
-    h5_path = os.path.join(results_dir, f'{args.depth}.h5')
+    h5_path = get_full_results_h5_path(args)
 
     with h5py.File(h5_path, 'w') as f_results:
         save_metadata(f_results)
@@ -140,6 +137,13 @@ def save_full_results(args, full_results):
                         info_group.create_dataset(k, data=v)
                 else:
                     exp_group.create_dataset(key, data=value)
+
+
+def get_full_results_h5_path(args):
+    results_dir = get_results_dir(args, 'full')
+    os.makedirs(results_dir, exist_ok=True)
+    h5_path = os.path.join(results_dir, f'{args.depth}.h5')
+    return h5_path
 
 
 def merge_summary_results(args):

@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from utils.geometry import R_err_fun, t_err_fun, get_kp_depth
 from utils.mp import NoDaemonProcessPool
-from utils.results import save_summary_results, print_results_all, save_full_results
+from utils.results import save_summary_results, print_results_all, save_full_results, get_full_results_h5_path
 from utils.system_info import save_metadata
 
 MDE_K_WARNING_SHOWN = False
@@ -407,8 +407,7 @@ if __name__ == '__main__':
         for depth_name in mde_list:
             args.depth = depth_name
             print(f"Checking if MDE {depth_name} results are available!")
-            basename = f'{depth_name}_{args.matches}_{args.depth}_{args.sampson_threshold}t_{args.reprojection_threshold}r'
-            h5_path = os.path.join(args.data_path, f'full_results/{basename}.h5')
+            h5_path = get_full_results_h5_path(args)
             if os.path.exists(h5_path) and not args.recalc:
                 print(f"Results in {h5_path} available. Skipping")
                 continue
