@@ -66,7 +66,7 @@ def main():
         mem_gb=args.mem_gb,
         timeout_min=args.timeout_min,
         cpus_per_task=args.num_workers,
-        setup=['export GIT_PYTHON_REFRESH=quiet'],
+        setup=['module load git'],
     )
 
     mde_list = [
