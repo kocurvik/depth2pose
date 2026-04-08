@@ -113,20 +113,19 @@ def save_summary_results(experiments, full_results, mde_runtimes, args):
 
 
 def save_full_results(f_results, full_results):
+    # Cache groups to avoid repeated lookups and string formatting
+    group_cache = {}
     for result in full_results:
-        # write into f_results the result in group by image_name_1_image_name_2
         group_name = f"{result['image_name_1']}-{result['image_name_2']}"
-        if group_name not in f_results:
-            group = f_results.create_group(group_name)
-        else:
-            group = f_results[group_name]
+        if group_name not in group_cache:
+            group_cache[group_name] = f_results.require_group(group_name)
+        group = group_cache[group_name]
 
         exp_group = group.create_group(result['experiment'])
         for key, value in result.items():
-            if key in ['experiment', 'image_name_1', 'image_name_2']:
+            if key in ('experiment', 'image_name_1', 'image_name_2'):
                 continue
             if isinstance(value, dict):
-                # Handle nested info dict
                 info_group = exp_group.create_group(key)
                 for k, v in value.items():
                     info_group.create_dataset(k, data=v)
