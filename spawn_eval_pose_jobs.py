@@ -40,11 +40,14 @@ def parse_args():
                         help='Directory for submitit logs (default: <data_path>/slurm_logs)')
     return parser.parse_args()
 
+load_git = submitit.helpers.CommandFunction(["module", "load git"])
 
 def run_for_depth(args):
     if args.depth == 'gt':
         args.include_baseline_solver = True
-    subprocess.run('module load git')
+
+    load_git()
+
     eval_single_mde(args)
 
 
