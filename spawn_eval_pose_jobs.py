@@ -1,11 +1,10 @@
 import argparse
 import copy
 import os
-import subprocess
-import sys
 import submitit
 
 from eval_pose import eval_single_mde
+from utils.results import get_basename
 
 
 def parse_args():
@@ -45,11 +44,6 @@ def run_for_depth(args):
     if args.depth == 'gt':
         args.include_baseline_solver = True
     eval_single_mde(args)
-
-
-def get_basename(args, depth: str) -> str:
-    return (f'{args.name}_{args.matches}_{depth}'
-            f'_{args.sampson_threshold}t_{args.reprojection_threshold}r')
 
 
 def main():

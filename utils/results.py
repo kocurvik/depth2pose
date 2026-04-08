@@ -3,8 +3,11 @@ import os
 
 import h5py
 import numpy as np
+from gitdb.util import basename
 from matplotlib import pyplot as plt
 from prettytable import PrettyTable
+
+from utils.system_info import save_metadata
 
 
 def get_summary_metrics(experiments, results):
@@ -90,8 +93,8 @@ def draw_cumplots(experiments, results):
     plt.ylabel('Portion of samples')
 
 
-def get_results_dir(args):
-    return os.path.join(args.data_path, 'summary_results',
+def get_results_dir(args, type='summary'):
+    return os.path.join(args.data_path, f'{type}_results',
                         f'{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r')
 
 
@@ -110,25 +113,33 @@ def save_summary_results(experiments, full_results, mde_runtimes, args):
         json.dump(metrics, f, indent=4)
 
 
-def save_full_results(f_results, full_results):
+def save_full_results(args, full_results):
     # Cache groups to avoid repeated lookups and string formatting
-    group_cache = {}
-    for result in full_results:
-        group_name = f"{result['image_name_1']}-{result['image_name_2']}"
-        if group_name not in group_cache:
-            group_cache[group_name] = f_results.require_group(group_name)
-        group = group_cache[group_name]
 
-        exp_group = group.create_group(result['experiment'])
-        for key, value in result.items():
-            if key in ('experiment', 'image_name_1', 'image_name_2'):
-                continue
-            if isinstance(value, dict):
-                info_group = exp_group.create_group(key)
-                for k, v in value.items():
-                    info_group.create_dataset(k, data=v)
-            else:
-                exp_group.create_dataset(key, data=value)
+    results_dir = get_results_dir(args, 'full')
+
+    os.makedirs(results_dir, exist_ok=True)
+    h5_path = os.path.join(results_dir, f'{args.depth}.h5')
+
+    with h5py.File(h5_path, 'w') as f_results:
+        save_metadata(f_results)
+        group_cache = {}
+        for result in full_results:
+            group_name = f"{result['image_name_1']}-{result['image_name_2']}"
+            if group_name not in group_cache:
+                group_cache[group_name] = f_results.require_group(group_name)
+            group = group_cache[group_name]
+
+            exp_group = group.create_group(result['experiment'])
+            for key, value in result.items():
+                if key in ('experiment', 'image_name_1', 'image_name_2'):
+                    continue
+                if isinstance(value, dict):
+                    info_group = exp_group.create_group(key)
+                    for k, v in value.items():
+                        info_group.create_dataset(k, data=v)
+                else:
+                    exp_group.create_dataset(key, data=value)
 
 
 def merge_summary_results(args):
@@ -180,3 +191,8 @@ if __name__ == '__main__':
     print(f"Unified results written to {output_path}\n")
 
     print_results_all(args, all_metrics)
+
+
+def get_basename(args, depth: str) -> str:
+    return (f'{args.name}_{args.matches}_{depth}'
+            f'_{args.sampson_threshold}t_{args.reprojection_threshold}r')

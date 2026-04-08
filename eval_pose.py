@@ -242,12 +242,11 @@ def eval_single_mde(args):
     os.makedirs(os.path.join(args.data_path, 'full_results'), exist_ok=True)
     os.makedirs(os.path.join(args.data_path, 'summary_results'), exist_ok=True)
 
-    h5_path = os.path.join(args.data_path, f'full_results/{basename}.h5')
-
     if args.load:
-        print("Loading: ", h5_path)        
-        with h5py.File(h5_path, 'r') as f_results:
-            load_full_results(f_results)
+        raise NotImplementedError
+        # print("Loading: ", h5_path)
+        # with h5py.File(h5_path, 'r') as f_results:
+        #     load_full_results(f_results)
     else:
         name_path = os.path.join(args.data_path, args.name)
 
@@ -359,9 +358,8 @@ def eval_single_mde(args):
                 pool = Pool(args.num_workers)
                 full_results = [x for x in pool.imap(eval_experiment, tqdm(gen_data(), total=total_length))]
 
-        with h5py.File(h5_path, 'w') as f_results:
-            save_metadata(f_results)
-            save_full_results(f_results, full_results)        
+
+        save_full_results(args, full_results)
 
         save_summary_results(experiments, full_results, mde_runtimes, args)
 
