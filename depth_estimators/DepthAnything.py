@@ -81,7 +81,7 @@ class DepthAnything(BaseDepthEstimator):
             depth = self.model.infer_image(input_image)
             runtime = perf_counter_ns() - start_time
 
-            return {'depth': depth, 'runtime': runtime}
+            return {'depth': 1.0 / depth, 'runtime': runtime}
 
 
 
