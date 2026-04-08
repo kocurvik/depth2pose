@@ -82,7 +82,7 @@ def main():
 
     for depth_name in mde_list:
         job_args = copy.copy(args)
-        h5_path = get_full_results_h5_path(args)
+        h5_path = get_full_results_h5_path(job_args)
         if os.path.exists(h5_path) and not args.recalc:
             print(f"Results for {depth_name} already available at {h5_path}. Skipping.")
             continue
