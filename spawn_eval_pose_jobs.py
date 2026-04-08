@@ -88,7 +88,7 @@ def main():
     array_job_arguments = []
 
     for depth_name in depths_to_run:
-        job_args = args.copy()
+        job_args = copy.copy(args)
         job_args.depth = depth_name
         array_job_arguments.append(job_args)
 
