@@ -1,6 +1,7 @@
 import argparse
 import copy
 import os
+import subprocess
 import sys
 import submitit
 
@@ -40,12 +41,11 @@ def parse_args():
     return parser.parse_args()
 
 
-def run_for_depth(args, depth: str):
-    job_args = copy.copy(args)
-    job_args.depth = depth
-    if depth == 'gt':
-        job_args.include_baseline_solver = True
-    eval_single_mde(job_args)
+def run_for_depth(args):
+    if args.depth == 'gt':
+        args.include_baseline_solver = True
+    subprocess.run('module load git')
+    eval_single_mde(args)
 
 
 def get_basename(args, depth: str) -> str:
@@ -65,8 +65,7 @@ def main():
         slurm_partition=args.queue,
         mem_gb=args.mem_gb,
         timeout_min=args.timeout_min,
-        cpus_per_task=args.num_workers,
-        setup=['module load git'],
+        cpus_per_task=args.num_workers
     )
 
     mde_list = [
@@ -86,18 +85,14 @@ def main():
 
     depths_to_run.append('gt')
 
-    jobs = []
+    array_job_arguments = []
+
     for depth_name in depths_to_run:
-        basename = get_basename(args, depth_name)
-        executor.update_parameters(
-            slurm_additional_parameters={
-                'output': os.path.join(log_dir, f'{basename}_%j.out'),
-                'error':  os.path.join(log_dir, f'{basename}_%j.err'),
-            }
-        )
-        print(f"Queuing job for depth: {depth_name}")
-        job = executor.submit(run_for_depth, args, depth_name)
-        jobs.append((depth_name, job))
+        job_args = args.copy()
+        job_args.depth = depth_name
+        array_job_arguments.append(job_args)
+
+    jobs = executor.map_array(run_for_depth, array_job_arguments)
 
     print(f"\nSubmitted {len(jobs)} job(s):")
     for depth_name, job in jobs:
