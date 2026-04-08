@@ -95,8 +95,8 @@ def main():
     jobs = executor.map_array(run_for_depth, array_job_arguments)
 
     print(f"\nSubmitted {len(jobs)} job(s):")
-    for depth_name, job in jobs:
-        print(f"  depth={depth_name}  job_id={job.job_id}")
+    for depth_name, job in zip(depths_to_run, jobs):
+        print(f"Depth: {depth_name} job_id={job.job_id}")
 
 
 if __name__ == '__main__':
