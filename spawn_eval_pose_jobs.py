@@ -67,7 +67,7 @@ def main():
         if x.startswith(f'{args.name}_depth_') and x.endswith('.h5')
     ]
 
-    depths_to_run = []
+    depths_to_run = ['gt']
 
     for depth_name in mde_list:
         h5_path = os.path.join(args.data_path, f'full_results/{get_basename(args, depth_name)}.h5')
@@ -75,8 +75,6 @@ def main():
             print(f"Results for {depth_name} already available at {h5_path}. Skipping.")
             continue
         depths_to_run.append(depth_name)
-
-    depths_to_run.append('gt')
 
     array_job_arguments = []
 
