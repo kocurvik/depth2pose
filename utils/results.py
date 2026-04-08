@@ -136,7 +136,7 @@ def merge_summary_results(args):
     results_dir = get_results_dir(args)
     unified = {}
     for fname in sorted(os.listdir(results_dir)):
-        if not fname.endswith('.json'):
+        if not fname.endswith('.json') or fname == 'all.json':
             continue
         depth_name = fname[:-5]
         with open(os.path.join(results_dir, fname), 'r') as f:
