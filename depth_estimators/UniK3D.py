@@ -27,7 +27,7 @@ class UniK3D(BaseDepthEstimator):
     def name(self):
         if self.requires_intrinsics:
             return f'UniK3DCalib-{self.checkpoint_name}'
-        return f'UniKD3-{self.checkpoint_name}'
+        return f'UniK3D-{self.checkpoint_name}'
 
     def infer(self, image, size=None, **kwargs):
         if self.requires_intrinsics and 'K' not in kwargs.keys():
