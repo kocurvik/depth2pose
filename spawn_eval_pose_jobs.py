@@ -1,6 +1,7 @@
 import argparse
 import copy
 import os
+import sys
 import submitit
 
 from eval_pose import eval_single_mde
@@ -53,13 +54,14 @@ def main():
     log_dir = args.log_dir or os.path.join(args.data_path, 'slurm_logs')
     os.makedirs(log_dir, exist_ok=True)
 
-    executor = submitit.AutoExecutor(folder=log_dir)
+    executor = submitit.AutoExecutor(folder=log_dir, python=sys.executable)
     executor.update_parameters(
         slurm_account=args.account,
         slurm_partition=args.queue,
         mem_gb=args.mem_gb,
         timeout_min=args.timeout_min,
         cpus_per_task=args.num_workers,
+        setup=['export GIT_PYTHON_REFRESH=quiet'],
     )
 
     mde_list = [
