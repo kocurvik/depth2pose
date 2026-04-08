@@ -53,11 +53,9 @@ def print_results_focal(metrics):
     print(tab)
 
 
-def print_results_all(args):
-    json_path = os.path.join(args.data_path,'summary_results',
-                             f'{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r.json')
-    with open(json_path, 'r') as f:
-        all_metrics = json.load(f)
+def print_results_all(args, all_metrics=None):
+    if all_metrics is None:
+        all_metrics = merge_summary_results(args)
 
     tab = PrettyTable(['MDE', 'solver', 'median pose err', 'median f err',
                        'pose mAA(10)', 'f mAA(0.1)', 'mean runtime', 'mean inliers'])
@@ -92,24 +90,24 @@ def draw_cumplots(experiments, results):
     plt.ylabel('Portion of samples')
 
 
+def get_results_dir(args):
+    return os.path.join(args.data_path, 'summary_results',
+                        f'{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r')
+
+
 def save_summary_results(experiments, full_results, mde_runtimes, args):
-    json_path = os.path.join(args.data_path, 'summary_results',
-                             f'{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r.json')
+    results_dir = get_results_dir(args)
+    os.makedirs(results_dir, exist_ok=True)
+    json_path = os.path.join(results_dir, f'{args.depth}.json')
+
     metrics = get_summary_metrics(experiments, full_results)
     for exp in experiments:
         metrics[exp]['mean_mde_runtime'] = np.mean(mde_runtimes)
+
     print_results_focal(metrics)
-    if os.path.exists(json_path):
-        with open(json_path, 'r') as f:
-            summary_dict = json.load(f)
-    else:
-        summary_dict = {}
-    if args.depth in summary_dict.keys():
-        summary_dict[args.depth].update(metrics)
-    else:
-        summary_dict[args.depth] = metrics
+
     with open(json_path, 'w') as f:
-        json.dump(summary_dict, f, indent=4)
+        json.dump(metrics, f, indent=4)
 
 
 def save_full_results(f_results, full_results):
@@ -133,6 +131,19 @@ def save_full_results(f_results, full_results):
                 exp_group.create_dataset(key, data=value)
 
 
+def merge_summary_results(args):
+    """Read all per-depth JSONs and merge into a single unified dict."""
+    results_dir = get_results_dir(args)
+    unified = {}
+    for fname in sorted(os.listdir(results_dir)):
+        if not fname.endswith('.json'):
+            continue
+        depth_name = fname[:-5]
+        with open(os.path.join(results_dir, fname), 'r') as f:
+            unified[depth_name] = json.load(f)
+    return unified
+
+
 def load_full_results(f_results):
     full_results = []
     for group_name in f_results.keys():
@@ -146,3 +157,26 @@ def load_full_results(f_results):
                 else:
                     res[key] = np.array(exp_group[key])
             full_results.append(res)
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('data_path')
+    parser.add_argument('name')
+    parser.add_argument('matches')
+    parser.add_argument('-st', '--sampson_threshold', type=float, default=2.0)
+    parser.add_argument('-rt', '--reprojection_threshold', type=float, default=16.0)
+    parser.add_argument('-o', '--output', type=str, default=None,
+                        help='Path to write unified JSON (default: <results_dir>/all.json)')
+    args = parser.parse_args()
+
+    all_metrics = merge_summary_results(args)
+
+    output_path = args.output or os.path.join(get_results_dir(args), 'all.json')
+    with open(output_path, 'w') as f:
+        json.dump(all_metrics, f, indent=4)
+    print(f"Unified results written to {output_path}\n")
+
+    print_results_all(args, all_metrics)
