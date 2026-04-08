@@ -54,7 +54,7 @@ def main():
     log_dir = args.log_dir or os.path.join(args.data_path, 'slurm_logs')
     os.makedirs(log_dir, exist_ok=True)
 
-    executor = submitit.AutoExecutor(folder=log_dir, python=sys.executable)
+    executor = submitit.AutoExecutor(folder=log_dir)
     executor.update_parameters(
         slurm_account=args.account,
         slurm_partition=args.queue,
