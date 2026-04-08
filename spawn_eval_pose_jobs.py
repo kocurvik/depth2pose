@@ -48,6 +48,11 @@ def run_for_depth(args, depth: str, force_baseline: bool = False):
     eval_single_mde(job_args)
 
 
+def get_basename(args, depth: str) -> str:
+    return (f'{args.name}_{args.matches}_{depth}'
+            f'_{args.sampson_threshold}t_{args.reprojection_threshold}r')
+
+
 def main():
     args = parse_args()
 
@@ -71,33 +76,31 @@ def main():
     ]
 
     depths_to_run = []
+    force_baseline_flags = []
 
     for depth_name in mde_list:
-        basename = (f'{args.name}_{args.matches}_{depth_name}'
-                    f'_{args.sampson_threshold}t_{args.reprojection_threshold}r')
-        h5_path = os.path.join(args.data_path, f'full_results/{basename}.h5')
+        h5_path = os.path.join(args.data_path, f'full_results/{get_basename(args, depth_name)}.h5')
         if os.path.exists(h5_path) and not args.recalc:
             print(f"Results for {depth_name} already available at {h5_path}. Skipping.")
             continue
         depths_to_run.append(depth_name)
+        force_baseline_flags.append(False)
 
     depths_to_run.append('gt')
+    force_baseline_flags.append(True)
 
-    with executor.batch():
-        jobs = []
-        for depth_name in depths_to_run:
-            force_baseline = depth_name == 'gt'
-            basename = (f'{args.name}_{args.matches}_{depth_name}'
-                        f'_{args.sampson_threshold}t_{args.reprojection_threshold}r')
-            executor.update_parameters(
-                slurm_additional_parameters={
-                    'output': os.path.join(log_dir, f'{basename}_%j.out'),
-                    'error':  os.path.join(log_dir, f'{basename}_%j.err'),
-                }
-            )
-            print(f"Queuing job for depth: {depth_name}")
-            job = executor.submit(run_for_depth, args, depth_name, force_baseline)
-            jobs.append((depth_name, job))
+    jobs = []
+    for depth_name, force_baseline in zip(depths_to_run, force_baseline_flags):
+        basename = get_basename(args, depth_name)
+        executor.update_parameters(
+            slurm_additional_parameters={
+                'output': os.path.join(log_dir, f'{basename}_%j.out'),
+                'error':  os.path.join(log_dir, f'{basename}_%j.err'),
+            }
+        )
+        print(f"Queuing job for depth: {depth_name}")
+        job = executor.submit(run_for_depth, args, depth_name, force_baseline)
+        jobs.append((depth_name, job))
 
     print(f"\nSubmitted {len(jobs)} job(s):")
     for depth_name, job in jobs:
