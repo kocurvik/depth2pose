@@ -40,10 +40,10 @@ def parse_args():
     return parser.parse_args()
 
 
-def run_for_depth(args, depth: str, force_baseline: bool = False):
+def run_for_depth(args, depth: str):
     job_args = copy.copy(args)
     job_args.depth = depth
-    if force_baseline:
+    if depth == 'gt':
         job_args.include_baseline_solver = True
     eval_single_mde(job_args)
 
@@ -76,7 +76,6 @@ def main():
     ]
 
     depths_to_run = []
-    force_baseline_flags = []
 
     for depth_name in mde_list:
         h5_path = os.path.join(args.data_path, f'full_results/{get_basename(args, depth_name)}.h5')
@@ -84,13 +83,11 @@ def main():
             print(f"Results for {depth_name} already available at {h5_path}. Skipping.")
             continue
         depths_to_run.append(depth_name)
-        force_baseline_flags.append(False)
 
     depths_to_run.append('gt')
-    force_baseline_flags.append(True)
 
     jobs = []
-    for depth_name, force_baseline in zip(depths_to_run, force_baseline_flags):
+    for depth_name in depths_to_run:
         basename = get_basename(args, depth_name)
         executor.update_parameters(
             slurm_additional_parameters={
@@ -99,7 +96,7 @@ def main():
             }
         )
         print(f"Queuing job for depth: {depth_name}")
-        job = executor.submit(run_for_depth, args, depth_name, force_baseline)
+        job = executor.submit(run_for_depth, args, depth_name)
         jobs.append((depth_name, job))
 
     print(f"\nSubmitted {len(jobs)} job(s):")
