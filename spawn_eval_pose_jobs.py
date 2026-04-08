@@ -85,6 +85,14 @@ def main():
         jobs = []
         for depth_name in depths_to_run:
             force_baseline = depth_name == 'gt'
+            basename = (f'{args.name}_{args.matches}_{depth_name}'
+                        f'_{args.sampson_threshold}t_{args.reprojection_threshold}r')
+            executor.update_parameters(
+                slurm_additional_parameters={
+                    'output': os.path.join(log_dir, f'{basename}_%j.out'),
+                    'error':  os.path.join(log_dir, f'{basename}_%j.err'),
+                }
+            )
             print(f"Queuing job for depth: {depth_name}")
             job = executor.submit(run_for_depth, args, depth_name, force_baseline)
             jobs.append((depth_name, job))
