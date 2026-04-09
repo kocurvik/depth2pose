@@ -23,6 +23,9 @@ Install MDE models:
 # install depth-anything-3
 pip install git+https://github.com/ByteDance-Seed/Depth-Anything-3.git
 
+# install depth-anything-2
+pip install git+https://github.com/badayvedat/Depth-Anything-V2.git@2ca8cd3dd7dc8b0a7386126ad65e58c7fc44e925
+
 # install depth-pro
 pip install git+https://github.com/apple/ml-depth-pro.git
 
@@ -45,6 +48,34 @@ pip install git+https://github.com/Parskatt/RoMa.git
 pip install git+https://github.com/cvg/LightGlue.git
 ```
 
+## Depth Evaluation
+
+### Extract Mono Depths
+
+Extract depth with a single MDE model:
+```bash
+# example - MoGeV2
+python depth_estimators/gen_depth.py \
+    --model_name MoGeV2 \
+    --name ETH3D \
+    --pretrained_weights moge-2-vitl \
+    out_path \
+    dataset_path
+```
+
+<!-- ## Process and Create Image Pairs
+
+```bash
+python datasets/colmap.py \
+    --check_images \
+    --max_pairs 500 \
+    --name eth3d \
+    out_path \
+    dataset_path 
+```
+
+> Example: out_path -> /mnt/data/gg/mdrpbench/pt, dataset_path -> /mnt/data/gg/pt
+
 
 ## Extract Mono Depths
 
@@ -53,7 +84,16 @@ Extract depth with a single MDE model:
 # example - MoGeV2
 python depth_estimators/infer_depth.py \
     --model_name MoGeV2 \
-    --name ETH3D \
+    --name eth3d \
     out_path \
     dataset_path
 ```
+
+## Extract Correspondences
+
+```bash
+python matchers/splg.py \
+    --name eth3d \
+    out_path \
+    dataset_path 
+``` -->

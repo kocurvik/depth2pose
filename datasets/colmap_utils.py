@@ -237,7 +237,8 @@ def read_images_text(path):
                     qvec=qvec,
                     tvec=tvec,
                     camera_id=camera_id,
-                    name=image_name,
+                    # name=image_name,
+                    name=str(image_name).split("/")[-1],
                     xys=xys,
                     point3D_ids=point3D_ids,
                 )
