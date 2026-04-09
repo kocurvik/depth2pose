@@ -184,7 +184,7 @@ def get_best_calib_result(all_metrics, variants):
 
     results = []
     for variant in variants:
-        valid_variant_results = [x for x in all_metrics['variants'] if x['experiment'] in cal_solvers]
+        valid_variant_results = [x for x in all_metrics[variant] if x['experiment'] in cal_solvers]
         for x in valid_variant_results:
             x['variant'] = variant
         results.extend(valid_variant_results)
@@ -199,7 +199,7 @@ def get_best_uncal_result(all_metrics, variants):
     for variant in variants:
         if 'Calib' in variant:
             continue
-        valid_variant_results = [x for x in all_metrics['variants'] if x['experiment'] in uncal_solvers]
+        valid_variant_results = [x for x in all_metrics[variant] if x['experiment'] in uncal_solvers]
         for x in valid_variant_results:
             x['variant'] = variant
         results.extend(valid_variant_results)
