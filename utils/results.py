@@ -174,6 +174,79 @@ def load_full_results(f_results):
             full_results.append(res)
 
 
+def get_basename(args, depth: str) -> str:
+    return (f'{args.name}_{args.matches}_{depth}'
+            f'_{args.sampson_threshold}t_{args.reprojection_threshold}r')
+
+
+def get_best_calib_result(all_metrics, variants):
+    cal_solvers = ['calib', 'calib_shift']
+
+    results = []
+    for variant in variants:
+        valid_variant_results = [x for x in all_metrics['variants'] if x['experiment'] in cal_solvers]
+        for x in valid_variant_results:
+            x['variant'] = variant
+        results.extend(valid_variant_results)
+    mAA_results = [x['pose_mAA_10'] for x in results]
+    return results[np.argmax(mAA_results)]
+
+
+def get_best_uncal_result(all_metrics, variants):
+    uncal_solvers = ['mdecalib', 'mdecalib_shift', 'sf', 'sf_calib', 'vf', 'vf_calib']
+
+    results = []
+    for variant in variants:
+        if 'Calib' in variant:
+            continue
+        valid_variant_results = [x for x in all_metrics['variants'] if x['experiment'] in uncal_solvers]
+        for x in valid_variant_results:
+            x['variant'] = variant
+        results.extend(valid_variant_results)
+    mAA_results = [x['pose_mAA_10'] for x in results]
+    return results[np.argmax(mAA_results)]
+
+
+def print_best_only(all_metrics):
+    mde_names = [x for x in all_metrics.keys()]
+
+    variant_dict = {}
+
+    for mde_name in mde_names:
+        base_name = mde_name.split('-')[0].split('Calib')[0]
+        if base_name in variant_dict:
+            variant_dict[base_name].append(mde_name)
+        else:
+            variant_dict[base_name] = [mde_name]
+
+    best_calib_results = {}
+    for base_mde, variants in variant_dict.items():
+        best_result = get_best_calib_result(all_metrics, variants)
+        # best_result['base_mde'] = base_mde
+        best_calib_results[best_result['variant']] = best_result
+
+    print("**** Best Calib Results ****")
+    print_results_all(None, best_calib_results)
+
+    best_uncal_results = {}
+    for base_mde, variants in variant_dict.items():
+        best_result = get_best_uncal_result(all_metrics, variants)
+        # best_result['base_mde'] = base_mde
+        best_uncal_results[best_result['variant']] = best_result
+
+    print("**** Best Uncal Results ****")
+    print_results_all(None, best_uncal_results)
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
     import argparse
 
@@ -196,7 +269,4 @@ if __name__ == '__main__':
 
     print_results_all(args, all_metrics)
 
-
-def get_basename(args, depth: str) -> str:
-    return (f'{args.name}_{args.matches}_{depth}'
-            f'_{args.sampson_threshold}t_{args.reprojection_threshold}r')
+    print_best_only(all_metrics)
