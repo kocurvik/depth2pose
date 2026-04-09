@@ -18,6 +18,10 @@ wget "https://huggingface.co/depth-anything/Depth-Anything-V2-Small/resolve/main
 wget "https://huggingface.co/depth-anything/Depth-Anything-V2-Base/resolve/main/depth_anything_v2_vitb.pth?download=true" -O checkpoints/depth_anything_v2_vitb.pth
 wget "https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth?download=true" -O checkpoints/depth_anything_v2_vitl.pth
 
+#InfiniDepth
+pip install --no-deps git+https://github.com/kocurvik/InfiniDepth
+wget https://huggingface.co/ritianyu/InfiniDepth/resolve/main/infinidepth.ckpt -O checkpoints/infinidepth.ckpt
+
 # poselib with all solvers
 pip install git+https://github.com/kocurvik/PoseLib.git@mdrpbench
 ```

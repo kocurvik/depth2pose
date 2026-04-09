@@ -8,6 +8,9 @@ import traceback
 from tqdm import tqdm
 
 import torch
+
+from depth_estimators.InfiniDepthWrapper import InfiniDepth
+
 torch.backends.cudnn.benchmark = True  # Pick fastest kernels
 
 from depth_estimators.Metric3D import Metric3D
@@ -19,6 +22,7 @@ from depth_estimators.DepthPro import DepthPro
 from utils.system_info import save_metadata
 
 ALL_MDEs = {
+    'InfiniDepth': ['vitl'],
     'UniK3D': ['vitl'],
     'UniK3DCalib': ['vitl'],
     'Metric3DV2': ['vit_small', 'vit_large', 'vit_giant2'],
@@ -55,6 +59,9 @@ def parse_args():
     return parser.parse_args()
 
 def get_mde_model(model_name, weights):
+    if model_name == 'InfiniDepth':
+        return InfiniDepth(weights, requires_intrinsics=False)
+
     if model_name == 'MoGeV2':
         return MoGe(weights, version=2, requires_intrinsics=False)
     elif model_name == 'MoGeV2Calib':
