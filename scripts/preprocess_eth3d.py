@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 sys.path.insert(0, "./")
 from datasets.colmap_utils import Camera, read_model, write_model
+from datasets.colmap_utils import Image as CImage
 from datasets.io import read_depth, read_image, read_json
 
 
@@ -147,13 +148,29 @@ def update_colmap_cameras(cameras, h, w):
     return new_cameras
 
 
+def update_colmap_images(images):
+    new_images = {}
+    for image_id, image in images.items():
+        new_image = CImage(
+            id=image_id,
+            qvec=image.qvec,
+            tvec=image.tvec,
+            camera_id=image.camera_id,
+            name=f"{Path(image.name).stem}.jpg",
+            xys=image.xys,
+            point3D_ids=image.point3D_ids,
+        )
+        new_images[image_id] = new_image
+    return new_images
+
+
 if __name__ == "__main__":
     root = Path("/mnt/data/gg/benchmarks_original/ETH3D_depth")
     colmap_root = Path("/mnt/data/gg/benchmarks_original/eth3d/dslr")
     out_root = Path("/mnt/data/gg/benchmarks/ETH3D")
 
-    # if out_root.exists():
-    #     shutil.rmtree(out_root)
+    if out_root.exists():
+        shutil.rmtree(out_root)
 
     scenes = sorted(list(root.glob("*")))
     scenes = [scene.stem for scene in scenes if scene.is_dir()]
@@ -168,6 +185,7 @@ if __name__ == "__main__":
         model_path = colmap_root / scene / "dslr_calibration_undistorted"
         cameras, images, points3d = read_model(model_path, ext=".txt")
         cameras = update_colmap_cameras(cameras, h, w)
+        images = update_colmap_images(images)
         out_model_path = scene_out_root / "colmap_gt"
         out_model_path.mkdir(parents=True, exist_ok=True)
         write_model(cameras, images, points3d, out_model_path, ext=".txt")
