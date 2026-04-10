@@ -55,7 +55,7 @@ def get_overlap_areas(image_1, image_2, cameras):
 
 def get_dataset_paths(basename, dataset_path, subset):
     subset_path = os.path.join(dataset_path, subset)
-    if basename.lower() == 'phototourism' or 'pt' in basename.lower():
+    if basename.lower() == 'phototourism' or 'pt' == basename.lower():
         model_path = os.path.join('dense', 'sparse')
         img_path = os.path.join('dense', 'images')
     elif basename.lower() == 'eth3d_depth':
