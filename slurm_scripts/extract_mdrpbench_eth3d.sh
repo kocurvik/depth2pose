@@ -31,7 +31,7 @@ rsync -a "$SRC/" "$WORK/"
 rsync -a "$DATASET_SRC/" "$DATASET_WORK/"
 
 # Run processing on /work
-python datasets/colmap.py --check_images -mp 500 --name pt "$WORK" "$DATASET_WORK"
+python datasets/colmap.py --min_area_overlap 0.025 --check_images -mp 500 --name pt "$WORK" "$DATASET_WORK"
 python depth_estimators/infer_depth.py --name pt "$WORK" "$DATASET_WORK"
 python matchers/splg.py --name pt "$WORK" "$DATASET_WORK"
 
