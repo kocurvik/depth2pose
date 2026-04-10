@@ -184,24 +184,25 @@ def get_best_calib_result(all_metrics, variants):
 
     results = []
     for variant in variants:
-        valid_variant_results = [x for x in all_metrics[variant] if x['experiment'] in cal_solvers]
-        for x in valid_variant_results:
-            x['variant'] = variant
+        for k, v in all_metrics[variant].items():
+            v['experiment'] = k
+            v['variant'] = variant
+        valid_variant_results = [all_metrics[variant][solver] for solver in cal_solvers]
         results.extend(valid_variant_results)
     mAA_results = [x['pose_mAA_10'] for x in results]
     return results[np.argmax(mAA_results)]
 
-
 def get_best_uncal_result(all_metrics, variants):
-    uncal_solvers = ['mdecalib', 'mdecalib_shift', 'sf', 'sf_calib', 'vf', 'vf_calib']
+    uncal_solvers = ['mdecalib', 'mdecalib_shift', 'sf', 'sf_shift', 'vf', 'vf_shift']
 
     results = []
     for variant in variants:
         if 'Calib' in variant:
             continue
-        valid_variant_results = [x for x in all_metrics[variant] if x['experiment'] in uncal_solvers]
-        for x in valid_variant_results:
-            x['variant'] = variant
+        for k, v in all_metrics[variant].items():
+            v['experiment'] = k
+            v['variant'] = variant
+        valid_variant_results = [all_metrics[variant][solver] for solver in all_metrics[variant].keys() if solver in uncal_solvers]
         results.extend(valid_variant_results)
     mAA_results = [x['pose_mAA_10'] for x in results]
     return results[np.argmax(mAA_results)]
@@ -220,20 +221,23 @@ def print_best_only(all_metrics):
             variant_dict[base_name] = [mde_name]
 
     best_calib_results = {}
+    best_uncal_results = {}
     for base_mde, variants in variant_dict.items():
         best_result = get_best_calib_result(all_metrics, variants)
-        # best_result['base_mde'] = base_mde
-        best_calib_results[best_result['variant']] = best_result
+        best_calib_results[best_result['variant']] ={best_result['experiment']: best_result}
+        best_result = get_best_uncal_result(all_metrics, variants)
+        best_uncal_results[best_result['variant']] ={best_result['experiment']: best_result}
+
+    best_calib_results['gt'] = {'baseline_calib': all_metrics['gt']['baseline_calib']}
+
+    if 'baseline_sf' in all_metrics['gt']:
+        best_uncal_results['gt'] = {'baseline_sf': all_metrics['gt']['baseline_sf']}
+    elif 'baseline_vf' in all_metrics['gt']:
+        best_uncal_results['gt'] = {'baseline_vf': all_metrics['gt']['baseline_vf']}
+
 
     print("**** Best Calib Results ****")
     print_results_all(None, best_calib_results)
-
-    best_uncal_results = {}
-    for base_mde, variants in variant_dict.items():
-        best_result = get_best_uncal_result(all_metrics, variants)
-        # best_result['base_mde'] = base_mde
-        best_uncal_results[best_result['variant']] = best_result
-
     print("**** Best Uncal Results ****")
     print_results_all(None, best_uncal_results)
 
