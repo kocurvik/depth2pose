@@ -53,9 +53,7 @@ def main():
                 )
                 pd_depth, pd_intrinsic = pd_depth_data["depth"], pd_depth_data["K"]
                 pd_depth = torch.from_numpy(pd_depth).to(torch.float32).to(device)
-                results = metric_fn.compute_affine_inv_depth(
-                    gt_depth, pd_depth, depth_mask
-                )
+                results = metric_fn.compute_metric_depth(gt_depth, pd_depth, depth_mask)
                 metrics_list.append(results)
 
                 if i % 100 == 0 or i == len(eval_data_pipe) - 1:

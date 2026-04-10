@@ -134,8 +134,8 @@ class DepthMetrics:
     def compute_metric_depth(
         self, gt: Tensor, pd: Tensor, mask: Tensor, max_depth: float = None
     ):
-        h, w = 1364, 2048
-        gt, pd, mask = gt[:h, :w], pd[:h, :w], mask[:h, :w]
+        # h, w = 1364, 2048
+        # gt, pd, mask = gt[:h, :w], pd[:h, :w], mask[:h, :w]
         pd_mask = ~torch.isinf(pd)
         mask &= pd_mask
         results = {}
