@@ -244,8 +244,9 @@ def get_model(args, subset):
     model = {}
     dataset_path = Path(args.dataset_path)
     basename = os.path.basename(dataset_path)
+    print(f"Basename: {basename}")
     img_path, model_path, subset_path = get_dataset_paths(basename, dataset_path, subset)
-    print(f"Reading model at {model_path}")
+    print(f"Reading model at {os.path.join(subset_path, model_path)}")
     cameras, images, points = read_model(os.path.join(subset_path, model_path))
 
     if args.check_images:
