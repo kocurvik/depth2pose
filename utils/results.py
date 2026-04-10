@@ -68,7 +68,7 @@ def print_results_all(args, all_metrics=None):
     for mde_name, metrics in all_metrics.items():
         for exp_name, m in metrics.items():
             tab.add_row([mde_name, exp_name, m['median_pose_err'], m['median_f_err'],
-                         m['pose_mAA_10'], m['f_mAA_10'], m['mean_runtime'], m['mean_inliers']])
+                         m['pose_mAA_10'], m['f_mAA_10'], m['mean_mde_runtime'], m['mean_inliers']])
     print(tab)
 
 def draw_cumplots(experiments, results):
@@ -240,15 +240,6 @@ def print_best_only(all_metrics):
     print_results_all(None, best_calib_results)
     print("**** Best Uncal Results ****")
     print_results_all(None, best_uncal_results)
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':
