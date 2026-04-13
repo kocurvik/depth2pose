@@ -148,16 +148,21 @@ def update_colmap_cameras(cameras, h, w):
     return new_cameras
 
 
-def update_colmap_images(images):
+def update_colmap_images(images, cameras, h, w):
     new_images = {}
     for image_id, image in images.items():
+        cam = cameras[image.camera_id]
+        sh, sw = h / cam.height, w / cam.width
+        new_xys = image.xys
+        new_xys[:, 0] *= sw
+        new_xys[:, 1] *= sh
         new_image = CImage(
             id=image_id,
             qvec=image.qvec,
             tvec=image.tvec,
             camera_id=image.camera_id,
             name=f"{Path(image.name).stem}.jpg",
-            xys=image.xys,
+            xys=new_xys,
             point3D_ids=image.point3D_ids,
         )
         new_images[image_id] = new_image
@@ -184,8 +189,8 @@ if __name__ == "__main__":
         # copy colmap gt
         model_path = colmap_root / scene / "dslr_calibration_undistorted"
         cameras, images, points3d = read_model(model_path, ext=".txt")
+        images = update_colmap_images(images, cameras, h, w)
         cameras = update_colmap_cameras(cameras, h, w)
-        images = update_colmap_images(images)
         out_model_path = scene_out_root / "colmap_gt"
         out_model_path.mkdir(parents=True, exist_ok=True)
         write_model(cameras, images, points3d, out_model_path, ext=".txt")
