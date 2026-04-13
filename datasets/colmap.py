@@ -58,7 +58,7 @@ def get_dataset_paths(basename, dataset_path, subset):
     if basename.lower() == 'phototourism' or 'pt' == basename.lower():
         model_path = os.path.join('dense', 'sparse')
         img_path = os.path.join('dense', 'images')
-    elif basename.lower() == 'eth3d_depth':
+    elif basename.lower() == 'eth3d_depth' or basename.lower() == 'scannetpp':
         model_path = os.path.join('colmap_gt')
         img_path = os.path.join('images')
     elif basename.lower() == 'urban':
