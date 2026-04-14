@@ -49,6 +49,7 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device, recalc=False
         single_results_path = Path(benchmark_config['depth']) / 'depth_results' / f'{mde_model}.json'
 
         if os.path.exists(single_results_path) and not recalc:
+            print(f'{single_results_path} exists skipping {mde_model} for {benchmark_name}')
             continue
 
         metric_result_list, scale_result_list, affine_result_list = [], [], []
