@@ -134,10 +134,9 @@ class DepthMetrics:
     def compute_metric_depth(
         self, gt: Tensor, pd: Tensor, mask: Tensor, max_depth: float = None
     ):
-        # h, w = 1364, 2048
-        # gt, pd, mask = gt[:h, :w], pd[:h, :w], mask[:h, :w]
         pd_mask = ~torch.isinf(pd)
         mask &= pd_mask
+        # print(gt[mask].mean(), pd[mask].mean())
         results = {}
         for metric_name in self.metrics_to_use:
             results[metric_name] = self.metrics[metric_name](gt[mask], pd[mask])
@@ -151,8 +150,6 @@ class DepthMetrics:
         # pd_depth_lr_masked, gt_depth_lr_masked = pd[lr_index][lr_mask], gt[lr_index][lr_mask]
         # scale, shift = align_depth_scale(pd_depth_lr_masked, gt_depth_lr_masked, 1/gt_depth_lr_masked)
         # pd = pd * scale
-        h, w = 1364, 2048
-        gt, pd, mask = gt[:h, :w], pd[:h, :w], mask[:h, :w]
         pd_mask = ~torch.isinf(pd)
         mask &= pd_mask
         for metric_name in self.metrics_to_use:
@@ -165,8 +162,6 @@ class DepthMetrics:
         self, gt: Tensor, pd: Tensor, mask: Tensor, max_depth: float = None
     ):
         results = {}
-        h, w = 1364, 2048
-        gt, pd, mask = gt[:h, :w], pd[:h, :w], mask[:h, :w]
         pd_mask = ~torch.isinf(pd)
         mask &= pd_mask
         for metric_name in self.metrics_to_use:

@@ -28,6 +28,7 @@ class EvalDataLoaderPipeline:
     def __init__(
         self,
         path: str,
+        depth: str,
         width: int,
         height: int,
         drop_max_depth: float = 1000.0,
@@ -40,6 +41,7 @@ class EvalDataLoaderPipeline:
         self.path = Path(path)
         self.filenames = self.read_filenames()
         self.depth_unit = depth_unit
+        self.depth_path = depth
 
         self.rng = np.random.default_rng(seed=0)
 
@@ -79,17 +81,19 @@ class EvalDataLoaderPipeline:
         image = read_image(self.path / scene / "images" / f"{filename}.jpg")
         # depth = read_depth(self.path / scene / "depths" / f"{filename}.png")
         depth = read_depth_npz(self.path / scene / "depths_gt" / f"{filename}.npz")
-        meta = read_json(self.path / scene / "intrinsics" / f"{filename}.json")
-
+        # meta = read_json(self.path / scene / "intrinsics" / f"{filename}.json")
+        depth_mask = np.isfinite(depth) & (depth > 0)
         instance = {
             "scenename": scene,
-            "filename": filename,
+            "filename": f"{filename}.jpg",
             "width": self.width,
             "height": self.height,
             "image": image,
-            "depth": np.nan_to_num(depth, nan=1, posinf=1, neginf=1),
-            "depth_mask": np.isfinite(depth),
-            "intrinsics": np.array(meta["intrinsics"], dtype=np.float32),
+            # "depth": np.nan_to_num(depth, nan=1, posinf=1, neginf=1),
+            "depth": depth,
+            "depth_mask": depth_mask,
+            # "intrinsics": np.array(meta["intrinsics"], dtype=np.float32),
+            "intrinsics": None,
         }
         return instance
 
@@ -247,7 +251,8 @@ class EvalDataLoaderPipeline:
                 # ),
                 "depth": torch.from_numpy(tgt_depth).float(),
                 "depth_mask": torch.from_numpy(tgt_depth_mask).bool(),
-                "intrinsics": torch.from_numpy(tgt_intrinsics).float(),
+                # "intrinsics": torch.from_numpy(tgt_intrinsics).float(),
+                "intrinsics": tgt_intrinsics,
                 "is_metric": self.depth_unit is not None,
             }
         )

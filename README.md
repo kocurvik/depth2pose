@@ -57,9 +57,7 @@ Extract depth with a single MDE model:
 # example - MoGeV2
 python depth_estimators/gen_depth.py \
     --model_name MoGeV2 \
-    --name ETH3D \
     --pretrained_weights moge-2-vitl \
-    out_path \
     dataset_path
 ```
 
