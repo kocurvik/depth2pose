@@ -78,8 +78,12 @@ class Metric3D(BaseDepthEstimator):
                                                      mode='bilinear').squeeze()
 
         # only if we care about metric depth
-        # canonical_to_real_scale = intrinsic[0] / 1000.0  # 1000.0 is the focal length of canonical camera
-        # pred_depth = pred_depth * canonical_to_real_scale  # now the depth is metric
-        # pred_depth = torch.clamp(pred_depth, 0, 300)
+
+        if self.requires_intrinsics:
+            # 1000.0 is the focal length of canonical camera
+            canonical_to_real_scale = 0.5 * (kwargs['K'][0, 0] + kwargs['K'][1, 1]) / 1000.0
+            pred_depth = pred_depth * canonical_to_real_scale  # now the depth is metric
+
+        pred_depth = torch.clamp(pred_depth, 0, 300)
 
         return {'depth': pred_depth.cpu().numpy(), 'runtime': runtime}

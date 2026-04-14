@@ -26,6 +26,7 @@ ALL_MDEs = {
     'UniK3D': ['vitl'],
     'UniK3DCalib': ['vitl'],
     'Metric3DV2': ['vit_small', 'vit_large', 'vit_giant2'],
+    'Metric3DV2Calib': ['vit_small', 'vit_large', 'vit_giant2'],
     'DepthAnythingV2': ['vits', 'vitb', 'vitl'],
     'DepthAnythingV3': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
     'DepthAnythingV3Calib': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
