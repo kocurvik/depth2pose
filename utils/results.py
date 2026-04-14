@@ -6,6 +6,7 @@ import numpy as np
 from gitdb.util import basename
 from matplotlib import pyplot as plt
 from prettytable import PrettyTable
+from scipy.cluster.hierarchy import single
 
 from utils.system_info import save_metadata
 
@@ -159,6 +160,19 @@ def merge_summary_results(args):
     return unified
 
 
+def merge_summary_depth_results(args):
+    """Read all per-depth JSONs and merge into a single unified dict."""
+    results_dir = os.path.join(args.data_path, f'depth_results')
+    unified = {}
+    for fname in sorted(os.listdir(results_dir)):
+        if not fname.endswith('.json') or fname == 'all.json':
+            continue
+        depth_name = fname[:-5]
+        with open(os.path.join(results_dir, fname), 'r') as f:
+            unified[depth_name] = json.load(f)
+    return unified
+
+
 def load_full_results(f_results):
     full_results = []
     for group_name in f_results.keys():
@@ -242,6 +256,67 @@ def print_best_only(all_metrics):
     print_results_all(None, best_uncal_results)
 
 
+def get_mde_list(name, data_path):
+    mde_list = [x.split('_depth_')[1].split('.h5')[0] for x in os.listdir(data_path)
+                if x.startswith(f'{name}_depth_') and x.endswith('.h5')]
+
+    return mde_list
+
+
+def get_n_colors(n):
+    if n <= 10:
+        cmap = plt.get_cmap('tab10')
+        return [cmap(i) for i in range(n)]
+    if n <= 20:
+        cmap = plt.get_cmap('tab20')
+        return [cmap(i) for i in range(n)]
+    return [plt.cm.hsv(i / n) for i in range(n)]
+
+
+def plot_scatter_pose_depth(all_metrics, depth_metrics):
+    from matplotlib.lines import Line2D
+
+    mde_list = list(depth_metrics.keys())
+    mde_list = [x for x in mde_list if 'Infini' not in x and 'AnythingV2' not in x]
+    base_names = list(set([x.split('-')[0].split('Calib')[0] for x in mde_list]))
+
+    single_metric = depth_metrics[mde_list[0]]
+    depth_evals = [(k, x) for k, v in single_metric.items() for x in v.keys()]
+
+    colors = get_n_colors(len(base_names))
+    color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
+
+    n = len(depth_evals)
+    ncols = 2
+    nrows = (n + ncols - 1) // ncols
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 3 * nrows))
+    axes = np.array(axes).flatten()
+
+    for idx, (type, metric) in enumerate(depth_evals):
+        ax = axes[idx]
+        for mde in mde_list:
+            base_name = mde.split('-')[0].split('Calib')[0]
+            depth_val = depth_metrics[mde][type][metric]
+            pose_val_shift = all_metrics[mde]['calib_shift']['pose_mAA_10']
+            marker = 'o' if 'Calib' in mde else '*'
+            ax.plot(depth_val, pose_val_shift, color=color_dict[base_name], marker=marker, linestyle='None')
+        ax.set_xlabel(f"Depth {type} - {metric}")
+        ax.set_ylabel("Calib Pose mAA(10)")
+
+    for idx in range(n, len(axes)):
+        axes[idx].set_visible(False)
+
+    color_handles = [Line2D([0], [0], color=c, marker='s', linestyle='None', label=name)
+                     for name, c in color_dict.items()]
+    marker_handles = [Line2D([0], [0], color='gray', marker='*', linestyle='None', label='Normal'),
+                      Line2D([0], [0], color='gray', marker='o', linestyle='None', label='Calib')]
+
+    fig.legend(handles=color_handles + marker_handles, loc='center right')
+    plt.tight_layout(rect=[0, 0, 0.82, 1])
+    plt.show()
+
+
 if __name__ == '__main__':
     import argparse
 
@@ -253,6 +328,7 @@ if __name__ == '__main__':
     parser.add_argument('-rt', '--reprojection_threshold', type=float, default=16.0)
     parser.add_argument('-o', '--output', type=str, default=None,
                         help='Path to write unified JSON (default: <results_dir>/all.json)')
+    parser.add_argument('-ed', '--eval_depth', action='store_true', default=False)
     args = parser.parse_args()
 
     all_metrics = merge_summary_results(args)
@@ -263,12 +339,7 @@ if __name__ == '__main__':
     print(f"Unified results written to {output_path}\n")
 
     print_results_all(args, all_metrics)
-
     print_best_only(all_metrics)
-
-
-def get_mde_list(name, data_path):
-    mde_list = [x.split('_depth_')[1].split('.h5')[0] for x in os.listdir(data_path)
-                if x.startswith(f'{name}_depth_') and x.endswith('.h5')]
-
-    return mde_list
+    if args.eval_depth:
+        depth_metrics = merge_summary_depth_results(args)
+        plot_scatter_pose_depth(all_metrics, depth_metrics)
