@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 import h5py
@@ -22,22 +23,18 @@ def parse_args():
 
     parser.add_argument('--device', type=str, default='cuda',
                         help='cuda or cpu to be used for extraction')
+    parser.add_argument('--recalc', action='store_true', default = False,
+                        help='whether to recalculate even previously calculated depths')
     return parser.parse_args()
 
 
-def get_depth_from_h5(dataset_name, dataset_config, depth_model_name, scene_name, file_name):
-    # all_depths = defaultdict(dict)
-    with h5py.File(Path(dataset_config['depth']) / f'{dataset_name}_depth_{depth_model_name}.h5', 'r') as f_depth_h5:
-        # for file in f_depth_h5.keys():
-        #     scene_name, _, depth_file_name = file.split("\\")
-        #     file_name = depth_file_name.split(".")[0]
-        #     all_depths[scene_name][file_name] = np.array(f_depth_h5[depth_file_name]).astype(np.float32)
-        depth_key_name = f"{scene_name}\\images\\{file_name}_depth"
-        depth = np.array(f_depth_h5[depth_key_name])
+def get_depth_from_h5(f_depth_h5, scene_name, file_name):
+    depth_key_name = f"{scene_name}\\images\\{file_name}_depth"
+    depth = np.array(f_depth_h5[depth_key_name])
     depth[depth <= 0] = np.inf
     return depth
 
-def evaluate_model(mde_model, dataset_config, save_dir_all, device):
+def evaluate_model(mde_model, dataset_config, save_dir_all, device, recalc=False):
     metric_result_path = save_dir_all / "metric_depth_results.json"
     scale_result_path = save_dir_all / "scale_inv_depth_results.json"
     affine_result_path = save_dir_all / "affine_inv_depth_results.json"
@@ -49,12 +46,18 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device):
     for benchmark_name, benchmark_config in tqdm(
         list(dataset_config.items()), desc="Benchmarks"
     ):
+        single_results_path = Path(benchmark_config['depth']) / 'depth_results' / f'{mde_model}.json'
+
+        if os.path.exists(single_results_path) and not recalc:
+            continue
+
         metric_result_list, scale_result_list, affine_result_list = [], [], []
         with (
             EvalDataLoaderPipeline(**benchmark_config) as eval_data_pipe,
             tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
+            h5py.File(Path(benchmark_config['depth']) / f'{benchmark_name}_depth_{mde_model}.h5',
+                      'r') as f_depth_h5
         ):
-            # iterate over the samples in the dataset
             for i in range(len(eval_data_pipe)):
                 sample = eval_data_pipe.get()
                 sample = {
@@ -70,7 +73,7 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device):
                 # pd_depth_data = np.load(eval_data_pipe.path / scenename / mde_model / f"{filename}.npz")
                 # pd_depth, pd_intrinsic = pd_depth_data["depth"], pd_depth_data["K"]
 
-                pd_depth = get_depth_from_h5(benchmark_name, benchmark_config, mde_model, scenename, filename)
+                pd_depth = get_depth_from_h5(f_depth_h5, scenename, filename)
                 pd_depth = torch.from_numpy(pd_depth).to(torch.float32).to(device)
 
                 metric_results = metric_fn.compute_metric_depth(gt_depth, pd_depth, depth_mask)
@@ -80,31 +83,11 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device):
                 scale_result_list.append(scale_results)
                 affine_result_list.append(affine_results)
 
-                # if i % 100 == 0 or i == len(eval_data_pipe) - 1:
-                #     Path(metric_result_path).write_text(
-                #         json.dumps(
-                #             {**all_metric_depth_results, benchmark_name: key_average(metric_result_list)},
-                #             indent=4,
-                #         )
-                #     )
-                #     Path(scale_result_path).write_text(
-                #         json.dumps(
-                #             {**all_scale_depth_results, benchmark_name: key_average(scale_result_list)},
-                #             indent=4,
-                #         )
-                #     )
-                #     Path(affine_result_path).write_text(
-                #         json.dumps(
-                #             {**all_affine_depth_results, benchmark_name: key_average(affine_result_list)},
-                #             indent=4,
-                #         )
-                #     )
                 pbar.update(1)
 
         single_results = {'metric': key_average(metric_result_list), 'scale': key_average(scale_result_list),
                           'affine': key_average(affine_result_list)}
 
-        single_results_path = Path(benchmark_config['depth']) / 'depth_results' / f'{mde_model}.json'
         Path(single_results_path).parent.mkdir(exist_ok=True, parents=True)
         Path(single_results_path).write_text(json.dumps(single_results, indent=4))
 
@@ -143,7 +126,7 @@ def main():
         # if model_name != "Metric3DV2-vit_giant2": continue
         save_dir = Path(args.all_results_path) / model_name
         save_dir.mkdir(parents=True, exist_ok=True)
-        evaluate_model(model_name, dataset_config, save_dir, device)
+        evaluate_model(model_name, dataset_config, save_dir, device, recalc=args.recalc)
 
 
 if __name__ == "__main__":
