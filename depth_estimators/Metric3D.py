@@ -23,7 +23,7 @@ class Metric3D(BaseDepthEstimator):
     @property
     def name(self):
         if self.requires_intrinsics:
-            f'Metric3DV{self.version}Calib-{self.checkpoint_name}'
+            return f'Metric3DV{self.version}Calib-{self.checkpoint_name}'
         return f'Metric3DV{self.version}-{self.checkpoint_name}'
 
     def infer(self, image, size=None, **kwargs):
