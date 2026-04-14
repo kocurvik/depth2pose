@@ -1,0 +1,9 @@
+{
+    "eth3d": {
+        "path": "/home/kocurvik/data/ETH3D/ETH3D_depth",
+        "depth": "/home/kocurvik/data/mdrpbench/eth3d",
+        "width": 2048,
+        "height": 1365,
+        "depth_unit": 1
+    }
+}

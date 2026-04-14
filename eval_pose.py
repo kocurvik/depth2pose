@@ -14,8 +14,8 @@ from tqdm import tqdm
 
 from utils.geometry import R_err_fun, t_err_fun, get_kp_depth
 from utils.mp import NoDaemonProcessPool
-from utils.results import save_summary_results, print_results_all, save_full_results, get_full_results_h5_path
-from utils.system_info import save_metadata
+from utils.results import save_summary_results, print_results_all, save_full_results, get_full_results_h5_path, \
+    get_mde_list
 
 MDE_K_WARNING_SHOWN = False
 
@@ -401,8 +401,7 @@ def get_solvers(args):
 if __name__ == '__main__':
     args = parse_args()
     if args.depth is None:
-        mde_list = [x.split('_depth_')[1].split('.h5')[0] for x in os.listdir(args.data_path)
-                    if x.startswith(f'{args.name}_depth_') and x.endswith('.h5')]
+        mde_list = get_mde_list(args.name, args.data_path)
 
         for depth_name in mde_list:
             args.depth = depth_name

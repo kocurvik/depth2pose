@@ -1,3 +1,4 @@
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -7,9 +8,21 @@ import torch
 from tqdm import tqdm
 from collections import defaultdict
 
+from utils.results import get_mde_list
+
 sys.path.insert(0, "./")
 from datasets.dataloader import EvalDataLoaderPipeline
 from utils.metrics import DepthMetrics, key_average
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('all_results_path')
+    parser.add_argument('config_path')
+
+    parser.add_argument('--device', type=str, default='cuda',
+                        help='cuda or cpu to be used for extraction')
+    return parser.parse_args()
 
 
 def get_depth_from_h5(dataset_name, dataset_config, depth_model_name, scene_name, file_name):
@@ -24,10 +37,10 @@ def get_depth_from_h5(dataset_name, dataset_config, depth_model_name, scene_name
     depth[depth <= 0] = np.inf
     return depth
 
-def evaluate_model(mde_model, dataset_config, save_dir, device):
-    metric_result_path = save_dir / "metric_depth_results.json"
-    scale_result_path = save_dir / "scale_inv_depth_results.json"
-    affine_result_path = save_dir / "affine_inv_depth_results.json"
+def evaluate_model(mde_model, dataset_config, save_dir_all, device):
+    metric_result_path = save_dir_all / "metric_depth_results.json"
+    scale_result_path = save_dir_all / "scale_inv_depth_results.json"
+    affine_result_path = save_dir_all / "affine_inv_depth_results.json"
 
     metric_fn = DepthMetrics()
     all_metric_depth_results, all_scale_depth_results, all_affine_depth_results = {}, {}, {}
@@ -88,6 +101,13 @@ def evaluate_model(mde_model, dataset_config, save_dir, device):
                 #     )
                 pbar.update(1)
 
+        single_results = {'metric': key_average(metric_result_list), 'scale': key_average(scale_result_list),
+                          'affine': key_average(affine_result_list)}
+
+        single_results_path = Path(benchmark_config['depth']) / 'depth_results' / f'{mde_model}.json'
+        Path(single_results_path).parent.mkdir(exist_ok=True, parents=True)
+        Path(single_results_path).write_text(json.dumps(single_results, indent=4))
+
         all_metric_depth_results[benchmark_name] = key_average(metric_result_list)
         all_scale_depth_results[benchmark_name] = key_average(scale_result_list)
         all_affine_depth_results[benchmark_name] = key_average(affine_result_list)
@@ -95,32 +115,33 @@ def evaluate_model(mde_model, dataset_config, save_dir, device):
     all_metric_depth_results["mean"] = key_average(list(all_metric_depth_results.values()))
     all_scale_depth_results["mean"] = key_average(list(all_scale_depth_results.values()))
     all_affine_depth_results["mean"] = key_average(list(all_affine_depth_results.values()))
+
     Path(metric_result_path).write_text(json.dumps(all_metric_depth_results, indent=4))
     Path(scale_result_path).write_text(json.dumps(all_scale_depth_results, indent=4))
     Path(affine_result_path).write_text(json.dumps(all_affine_depth_results, indent=4))
 
 
-def get_depth_models(root: str):
-    root = Path(root)
-    dataset_dir = [dataset.stem for dataset in root.glob("*") if dataset.is_dir()][0]
-    depth_models = sorted(list((root / dataset_dir).glob("*.h5")))
+def get_depth_models(processed_dataset_path):
+    depth_models = sorted(list((Path(processed_dataset_path)).glob("*.h5")))
     depth_models = [depth_model.stem.split("_depth_")[-1] for depth_model in depth_models]
     return depth_models
 
 def main():
-    config_path = "./datasets/all_benchmarks.json"
+    args = parse_args()
+    config_path = args.config_path
+
     with open(config_path) as f:
         dataset_config = json.load(f)
 
-    device = torch.device("cuda")
-    depth_models_path = "/mnt/data/gg/benchmarks_depth"
-    save_results_path = "/mnt/data/gg/benchmarks_results"
+    device = torch.device(args.device)
 
-    depth_models = get_depth_models(depth_models_path)
+    first_dataset_name = list(config_path.keys())[0]
+    depth_models = get_mde_list(first_dataset_name, dataset_config[first_dataset_name]['depth'])
+
     for model_name in depth_models:
         print(model_name)
         # if model_name != "Metric3DV2-vit_giant2": continue
-        save_dir = Path(save_results_path) / model_name
+        save_dir = Path(args.all_results_path) / model_name
         save_dir.mkdir(parents=True, exist_ok=True)
         evaluate_model(model_name, dataset_config, save_dir, device)
 

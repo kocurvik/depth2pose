@@ -265,3 +265,10 @@ if __name__ == '__main__':
     print_results_all(args, all_metrics)
 
     print_best_only(all_metrics)
+
+
+def get_mde_list(name, data_path):
+    mde_list = [x.split('_depth_')[1].split('.h5')[0] for x in os.listdir(data_path)
+                if x.startswith(f'{name}_depth_') and x.endswith('.h5')]
+
+    return mde_list

@@ -4,7 +4,7 @@ import os
 import submitit
 
 from eval_pose import eval_single_mde
-from utils.results import get_basename, get_full_results_h5_path
+from utils.results import get_basename, get_full_results_h5_path, get_mde_list
 
 
 def parse_args():
@@ -61,11 +61,7 @@ def main():
         cpus_per_task=args.num_workers
     )
 
-    mde_list = [
-        x.split('_depth_')[1].split('.h5')[0]
-        for x in os.listdir(args.data_path)
-        if x.startswith(f'{args.name}_depth_') and x.endswith('.h5')
-    ]
+    mde_list = get_mde_list(args.name, args.data_path)
 
     depths_to_run = ['gt'] + mde_list
 
