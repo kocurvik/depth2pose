@@ -135,7 +135,7 @@ def main():
 
     device = torch.device(args.device)
 
-    first_dataset_name = list(config_path.keys())[0]
+    first_dataset_name = list(dataset_config.keys())[0]
     depth_models = get_mde_list(first_dataset_name, dataset_config[first_dataset_name]['depth'])
 
     for model_name in depth_models:
