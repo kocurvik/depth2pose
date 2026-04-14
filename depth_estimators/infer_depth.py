@@ -70,6 +70,8 @@ def get_mde_model(model_name, weights):
 
     elif model_name == 'Metric3DV2':
         return Metric3D(weights, version=2, requires_intrinsics=False)
+    elif model_name == 'Metric3DV2Calib':
+        return Metric3D(weights, version=2, requires_intrinsics=True)
 
     elif model_name == 'MoGeV1':
         return MoGe(weights, version=1, requires_intrinsics=False)
