@@ -597,17 +597,24 @@ def main():
 
 
 def cam_to_K(cam):
-    if cam.model in ["PINHOLE", "THIN_PRISM_FISHEYE"]:
+    if cam.model in ["PINHOLE"]:
         fx = cam.params[0]
         fy = cam.params[1]
         cx = cam.params[2]
         cy = cam.params[3]
 
-    elif cam.model in ["SIMPLE_RADIAL", "SIMPLE_PINHOLE"]:
+    elif cam.model in ["SIMPLE_PINHOLE"]:
         fx = cam.params[0]
         fy = cam.params[0]
         cx = cam.params[1]
         cy = cam.params[2]
+
+    elif cam.model == "OPENCV":
+        fx = cam.params[0]
+        fy = cam.params[1]
+        cx = cam.params[2]
+        cy = cam.params[3]
+
     else:
         raise NotImplementedError
 
@@ -617,7 +624,12 @@ def cam_to_K(cam):
     K[0, 2] = cx
     K[1, 2] = cy
 
-    return K
+    if cam.model == "OPENCV":
+        dist_coeffs = np.array(cam.params[4:])
+    else:
+        dist_coeffs = None
+
+    return K, dist_coeffs
 
 
 if __name__ == "__main__":

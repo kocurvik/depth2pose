@@ -79,10 +79,13 @@ def get_dataset_paths(basename, dataset_path, subset):
 def enforce_max_resolution(camera, args):
     w = camera.width
     h = camera.height
-    K = cam_to_K(camera)
+    K, dist_coeffs = cam_to_K(camera)
 
     if args.max_resolution is None or max(w,h) < args.max_resolution:
-        return w, h, K, w, h, K
+        return w, h, K, dist_coeffs, w, h, K, dist_coeffs
+
+    if dist_coeffs is not None:
+        raise NotImplementedError("Need to set logic for rescaling dist coeffs")
 
     if w > h:
         scale = args.max_resolution / w
@@ -94,7 +97,7 @@ def enforce_max_resolution(camera, args):
     new_K[0, :] *= new_w / w
     new_K[1, :] *= new_h / h
 
-    return new_w, new_h, new_K, w, h, K
+    return new_w, new_h, new_K, dist_coeffs, w, h, K, dist_coeffs
 
 
 
@@ -114,7 +117,7 @@ def create_gt_h5(model, image_ids, subset, f, f_txt, args):
         t = img.tvec
         R = Rotation.from_quat([q[1], q[2], q[3], q[0]]).as_matrix()
 
-        w, h, K, w_orig, h_orig, K_orig = enforce_max_resolution(camera, args)
+        w, h, K, d, w_orig, h_orig, K_orig, d_orig = enforce_max_resolution(camera, args)
         size = np.array([int(w), int(h)], dtype=int)
         size_orig = np.array([int(w_orig), int(h_orig)], dtype=int)
 
@@ -129,6 +132,10 @@ def create_gt_h5(model, image_ids, subset, f, f_txt, args):
         f.create_dataset(K_name, data=K, compression='gzip', chunks=True)
         f.create_dataset(size_name + '_orig', data=size_orig, compression='gzip', chunks=True)
         f.create_dataset(K_name + '_orig', data=K_orig, compression='gzip', chunks=True)
+
+        if d is not None:
+            f.create_dataset(f'{name}_d', data=d, compression='gzip', chunks=True)
+            f.create_dataset(f'{name}_d_orig', data=d_orig, compression='gzip', chunks=True)
 
 
 def valid_pairs(model, image_ids, args):
