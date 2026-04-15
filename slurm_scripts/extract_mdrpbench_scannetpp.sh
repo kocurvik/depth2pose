@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH -G 1
-#SBATCH -t 4:00:00
+#SBATCH -t 12:00:00
 #SBATCH --mem 64GB
 #SBATCH -o /home/kocurvik/logs/extract_mdrpbench_scannet.000.std.out
 #SBATCH -e /home/kocurvik/logs/extract_mdrpbench_scannet.000.err.out
@@ -31,7 +31,7 @@ rsync -a "$SRC/" "$WORK/"
 rsync -a "$DATASET_SRC/" "$DATASET_WORK/"
 
 # Run processing on /work
-python datasets/colmap.py --min_area_overlap 0.1 -mp 250 --check_images --name scannetpp "$WORK" "$DATASET_WORK"
+python datasets/colmap.py --min_area_overlap 0.1 -mp 500 --check_images --name scannetpp "$WORK" "$DATASET_WORK"
 python depth_estimators/infer_depth.py --name scannetpp "$WORK" "$DATASET_WORK"
 python matchers/splg.py --name scannetpp "$WORK" "$DATASET_WORK"
 
