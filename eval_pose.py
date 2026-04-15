@@ -82,10 +82,10 @@ def get_exception_result_dict(x):
 def eval_experiment(x):
     experiment, kp1, kp2, d1, d2, K1_mde, K2_mde, R_gt, t_gt, cam1_gt, cam2_gt, img_name_1, img_name_2, t, r = x
 
-    f1_gt = cam1_gt.focal()
-    f2_gt = cam2_gt.focal()
-    pp1 = cam1_gt.principal_point()    
-    pp2 = cam2_gt.principal_point()
+    f1_gt = (cam1_gt['params'][0] + cam1_gt['params'][1]) / 2
+    f2_gt = (cam2_gt['params'][0] + cam2_gt['params'][1]) / 2
+    pp1 = np.array([cam1_gt['params'][2], cam1_gt['params'][3]])
+    pp2 = np.array([cam2_gt['params'][2], cam2_gt['params'][3]])
 
     shift = 'shift' in experiment
 
@@ -98,8 +98,8 @@ def eval_experiment(x):
         camera2 = poselib.Camera({'model': 'PINHOLE', 'width': -1, 'height': -1,
                                   'params': [K2_mde[0, 0], K2_mde[1, 1], K2_mde[0, 2], K2_mde[1, 2]]})
     else:
-        camera1 = cam1_gt
-        camera2 = cam2_gt
+        camera1 = poselib.Camera(cam1_gt)
+        camera2 = poselib.Camera(cam2_gt)
 
     monodepth_dict = {'max_errors': [r, t], 'estimate_shift': shift, 'ransac': ransac_dict}
 
@@ -300,22 +300,21 @@ def eval_single_mde(args):
                 R_gt = np.dot(R2, R1.T)
                 t_gt = T2 - np.dot(R_gt, T1)
 
-                if f'{img_name_1}_d' not in f_images: 
-                    cam1_gt = poselib.Camera({'model': 'PINHOLE', 'width': -1, 'height': -1,
-                                             'params': [K1_gt[0, 0], K1_gt[1, 1], K1_gt[0, 2], K1_gt[1, 2]]})
+                if f'{img_name_1}_d' not in f_images:
+                    cam1_gt = {'model': 'PINHOLE', 'width': -1, 'height': -1,
+                               'params': [K1_gt[0, 0], K1_gt[1, 1], K1_gt[0, 2], K1_gt[1, 2]]}
                 else:
                     dist1 = f_images[f'{img_name_1}_d']
-                    cam1_gt = poselib.Camera({'model': 'OPENCV', 'width': -1, 'height': -1,
-                                              'params': [K1_gt[0, 0], K1_gt[1, 1], K1_gt[0, 2], K1_gt[1, 2], *dist1]})
-                    
-                    
+                    cam1_gt = {'model': 'OPENCV', 'width': -1, 'height': -1,
+                               'params': [K1_gt[0, 0], K1_gt[1, 1], K1_gt[0, 2], K1_gt[1, 2], *dist1]}
+
                 if f'{img_name_2}_d' not in f_images:
-                    cam2_gt = poselib.Camera({'model': 'PINHOLE', 'width': -1, 'height': -1,
-                                             'params': [K2_gt[0, 0], K2_gt[1, 1], K2_gt[0, 2], K2_gt[1, 2]]})
+                    cam2_gt = {'model': 'PINHOLE', 'width': -1, 'height': -1,
+                               'params': [K2_gt[0, 0], K2_gt[1, 1], K2_gt[0, 2], K2_gt[1, 2]]}
                 else:
                     dist2 = f_images[f'{img_name_2}_d']
-                    cam2_gt = poselib.Camera({'model': 'OPENCV', 'width': -1, 'height': -1,
-                                              'params': [K2_gt[0, 0], K2_gt[1, 1], K2_gt[0, 2], K2_gt[1, 2], *dist2]})
+                    cam2_gt = {'model': 'OPENCV', 'width': -1, 'height': -1,
+                               'params': [K2_gt[0, 0], K2_gt[1, 1], K2_gt[0, 2], K2_gt[1, 2], *dist2]}
 
                 kps = np.array(f_matches[f"{img_name_1}-{img_name_2}"])
 
