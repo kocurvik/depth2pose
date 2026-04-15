@@ -274,6 +274,7 @@ def get_n_colors(n):
 
 
 def plot_scatter_pose_depth(all_metrics, depth_metrics):
+
     from matplotlib.lines import Line2D
 
     mde_list = list(depth_metrics.keys())
@@ -290,31 +291,39 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics):
     ncols = 2
     nrows = (n + ncols - 1) // ncols
 
-    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 3 * nrows))
-    axes = np.array(axes).flatten()
+    for solver in ['calib', 'calib_shift', 'mdecalib', 'mdecalib_shift', 'sf', 'sf_shift', 'vf', 'vf_shift']:
 
-    for idx, (type, metric) in enumerate(depth_evals):
-        ax = axes[idx]
-        for mde in mde_list:
-            base_name = mde.split('-')[0].split('Calib')[0]
-            depth_val = depth_metrics[mde][type][metric]
-            pose_val_shift = all_metrics[mde]['calib_shift']['pose_mAA_10']
-            marker = 'o' if 'Calib' in mde else '*'
-            ax.plot(depth_val, pose_val_shift, color=color_dict[base_name], marker=marker, linestyle='None')
-        ax.set_xlabel(f"Depth {type} - {metric}")
-        ax.set_ylabel("Calib Pose mAA(10)")
+        fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 3 * nrows))
+        fig.suptitle(f'Solver {solver}')
+        axes = np.array(axes).flatten()
 
-    for idx in range(n, len(axes)):
-        axes[idx].set_visible(False)
+        for idx, (type, metric) in enumerate(depth_evals):
+            ax = axes[idx]
+            for mde in mde_list:
+                base_name = mde.split('-')[0].split('Calib')[0]
+                if 'Calib' in mde and ('vf' in solver or 'sf' in solver or 'mdecalib' in solver):
+                    continue
+                depth_val = depth_metrics[mde][type][metric]
+                try:
+                    pose_val = all_metrics[mde][solver]['pose_mAA_10']
+                except:
+                    continue
+                marker = 'o' if 'Calib' in mde else '*'
+                ax.plot(depth_val, pose_val, color=color_dict[base_name], marker=marker, linestyle='None')
+            ax.set_xlabel(f"Depth {type} - {metric}")
+            ax.set_ylabel("Calib Pose mAA(10)")
 
-    color_handles = [Line2D([0], [0], color=c, marker='s', linestyle='None', label=name)
-                     for name, c in color_dict.items()]
-    marker_handles = [Line2D([0], [0], color='gray', marker='*', linestyle='None', label='Normal'),
-                      Line2D([0], [0], color='gray', marker='o', linestyle='None', label='Calib')]
+        for idx in range(n, len(axes)):
+            axes[idx].set_visible(False)
 
-    fig.legend(handles=color_handles + marker_handles, loc='center right')
-    plt.tight_layout(rect=[0, 0, 0.82, 1])
-    plt.show()
+        color_handles = [Line2D([0], [0], color=c, marker='s', linestyle='None', label=name)
+                         for name, c in color_dict.items()]
+        marker_handles = [Line2D([0], [0], color='gray', marker='*', linestyle='None', label='Normal'),
+                          Line2D([0], [0], color='gray', marker='o', linestyle='None', label='Calib')]
+
+        fig.legend(handles=color_handles + marker_handles, loc='center right')
+        plt.tight_layout(rect=[0, 0, 0.82, 1])
+        plt.show()
 
 
 if __name__ == '__main__':
