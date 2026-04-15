@@ -112,11 +112,7 @@ def get_mde_model(model_name, weights):
 def infer_depth(model, args):
     name_path = os.path.join(args.out_path, args.name)
 
-    if args.temp_out_path is not None:
-        temp_name_path = os.path.join(args.temp_out_path, args.name)
-        f_depth_path = f'{temp_name_path}_depth_{model.name}.h5'
-    else:
-        f_depth_path = f'{name_path}_depth_{model.name}.h5'
+    f_depth_path = f'{name_path}_depth_{model.name}.h5'
     if os.path.exists(f_depth_path) and not args.recalc:
         try:
             with h5py.File(f_depth_path, 'r') as f_check:
@@ -133,6 +129,10 @@ def infer_depth(model, args):
     print(f"Creating {f_depth_path}")
     f_images = h5py.File(f'{name_path}.h5', 'r')
 
+    if args.temp_out_path is not None:
+        temp_name_path = os.path.join(args.temp_out_path, args.name)
+        f_depth_path = f'{temp_name_path}_depth_{model.name}.h5'
+        print(f"Using temp file {f_depth_path}")
     f_depth = h5py.File(f_depth_path, 'w')
     save_metadata(f_depth)
 
