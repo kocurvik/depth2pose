@@ -271,6 +271,8 @@ def eval_single_mde(args):
         if args.depth != 'gt':
             if args.direct_read:
                 f_depth = h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r')
+                if 'completed' not in f_depth:
+                    raise ValueError(f'{name_path}_depth_{args.depth}.h5 does not have the completed tag. Aborting.')
             else:
                 with h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r') as f_depth_h5:
                     if 'completed' not in f_depth_h5:
@@ -326,8 +328,8 @@ def eval_single_mde(args):
                 kp2 = kps[:, 2:4]
 
                 if args.depth != 'gt':
-                    depth_map1 = f_depth[f'{img_name_1}_depth']
-                    depth_map2 = f_depth[f'{img_name_2}_depth']
+                    depth_map1 = np.array(f_depth[f'{img_name_1}_depth'])
+                    depth_map2 = np.array(f_depth[f'{img_name_2}_depth'])
 
                     d1 = get_kp_depth(kp1, depth_map1, interpolation='nearest')
                     d2 = get_kp_depth(kp2, depth_map2, interpolation='nearest')
