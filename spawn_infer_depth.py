@@ -1,6 +1,7 @@
 import argparse
 import copy
 import os
+import shutil
 import submitit
 
 from depth_estimators.infer_depth import ALL_MDEs, get_mde_model, infer_depth
@@ -31,12 +32,32 @@ def parse_args():
                         help='Number of GPUs per job')
     parser.add_argument('--log_dir', type=str, default=None,
                         help='Directory for submitit logs (default: <out_path>/slurm_logs)')
+    parser.add_argument('--work_dir', type=str, default=None,
+                        help='If set, write h5 output to <work_dir>/$SLURM_JOB_ID/ during inference '
+                             'and move to out_path when done (useful for fast local scratch like /work/partition)')
     return parser.parse_args()
 
 
 def run_for_model(args):
     model = get_mde_model(args.model_name, args.pretrained_weights)
-    infer_depth(model, args)
+
+    if args.work_dir:
+        job_id = os.environ.get('SLURM_JOB_ID', 'local')
+        tmp_out_path = os.path.join(args.work_dir, job_id)
+        os.makedirs(tmp_out_path, exist_ok=True)
+
+        final_out_path = args.out_path
+        args = copy.copy(args)
+        args.temp_out_path = tmp_out_path
+
+        infer_depth(model, args)
+
+        name_path = os.path.join(tmp_out_path, args.name)
+        src = f'{name_path}_depth_{model.name}.h5'
+        os.makedirs(final_out_path, exist_ok=True)
+        shutil.move(src, final_out_path)
+    else:
+        infer_depth(model, args)
 
 
 def main():

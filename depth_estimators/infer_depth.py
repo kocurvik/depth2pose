@@ -54,6 +54,7 @@ def parse_args():
     parser.add_argument('--device', type=str, default='cuda', help='Device to run inference on (cuda or cpu).')
     parser.add_argument('--name', type=str, default='dataset')
     parser.add_argument('--pretrained_weights', type=str, help='Path to pretrained model weights.')
+    parser.add_argument('--temp_out_path', default=None, type=str, help='Path to data directory.')
     parser.add_argument('out_path', type=str, help='Path to data directory.')
     parser.add_argument('dataset_path', type=str, help='Path to dataset')
 
@@ -111,7 +112,11 @@ def get_mde_model(model_name, weights):
 def infer_depth(model, args):
     name_path = os.path.join(args.out_path, args.name)
 
-    f_depth_path = f'{name_path}_depth_{model.name}.h5'
+    if args.temp_out_path is not None:
+        temp_name_path = os.path.join(args.temp_out_path, args.name)
+        f_depth_path = f'{temp_name_path}_depth_{model.name}.h5'
+    else:
+        f_depth_path = f'{name_path}_depth_{model.name}.h5'
     if os.path.exists(f_depth_path) and not args.recalc:
         try:
             with h5py.File(f_depth_path, 'r') as f_check:
