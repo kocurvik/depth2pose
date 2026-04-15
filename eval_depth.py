@@ -50,51 +50,57 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device, recalc=False
 
         if os.path.exists(single_results_path) and not recalc:
             print(f'{single_results_path} exists skipping {mde_model} for {benchmark_name}')
-            continue
+            with open(single_results_path) as f:
+                single_results = json.load(f)
 
-        metric_result_list, scale_result_list, affine_result_list = [], [], []
-        with (
-            EvalDataLoaderPipeline(**benchmark_config) as eval_data_pipe,
-            tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
-            h5py.File(Path(benchmark_config['depth']) / f'{benchmark_name}_depth_{mde_model}.h5',
-                      'r') as f_depth_h5
-        ):
-            for i in range(len(eval_data_pipe)):
-                sample = eval_data_pipe.get()
-                sample = {
-                    k: v.to(device) if isinstance(v, torch.Tensor) else v
-                    for k, v in sample.items()
-                }
-                scenename, filename = sample["scenename"], sample["filename"]
-                _, gt_depth, depth_mask = (
-                    sample["image"],
-                    sample["depth"],
-                    sample["depth_mask"]
-                )
-                # pd_depth_data = np.load(eval_data_pipe.path / scenename / mde_model / f"{filename}.npz")
-                # pd_depth, pd_intrinsic = pd_depth_data["depth"], pd_depth_data["K"]
+            all_metric_depth_results[benchmark_name] = single_results['metric']
+            all_scale_depth_results[benchmark_name] = single_results['scale']
+            all_affine_depth_results[benchmark_name] = single_results['affine']
+        else:
 
-                pd_depth = get_depth_from_h5(f_depth_h5, scenename, filename)
-                pd_depth = torch.from_numpy(pd_depth).to(torch.float32).to(device)
+            metric_result_list, scale_result_list, affine_result_list = [], [], []
+            with (
+                EvalDataLoaderPipeline(**benchmark_config) as eval_data_pipe,
+                tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
+                h5py.File(Path(benchmark_config['depth']) / f'{benchmark_name}_depth_{mde_model}.h5',
+                          'r') as f_depth_h5
+            ):
+                for i in range(len(eval_data_pipe)):
+                    sample = eval_data_pipe.get()
+                    sample = {
+                        k: v.to(device) if isinstance(v, torch.Tensor) else v
+                        for k, v in sample.items()
+                    }
+                    scenename, filename = sample["scenename"], sample["filename"]
+                    _, gt_depth, depth_mask = (
+                        sample["image"],
+                        sample["depth"],
+                        sample["depth_mask"]
+                    )
+                    # pd_depth_data = np.load(eval_data_pipe.path / scenename / mde_model / f"{filename}.npz")
+                    # pd_depth, pd_intrinsic = pd_depth_data["depth"], pd_depth_data["K"]
 
-                metric_results = metric_fn.compute_metric_depth(gt_depth, pd_depth, depth_mask)
-                scale_results = metric_fn.compute_scale_inv_depth(gt_depth, pd_depth, depth_mask)
-                affine_results = metric_fn.compute_affine_inv_depth(gt_depth, pd_depth, depth_mask)
-                metric_result_list.append(metric_results)
-                scale_result_list.append(scale_results)
-                affine_result_list.append(affine_results)
+                    pd_depth = get_depth_from_h5(f_depth_h5, scenename, filename)
+                    pd_depth = torch.from_numpy(pd_depth).to(torch.float32).to(device)
 
-                pbar.update(1)
+                    metric_results = metric_fn.compute_metric_depth(gt_depth, pd_depth, depth_mask)
+                    scale_results = metric_fn.compute_scale_inv_depth(gt_depth, pd_depth, depth_mask)
+                    affine_results = metric_fn.compute_affine_inv_depth(gt_depth, pd_depth, depth_mask)
+                    metric_result_list.append(metric_results)
+                    scale_result_list.append(scale_results)
+                    affine_result_list.append(affine_results)
 
-        single_results = {'metric': key_average(metric_result_list), 'scale': key_average(scale_result_list),
-                          'affine': key_average(affine_result_list)}
+                    pbar.update(1)
 
-        Path(single_results_path).parent.mkdir(exist_ok=True, parents=True)
-        Path(single_results_path).write_text(json.dumps(single_results, indent=4))
+            single_results = {'metric': key_average(metric_result_list), 'scale': key_average(scale_result_list),
+                              'affine': key_average(affine_result_list)}
 
-        all_metric_depth_results[benchmark_name] = key_average(metric_result_list)
-        all_scale_depth_results[benchmark_name] = key_average(scale_result_list)
-        all_affine_depth_results[benchmark_name] = key_average(affine_result_list)
+            Path(single_results_path).parent.mkdir(exist_ok=True, parents=True)
+            Path(single_results_path).write_text(json.dumps(single_results, indent=4))
+
+            all_metric_depth_results[benchmark_name] = key_average(metric_result_list)
+            all_scale_depth_results[benchmark_name] = key_average(scale_result_list)
+            all_affine_depth_results[benchmark_name] = key_average(affine_result_list)
 
     all_metric_depth_results["mean"] = key_average(list(all_metric_depth_results.values()))
     all_scale_depth_results["mean"] = key_average(list(all_scale_depth_results.values()))
