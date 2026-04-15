@@ -16,7 +16,7 @@ export PYTHONPATH=/home/kocurvik/code/mdrpbench
 module load git
 
 # Run processing on /work
-python eval_depth.py /home/kocurvik/mdrpbench/all_results ./datasets/devana_benchmarks.json --device cuda
+python eval_depth.py /projects/p1358-25-2/mdrpbench/all_results ./datasets/devana_benchmarks.json --device cuda
 
 echo "Done."
 
