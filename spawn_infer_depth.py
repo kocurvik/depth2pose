@@ -32,9 +32,9 @@ def parse_args():
                         help='Number of GPUs per job')
     parser.add_argument('--log_dir', type=str, default=None,
                         help='Directory for submitit logs (default: <out_path>/slurm_logs)')
-    parser.add_argument('--work_dir', type=str, default=None,
-                        help='If set, write h5 output to <work_dir>/$SLURM_JOB_ID/ during inference '
-                             'and move to out_path when done (useful for fast local scratch like /work/partition)')
+    parser.add_argument('--work_dir', action='store_true', default=False,
+                        help='If set, write h5 output to /work/$SLURM_JOB_ID/ during inference '
+                             'and move to out_path when done')
     return parser.parse_args()
 
 
@@ -43,7 +43,7 @@ def run_for_model(args):
 
     if args.work_dir:
         job_id = os.environ.get('SLURM_JOB_ID', 'local')
-        tmp_out_path = os.path.join(args.work_dir, job_id)
+        tmp_out_path = f'/work/{job_id}'
         os.makedirs(tmp_out_path, exist_ok=True)
 
         final_out_path = args.out_path
