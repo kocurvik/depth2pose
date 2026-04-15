@@ -22,5 +22,6 @@ DATASET=/projects/p1358-25-2/data/lamar
 python datasets/colmap.py --min_area_overlap 0.1 --check_images -mp 2500 --name lamar "$PROCESSED" "$DATASET"
 python matchers/splg.py --name lamar "$PROCESSED" "$DATASET"
 # python depth_estimators/infer_depth.py --name lamar "$WORK" "$DATASET_WORK"
+python spawn_infer_depth.py --work_dir --name lamar "$PROCESSED" "$DATASET"
 
 echo "Done."

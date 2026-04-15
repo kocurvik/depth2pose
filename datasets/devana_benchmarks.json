@@ -12,5 +12,12 @@
         "width": 1920,
         "height": 1440,
         "depth_unit": 1
+    },
+    "lamar": {
+        "path": "/projects/p1358-25-2/data/lamar",
+        "depth": "/projects/p1358-25-2/mdrpbench/lamar",
+        "width": 1280,
+        "height": 1920,
+        "depth_unit": 1
     }
 }
