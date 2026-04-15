@@ -31,11 +31,11 @@ rsync -a "$SRC/" "$WORK/"
 rsync -a "$DATASET_SRC/" "$DATASET_WORK/"
 
 # Run processing on /work
-#python datasets/colmap.py --min_area_overlap 0.025 --check_images -mp 500 --name eth3d "$WORK" "$DATASET_WORK"
+#python datasets/colmap.py --min_area_overlap 0.025 --check_images --name eth3d "$WORK" "$DATASET_WORK"
 #python depth_estimators/infer_depth.py --name eth3d "$WORK" "$DATASET_WORK"
 #python matchers/splg.py --name eth3d "$WORK" "$DATASET_WORK"
 
-python datasets/colmap.py --min_area_overlap 0.025 --check_images --max_resolution 800 -mp 500 --name eth3d_800 "$WORK" "$DATASET_WORK"
+python datasets/colmap.py --min_area_overlap 0.025 --check_images --max_resolution 800 --name eth3d_800 "$WORK" "$DATASET_WORK"
 python depth_estimators/infer_depth.py --name eth3d_800 "$WORK" "$DATASET_WORK"
 python matchers/splg.py --name eth3d_800 "$WORK" "$DATASET_WORK"
 
