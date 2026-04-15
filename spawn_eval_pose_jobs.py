@@ -18,6 +18,7 @@ def parse_args():
     parser.add_argument('-ss',  '--include_shift_solvers', action='store_true', default=False)
     parser.add_argument('-sf',  '--include_shared_focal', action='store_true', default=False)
     parser.add_argument('-vf',  '--include_varying_focal', action='store_true', default=False)
+    parser.add_argument('-dr', '--direct_read', action='store_true', default=False)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
     parser.add_argument('--recalc', action='store_true', default=False)
     parser.add_argument('-nw', '--num_workers', type=int, default=1)

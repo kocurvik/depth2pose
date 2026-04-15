@@ -29,6 +29,7 @@ def parse_args():
     parser.add_argument('-ss',  '--include_shift_solvers', action='store_true', default=False)
     parser.add_argument('-sf',  '--include_shared_focal', action='store_true', default=False)
     parser.add_argument('-vf',  '--include_varying_focal', action='store_true', default=False)
+    parser.add_argument('-dr',  '--direct_read', action='store_true', default=False)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
     parser.add_argument('--recalc', action='store_true', default=False)
     parser.add_argument('-nw', '--num_workers', type=int, default=1)
@@ -267,19 +268,22 @@ def eval_single_mde(args):
                 f_matches[f"{image_name_1}-{image_name_2}"] = np.array(f_matches_h5[f"{image_name_1}-{image_name_2}"])
 
         
-        if args.depth != 'gt':            
-            with h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r') as f_depth_h5:
-                if 'completed' not in f_depth_h5:
-                    raise ValueError(f'{name_path}_depth_{args.depth}.h5 does not have the completed tag. Aborting.')
+        if args.depth != 'gt':
+            if args.direct_read:
+                f_depth = h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r')
+            else:
+                with h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r') as f_depth_h5:
+                    if 'completed' not in f_depth_h5:
+                        raise ValueError(f'{name_path}_depth_{args.depth}.h5 does not have the completed tag. Aborting.')
 
-                mde_runtimes = [f_depth_h5[f'{x}_runtime'][()] / 1e6 for x in image_list]
-                
-                f_depth = {}
-                for image_name in image_list:
-                    f_depth[f'{image_name}_depth'] = np.array(f_depth_h5[f'{image_name}_depth'])
-                    if f'{image_name}_K' in f_depth_h5:
-                        f_depth[f'{image_name}_K'] = np.array(f_depth_h5[f'{image_name}_K'])
-            
+                    mde_runtimes = [f_depth_h5[f'{x}_runtime'][()] / 1e6 for x in image_list]
+
+                    f_depth = {}
+                    for image_name in image_list:
+                        f_depth[f'{image_name}_depth'] = np.array(f_depth_h5[f'{image_name}_depth'])
+                        if f'{image_name}_K' in f_depth_h5:
+                            f_depth[f'{image_name}_K'] = np.array(f_depth_h5[f'{image_name}_K'])
+
         else:
             f_depth = None
             mde_runtimes = [0 for x in image_list]
@@ -371,6 +375,8 @@ def eval_single_mde(args):
                 pool = Pool(args.num_workers)
                 full_results = [x for x in pool.imap(eval_experiment, tqdm(gen_data(), total=total_length))]
 
+        if args.direct_read:
+            f_depth.close()
 
         save_full_results(args, full_results)
 
