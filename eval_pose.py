@@ -318,6 +318,8 @@ def eval_single_mde(args):
                     d2 = get_kp_depth(kp2, depth_map2, interpolation='nearest')
 
                     l = np.logical_and(np.isfinite(d1), np.isfinite(d2))
+                    l = np.logical_and(d1 > 0, l)
+                    l = np.logical_and(d2 > 0, l)
                     kp1 = kp1[l]
                     kp2 = kp2[l]
                     d1 = d1[l]
