@@ -127,7 +127,6 @@ def infer_depth(model, args):
     model.load_model()
 
     print(f"Creating {f_depth_path}")
-    f_images = h5py.File(f'{name_path}.h5', 'r')
 
     if args.temp_out_path is not None:
         temp_name_path = os.path.join(args.temp_out_path, args.name)
@@ -141,11 +140,19 @@ def infer_depth(model, args):
         image_list = [x.strip() for x in f.readlines()]
 
 
+    f_image_dict = {}
+    with h5py.File(f'{name_path}.h5', 'r') as f_images:
+        for image_name in tqdm(image_list):
+            f_image_dict[f'{image_name}_K'] = np.array(f_images[f'{image_name}_K'])
+            f_image_dict[f'{image_name}_size'] = np.array(f_images[f'{image_name}_size'])
+            f_image_dict[f'{image_name}_size_orig'] = np.array(f_images[f'{image_name}_size_orig'])
+
+
     for image_name in tqdm(image_list):
-        K = np.array(f_images[f'{image_name}_K'])
+        K = f_image_dict[f'{image_name}_K']
         img_path = os.path.join(args.dataset_path, Path(PureWindowsPath(image_name)))
-        size = np.array(f_images[f'{image_name}_size'])
-        size_orig = np.array(f_images[f'{image_name}_size_orig'])
+        size = f_image_dict[f'{image_name}_size']
+        size_orig = f_image_dict[f'{image_name}_size_orig']
         if (size != size_orig).any():
             # if we resized during dataset generation we need to resize here
             out_dict = model.infer(img_path, size=size, K=K)
