@@ -1,23 +1,26 @@
 {
     "eth3d": {
         "path": "/mnt/d/Research/data/ETH3D_depth",
-        "processed": "/mnt/d/Research/data/mdrpbench/eth3d",
+        "work_path": "/mnt/d/Research/data/mdrpbench/eth3d",
         "width": 2048,
         "height": 1365,
-        "depth_unit": 1
+        "depth_unit": 1,
+        "contains_depth": true
     },
     "scannetpp": {
         "path": "/mnt/d/Research/data/scannetpp",
-        "processed": "/mnt/d/Research/data/mdrpbench/scannetpp",
+        "work_path": "/mnt/d/Research/data/mdrpbench/scannetpp",
         "width": 1920,
         "height": 1440,
-        "depth_unit": 1
+        "depth_unit": 1,
+        "contains_depth": true
     },
     "lamar": {
         "path": "/mnt/d/Research/data/lamar",
-        "processed": "/mnt/d/Research/data/mdrpbench/lamar",
+        "work_path": "/mnt/d/Research/data/mdrpbench/lamar",
         "width": 1280,
         "height": 1920,
-        "depth_unit": 1
+        "depth_unit": 1,
+        "contains_depth": true
     }
 }

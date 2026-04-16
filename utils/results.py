@@ -282,7 +282,7 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics, name='default', remove_o
 
     if remove_outliers:
         mde_list = [x for x in mde_list if 'Infini' not in x and 'AnythingV2' not in x]
-    if remove_outliers and name == 'eth3d':
+    if remove_outliers and name == 'lamar':
         mde_list = [x for x in mde_list if 'DepthPro' not in x]
 
     base_names = list(set([x.split('-')[0].split('Calib')[0] for x in mde_list]))
@@ -340,10 +340,8 @@ def plot_scatter_pose_depth_best(best_metrics, depth_metrics, version='calib', n
 
     if remove_outliers:
         mde_list = [x for x in mde_list if 'Infini' not in x and 'AnythingV2' not in x]
-    if remove_outliers and name == 'eth3d':
+    if remove_outliers and name == 'lamar':
         mde_list = [x for x in mde_list if 'DepthPro' not in x]
-
-    base_names = list(set([x.split('-')[0].split('Calib')[0] for x in mde_list]))
 
     single_metric = depth_metrics[mde_list[0]]
     depth_evals = [(k, x) for k, v in single_metric.items() for x in v.keys() if 'metric' not in k]
@@ -438,5 +436,5 @@ if __name__ == '__main__':
         for name, config in dataset_config.items():
             single_args = copy.copy(args)
             single_args.name = name
-            single_args.data_path = config["processed"]
+            single_args.data_path = config["work_path"]
             main(single_args)

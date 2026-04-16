@@ -46,7 +46,7 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device, recalc=False
     for benchmark_name, benchmark_config in tqdm(
         list(dataset_config.items()), desc="Benchmarks"
     ):
-        single_results_path = Path(benchmark_config['processed']) / 'depth_results' / f'{mde_model}.json'
+        single_results_path = Path(benchmark_config['work_path']) / 'depth_results' / f'{mde_model}.json'
 
         if os.path.exists(single_results_path) and not recalc:
             print(f'{single_results_path} exists skipping {mde_model} for {benchmark_name}')
@@ -62,7 +62,7 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device, recalc=False
             with (
                 EvalDataLoaderPipeline(**benchmark_config) as eval_data_pipe,
                 tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
-                h5py.File(Path(benchmark_config['processed']) / f'{benchmark_name}_depth_{mde_model}.h5',
+                h5py.File(Path(benchmark_config['work_path']) / f'{benchmark_name}_depth_{mde_model}.h5',
                           'r') as f_depth_h5
             ):
                 for i in range(len(eval_data_pipe)):
@@ -126,7 +126,7 @@ def main():
     device = torch.device(args.device)
 
     first_dataset_name = list(dataset_config.keys())[0]
-    depth_models = get_mde_list(first_dataset_name, dataset_config[first_dataset_name]['processed'])
+    depth_models = get_mde_list(first_dataset_name, dataset_config[first_dataset_name]['work_path'])
 
     for model_name in depth_models:
         print(model_name)
