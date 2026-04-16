@@ -1,4 +1,6 @@
 import argparse
+import copy
+import json
 import os
 from pathlib import Path, PureWindowsPath
 
@@ -107,4 +109,16 @@ def match_splg(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    match_splg(args)
+
+    if args.config_path is not None:
+        with open(args.config_path) as f:
+            dataset_config = json.load(f)
+
+        for name, config in dataset_config.items():
+            single_args = copy.copy(args)
+            single_args.name = name
+            single_args.out_path = config["work_path"]
+            single_args.dataset_path = config["path"]
+            match_splg(single_args)
+    else:
+        match_splg(args)
