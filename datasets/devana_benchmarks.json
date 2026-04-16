@@ -13,7 +13,8 @@
         "width": 1920,
         "height": 1440,
         "depth_unit": 1,
-        "contains_gt_depth": true
+        "contains_gt_depth": true,
+        "requires_direct_read": true
     },
     "lamar": {
         "path": "/projects/p1358-25-2/data/lamar",
@@ -21,6 +22,7 @@
         "width": 1280,
         "height": 1920,
         "depth_unit": 1,
-        "contains_gt_depth": true
+        "contains_gt_depth": true,
+        "requires_direct_read": true
     }
 }

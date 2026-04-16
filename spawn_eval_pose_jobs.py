@@ -1,5 +1,6 @@
 import argparse
 import copy
+import json
 import os
 import submitit
 
@@ -47,9 +48,7 @@ def run_for_depth(args):
     eval_single_mde(args)
 
 
-def main():
-    args = parse_args()
-
+def main(args):
     log_dir = args.log_dir or os.path.join(args.data_path, 'slurm_logs')
     os.makedirs(log_dir, exist_ok=True)
 
@@ -86,4 +85,16 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    if args.config_path is not None:
+        with open(args.config_path) as f:
+            dataset_config = json.load(f)
+
+        for name, config in dataset_config.items():
+            single_args = copy.copy(args)
+            single_args.name = name
+            single_args.data_path = config["work_path"]
+            single_args.direct_read = "requires_direct_read" in config.keys() and config["requires_direct_read"]
+            main(single_args)
+    else:
+        main(args)
