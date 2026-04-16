@@ -1,28 +1,36 @@
 {
     "eth3d": {
         "path": "/mnt/d/Research/data/ETH3D_depth",
-        "work_path": "/mnt/d/Research/data/mdrpbench/eth3d",
+        "work_path": "/mnt/d/Research/mdrpbench/eth3d",
         "width": 2048,
         "height": 1365,
         "depth_unit": 1,
-        "contains_gt_depth": true
+        "contains_gt_depth": true,
+        "min_area_overlap": 0.025
     },
     "scannetpp": {
         "path": "/mnt/d/Research/data/scannetpp",
-        "work_path": "/mnt/d/Research/data/mdrpbench/scannetpp",
+        "work_path": "/mnt/d/Research/mdrpbench/scannetpp",
         "width": 1920,
         "height": 1440,
         "depth_unit": 1,
         "contains_gt_depth": true,
-        "requires_direct_read": true
+        "requires_direct_read": true,
+        "max_pairs": 500
     },
     "lamar": {
         "path": "/mnt/d/Research/data/lamar",
-        "work_path": "/mnt/d/Research/data/mdrpbench/lamar",
+        "work_path": "/mnt/d/Research/mdrpbench/lamar",
         "width": 1280,
         "height": 1920,
         "depth_unit": 1,
         "contains_gt_depth": true,
-        "requires_direct_read": true
+        "requires_direct_read": true,
+        "max_pairs": 2500
+    },
+    "pt": {
+        "path": "/mnt/d/Research/data/pt_test",
+        "work_path": "/mnt/d/Research/mdrpbench/pt",
+        "max_pairs": 500
     }
 }
