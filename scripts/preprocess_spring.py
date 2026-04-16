@@ -3,7 +3,6 @@ import sys
 from pathlib import Path
 
 import h5py
-import imageio
 import numpy as np
 from tqdm import tqdm
 
@@ -15,7 +14,7 @@ SPRING_BASELINE = 0.065
 
 
 def disparity_to_metric_depth(disparity, fx, baseline=SPRING_BASELINE):
-    return fx * baseline / disparity
+    return fx * baseline / (disparity+1e-9)
 
 
 def read_depth_spring(depth_file, intrinsic):
@@ -24,40 +23,6 @@ def read_depth_spring(depth_file, intrinsic):
     disparity = disparity[::2, ::2]
     # disparity = np.nan_to_num(disparity, 0.0)
     return disparity_to_metric_depth(disparity, intrinsic[0])
-
-
-def update_colmap_cameras(cameras):
-    new_cameras = {}
-    for cam_id, camera in cameras.items():
-        if camera.id != 2:
-            continue
-        new_camera = Camera(
-            id=0,
-            model=camera.model,
-            width=camera.width,
-            height=camera.height,
-            params=camera.params,
-        )
-        new_cameras[cam_id] = new_camera
-    return new_cameras
-
-
-def update_colmap_images(images):
-    new_images = {}
-    for image_id, image in images.items():
-        if "iphone" not in image.name:
-            continue
-        new_image = CImage(
-            id=image_id,
-            qvec=image.qvec,
-            tvec=image.tvec,
-            camera_id=0,
-            name=f"{Path(image.name).stem}.jpg",
-            xys=image.xys,
-            point3D_ids=image.point3D_ids,
-        )
-        new_images[image_id] = new_image
-    return new_images
 
 
 if __name__ == "__main__":
@@ -104,7 +69,7 @@ if __name__ == "__main__":
             filename = filenames[i]
             # create colmap model
             intrinsic, extrinsic = intrinsics[i], extrinsics[i].reshape(4, 4)
-            print(extrinsic.shape)
+
             # copy image file
             shutil.copyfile(
                 image_folder_path / f"frame_left_{filename}.png",
@@ -134,7 +99,7 @@ if __name__ == "__main__":
                 point3D_ids=np.array([])
             )
             points3ds[i] = Point3D(
-                id=0,
+                id=i,
                 xyz=np.array([]),
                 rgb=np.array([]),
                 error=0.0,
@@ -146,4 +111,4 @@ if __name__ == "__main__":
         # save a new colmap model
         write_model(cameras, images, points3ds, save_model_path, ext=".txt")
 
-        break
+        # break
