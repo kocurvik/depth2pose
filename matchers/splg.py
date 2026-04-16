@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument('-r', '--resize', type=int, default=None)
     parser.add_argument('--recalc_features', action='store_true', default=False)
     parser.add_argument('--name', type=str, default='dataset')
+    parser.add_argument('--config_path', type=str, default=None)
     parser.add_argument('out_path')
     parser.add_argument('dataset_path')
 
@@ -113,7 +114,6 @@ if __name__ == '__main__':
     if args.config_path is not None:
         with open(args.config_path) as f:
             dataset_config = json.load(f)
-
         for name, config in dataset_config.items():
             single_args = copy.copy(args)
             single_args.name = name
