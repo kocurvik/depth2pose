@@ -438,5 +438,5 @@ if __name__ == '__main__':
         for name, config in dataset_config.items():
             single_args = copy.copy(args)
             single_args.name = name
-            single_args.data_path = config["depth"]
+            single_args.data_path = config["processed"]
             main(single_args)

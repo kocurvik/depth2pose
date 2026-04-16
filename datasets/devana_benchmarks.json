@@ -1,21 +1,21 @@
 {
     "eth3d": {
         "path": "/projects/p1358-25-2/data/ETH3D_depth",
-        "depth": "/projects/p1358-25-2/mdrpbench/eth3d",
+        "processed": "/projects/p1358-25-2/mdrpbench/eth3d",
         "width": 2048,
         "height": 1365,
         "depth_unit": 1
     },
     "scannetpp": {
         "path": "/projects/p1358-25-2/data/scannetpp",
-        "depth": "/projects/p1358-25-2/mdrpbench/scannetpp",
+        "processed": "/projects/p1358-25-2/mdrpbench/scannetpp",
         "width": 1920,
         "height": 1440,
         "depth_unit": 1
     },
     "lamar": {
         "path": "/projects/p1358-25-2/data/lamar",
-        "depth": "/projects/p1358-25-2/mdrpbench/lamar",
+        "processed": "/projects/p1358-25-2/mdrpbench/lamar",
         "width": 1280,
         "height": 1920,
         "depth_unit": 1
