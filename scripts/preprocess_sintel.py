@@ -18,15 +18,15 @@ TAG_FLOAT = 202021.25
 
 def compare_depths(depth1, depth2):
     # function to compare depths from different sources
-    nan_mask_1 = np.isnan(depth)
-    nan_mask_2 = np.isnan(depth_cached)
+    nan_mask_1 = np.isnan(depth1)
+    nan_mask_2 = np.isnan(depth2)
 
     num_nan_1 = np.sum(nan_mask_1)
     num_nan_2 = np.sum(nan_mask_2)
 
     valid_mask = ~nan_mask_1 & ~nan_mask_2
 
-    diff = np.abs(depth - depth_cached)
+    diff = np.abs(depth1 - depth2)
 
     max_diff = np.max(diff[valid_mask])
     mean_diff = np.mean(diff[valid_mask])
@@ -183,18 +183,20 @@ if __name__ == "__main__":
             )
             
 
-            # just to check we get the same depth info
-            depth_cached = depth_read_cached(Path("/mnt/data/gg/benchmarks_original/sintel_all/sintel_pose_depth_cached/training/depth/") / scene / f"{frame}.dpt")
-
-
+           
             # read depth using read_depth
             depth, _ = read_depth_sintel(depth_path)  
             
+            ''' 
+            # just to check we get the same depth info from different sources
+            depth_cached = depth_read_cached(Path("/mnt/data/gg/benchmarks_original/sintel_all/sintel_pose_depth_cached/training/depth/") / scene / f"{frame}.dpt")
+
             # compare the two depth representations and check if they differ a lot
             nbr_nans, max_diff, mean_diff = compare_depths(depth, depth_cached)
             print(f"Scene {scene}, frame {frame}, depth diffs: max: {max_diff:.4f}, mean: {mean_diff:.4f}, ratio nans in MoGe2 depth {nbr_nans[0]/(h*w):.4f}, in cached depth {nbr_nans[1]/(h*w):.4f}")
+            '''
+
             # save the depth
-            
             np.savez_compressed(
                 save_depth_folder / frame, depth=depth.astype(np.float32)
             )
