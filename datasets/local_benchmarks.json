@@ -5,7 +5,7 @@
         "width": 2048,
         "height": 1365,
         "depth_unit": 1,
-        "contains_depth": true
+        "contains_gt_depth": true
     },
     "scannetpp": {
         "path": "/mnt/d/Research/data/scannetpp",
@@ -13,7 +13,7 @@
         "width": 1920,
         "height": 1440,
         "depth_unit": 1,
-        "contains_depth": true
+        "contains_gt_depth": true
     },
     "lamar": {
         "path": "/mnt/d/Research/data/lamar",
@@ -21,6 +21,6 @@
         "width": 1280,
         "height": 1920,
         "depth_unit": 1,
-        "contains_depth": true
+        "contains_gt_depth": true
     }
 }

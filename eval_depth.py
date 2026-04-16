@@ -46,6 +46,8 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device, recalc=False
     for benchmark_name, benchmark_config in tqdm(
         list(dataset_config.items()), desc="Benchmarks"
     ):
+        if not benchmark_config['contains_gt_depth']:
+            continue
         single_results_path = Path(benchmark_config['work_path']) / 'depth_results' / f'{mde_model}.json'
 
         if os.path.exists(single_results_path) and not recalc:

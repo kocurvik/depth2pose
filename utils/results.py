@@ -436,5 +436,6 @@ if __name__ == '__main__':
         for name, config in dataset_config.items():
             single_args = copy.copy(args)
             single_args.name = name
+            single_args.eval_depth = args.eval_depth and config["contains_gt_depth"]
             single_args.data_path = config["work_path"]
             main(single_args)
