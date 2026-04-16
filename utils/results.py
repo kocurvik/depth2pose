@@ -10,6 +10,7 @@ from prettytable import PrettyTable
 from scipy.cluster.hierarchy import single
 from matplotlib.lines import Line2D
 
+from depth_estimators.vis_utils import MDE_BASNAME_COLOR_DICT
 from utils.system_info import save_metadata
 
 
@@ -290,8 +291,9 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics, name='default', remove_o
     single_metric = depth_metrics[mde_list[0]]
     depth_evals = [(k, x) for k, v in single_metric.items() for x in v.keys()]
 
-    colors = get_n_colors(len(base_names))
-    color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
+    # colors = get_n_colors(len(base_names))
+    # color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
+    color_dict = MDE_BASNAME_COLOR_DICT
 
     n = len(depth_evals)
     ncols = 2
@@ -323,7 +325,7 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics, name='default', remove_o
             axes[idx].set_visible(False)
 
         color_handles = [Line2D([0], [0], color=c, marker='s', linestyle='None', label=name)
-                         for name, c in color_dict.items()]
+                         for name, c in color_dict.items() if name in base_names]
         marker_handles = [Line2D([0], [0], color='gray', marker='*', linestyle='None', label='Normal'),
                           Line2D([0], [0], color='gray', marker='o', linestyle='None', label='Calib')]
 
@@ -348,8 +350,9 @@ def plot_scatter_pose_depth_best(best_metrics, depth_metrics, version='calib', n
 
     base_names = list(set([x.split('-')[0].split('Calib')[0] for x in mde_list]))
 
-    colors = get_n_colors(len(base_names))
-    color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
+    # colors = get_n_colors(len(base_names))
+    # color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
+    color_dict = MDE_BASNAME_COLOR_DICT
 
     n = len(depth_evals)
     ncols = 2
@@ -378,7 +381,7 @@ def plot_scatter_pose_depth_best(best_metrics, depth_metrics, version='calib', n
             axes[idx].set_visible(False)
 
         color_handles = [Line2D([0], [0], color=c, marker='s', linestyle='None', label=name)
-                         for name, c in color_dict.items()]
+                         for name, c in color_dict.items() if name in base_names]
         marker_handles = [Line2D([0], [0], color='gray', marker='*', linestyle='None', label='Normal'),
                           Line2D([0], [0], color='gray', marker='o', linestyle='None', label='Calib')]
 
@@ -436,6 +439,6 @@ if __name__ == '__main__':
         for name, config in dataset_config.items():
             single_args = copy.copy(args)
             single_args.name = name
-            single_args.eval_depth = args.eval_depth and config["contains_gt_depth"]
+            single_args.eval_depth = args.eval_depth and "contains_gt_depth" in config and config["contains_gt_depth"]
             single_args.data_path = config["work_path"]
             main(single_args)
