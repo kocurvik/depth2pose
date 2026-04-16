@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 
@@ -7,6 +8,7 @@ from gitdb.util import basename
 from matplotlib import pyplot as plt
 from prettytable import PrettyTable
 from scipy.cluster.hierarchy import single
+from matplotlib.lines import Line2D
 
 from utils.system_info import save_metadata
 
@@ -255,6 +257,8 @@ def print_best_only(all_metrics):
     print("**** Best Uncal Results ****")
     print_results_all(None, best_uncal_results)
 
+    return best_calib_results, best_uncal_results
+
 
 def get_mde_list(name, data_path):
     mde_list = [x.split('_depth_')[1].split('.h5')[0] for x in os.listdir(data_path)
@@ -273,12 +277,14 @@ def get_n_colors(n):
     return [plt.cm.hsv(i / n) for i in range(n)]
 
 
-def plot_scatter_pose_depth(all_metrics, depth_metrics):
-
-    from matplotlib.lines import Line2D
-
+def plot_scatter_pose_depth(all_metrics, depth_metrics, name='default', remove_outliers=False):
     mde_list = list(depth_metrics.keys())
-    mde_list = [x for x in mde_list if 'Infini' not in x and 'AnythingV2' not in x]
+
+    if remove_outliers:
+        mde_list = [x for x in mde_list if 'Infini' not in x and 'AnythingV2' not in x]
+    if remove_outliers and name == 'eth3d':
+        mde_list = [x for x in mde_list if 'DepthPro' not in x]
+
     base_names = list(set([x.split('-')[0].split('Calib')[0] for x in mde_list]))
 
     single_metric = depth_metrics[mde_list[0]]
@@ -294,7 +300,7 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics):
     for solver in ['calib', 'calib_shift', 'mdecalib', 'mdecalib_shift', 'sf', 'sf_shift', 'vf', 'vf_shift']:
 
         fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 3 * nrows))
-        fig.suptitle(f'Solver {solver}')
+        fig.suptitle(f'Dataset: {name}, Solver: {solver}')
         axes = np.array(axes).flatten()
 
         for idx, (type, metric) in enumerate(depth_evals):
@@ -311,7 +317,7 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics):
                 marker = 'o' if 'Calib' in mde else '*'
                 ax.plot(depth_val, pose_val, color=color_dict[base_name], marker=marker, linestyle='None')
             ax.set_xlabel(f"Depth {type} - {metric}")
-            ax.set_ylabel("Calib Pose mAA(10)")
+            ax.set_ylabel("Pose mAA(10)")
 
         for idx in range(n, len(axes)):
             axes[idx].set_visible(False)
@@ -323,23 +329,84 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics):
 
         fig.legend(handles=color_handles + marker_handles, loc='center right')
         plt.tight_layout(rect=[0, 0, 0.82, 1])
-        plt.show()
+        plt.savefig(f'vis/scatter_pose_depth_{name}_{solver}{"_no_outliers" if remove_outliers else "_all"}.png')
+        # plt.show()
 
 
-if __name__ == '__main__':
+def plot_scatter_pose_depth_best(best_metrics, depth_metrics, version='calib', name='default', remove_outliers=False):
+    mde_list = list(best_metrics.keys())
+
+    mde_list = [x for x in mde_list if 'gt' != x]
+
+    if remove_outliers:
+        mde_list = [x for x in mde_list if 'Infini' not in x and 'AnythingV2' not in x]
+    if remove_outliers and name == 'eth3d':
+        mde_list = [x for x in mde_list if 'DepthPro' not in x]
+
+    base_names = list(set([x.split('-')[0].split('Calib')[0] for x in mde_list]))
+
+    single_metric = depth_metrics[mde_list[0]]
+    depth_evals = [(k, x) for k, v in single_metric.items() for x in v.keys() if 'metric' not in k]
+
+    base_names = list(set([x.split('-')[0].split('Calib')[0] for x in mde_list]))
+
+    colors = get_n_colors(len(base_names))
+    color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
+
+    n = len(depth_evals)
+    ncols = 2
+    nrows = (n + ncols - 1) // ncols
+
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 3 * nrows))
+    fig.suptitle(f'Dataset: {name}, Case: {version}')
+    axes = np.array(axes).flatten()
+
+    for idx, (type, metric) in enumerate(depth_evals):
+        ax = axes[idx]
+        for mde in mde_list:
+            base_name = mde.split('-')[0].split('Calib')[0]
+            depth_val = depth_metrics[mde][type][metric]
+            try:
+                pose_val = list(best_metrics[mde].items())[0][1]['pose_mAA_10']
+            except:
+                continue
+            marker = 'o' if 'Calib' in mde else '*'
+            ax.plot(depth_val, pose_val, color=color_dict[base_name], marker=marker, linestyle='None')
+        ax.set_xlabel(f"Depth {type} - {metric}")
+        ax.set_ylabel("Pose mAA(10)")
+
+        for idx in range(n, len(axes)):
+            axes[idx].set_visible(False)
+
+        color_handles = [Line2D([0], [0], color=c, marker='s', linestyle='None', label=name)
+                         for name, c in color_dict.items()]
+        marker_handles = [Line2D([0], [0], color='gray', marker='*', linestyle='None', label='Normal'),
+                          Line2D([0], [0], color='gray', marker='o', linestyle='None', label='Calib')]
+
+        fig.legend(handles=color_handles + marker_handles, loc='center right')
+        plt.tight_layout(rect=[0, 0, 0.82, 1])
+        plt.savefig(f'vis/scatter_pose_depth_{name}_best_{version}{"_no_outliers" if remove_outliers else "_all"}.png')
+        # plt.show()
+
+
+def parse_args():
+    global args
     import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path')
     parser.add_argument('name')
     parser.add_argument('matches')
+    parser.add_argument('--config_path', default=None, type=str)
     parser.add_argument('-st', '--sampson_threshold', type=float, default=2.0)
     parser.add_argument('-rt', '--reprojection_threshold', type=float, default=16.0)
     parser.add_argument('-o', '--output', type=str, default=None,
                         help='Path to write unified JSON (default: <results_dir>/all.json)')
     parser.add_argument('-ed', '--eval_depth', action='store_true', default=False)
     args = parser.parse_args()
+    return args
 
+def main(args):
     all_metrics = merge_summary_results(args)
 
     output_path = args.output or os.path.join(get_results_dir(args), 'all.json')
@@ -348,7 +415,28 @@ if __name__ == '__main__':
     print(f"Unified results written to {output_path}\n")
 
     print_results_all(args, all_metrics)
-    print_best_only(all_metrics)
+    best_calib_results, best_uncal_results = print_best_only(all_metrics)
     if args.eval_depth:
         depth_metrics = merge_summary_depth_results(args)
-        plot_scatter_pose_depth(all_metrics, depth_metrics)
+        plot_scatter_pose_depth(all_metrics, depth_metrics, args.name)
+        plot_scatter_pose_depth(all_metrics, depth_metrics, args.name, remove_outliers=True)
+        plot_scatter_pose_depth_best(best_calib_results, depth_metrics, version='calib', name=args.name)
+        plot_scatter_pose_depth_best(best_calib_results, depth_metrics, version='calib', name=args.name,
+                                     remove_outliers=True)
+        plot_scatter_pose_depth_best(best_uncal_results, depth_metrics, version='uncal', name=args.name)
+        plot_scatter_pose_depth_best(best_uncal_results, depth_metrics, version='uncal', name=args.name,
+                                     remove_outliers=True)
+
+
+if __name__ == '__main__':
+    args = parse_args()
+
+    if args.config_path is not None:
+        with open(args.config_path) as f:
+            dataset_config = json.load(f)
+
+        for name, config in dataset_config.items():
+            single_args = copy.copy(args)
+            single_args.name = name
+            single_args.data_path = config["depth"]
+            main(single_args)
