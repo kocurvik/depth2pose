@@ -1,5 +1,6 @@
 import argparse
 import copy
+import json
 import os
 import shutil
 import submitit
@@ -18,6 +19,8 @@ def parse_args():
     parser.add_argument('out_path', type=str, help='Path to output directory')
     parser.add_argument('dataset_path', type=str, help='Path to dataset')
     # --- slurm-specific args ---
+    parser.add_argument('--config_path', type=str, default=None,
+                        help='specify path to config to run for multiple datasets at the same time')
     parser.add_argument('--account', type=str, default='p1358-25-2',
                         help='Slurm account name')
     parser.add_argument('--queue', type=str, default='gpu',
@@ -60,9 +63,7 @@ def run_for_model(args):
         infer_depth(model, args)
 
 
-def main():
-    args = parse_args()
-
+def main(args):
     log_dir = args.log_dir or os.path.join(args.out_path, 'slurm_logs')
     os.makedirs(log_dir, exist_ok=True)
 
@@ -100,4 +101,16 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    if args.config_path is not None:
+        with open(args.config_path) as f:
+            dataset_config = json.load(f)
+
+        for name, config in dataset_config.items():
+            single_args = copy.copy(args)
+            single_args.name = name
+            single_args.out_path = config["work_path"]
+            single_args.dataset_path = config["path"]
+            main(single_args)
+    else:
+        main(args)
