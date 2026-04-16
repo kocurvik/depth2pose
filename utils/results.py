@@ -4,13 +4,11 @@ import os
 
 import h5py
 import numpy as np
-from gitdb.util import basename
 from matplotlib import pyplot as plt
 from prettytable import PrettyTable
-from scipy.cluster.hierarchy import single
 from matplotlib.lines import Line2D
 
-from depth_estimators.vis_utils import MDE_BASNAME_COLOR_DICT
+from depth_estimators.vis_utils import MDE_BASENAME_COLOR_DICT
 from utils.system_info import save_metadata
 
 
@@ -293,7 +291,7 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics, name='default', remove_o
 
     # colors = get_n_colors(len(base_names))
     # color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
-    color_dict = MDE_BASNAME_COLOR_DICT
+    color_dict = MDE_BASENAME_COLOR_DICT
 
     n = len(depth_evals)
     ncols = 2
@@ -352,7 +350,7 @@ def plot_scatter_pose_depth_best(best_metrics, depth_metrics, version='calib', n
 
     # colors = get_n_colors(len(base_names))
     # color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
-    color_dict = MDE_BASNAME_COLOR_DICT
+    color_dict = MDE_BASENAME_COLOR_DICT
 
     n = len(depth_evals)
     ncols = 2
