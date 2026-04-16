@@ -1,6 +1,8 @@
 import argparse
 import collections
+import copy
 import itertools
+import json
 import ntpath
 import os
 from pathlib import Path
@@ -8,6 +10,7 @@ import random
 
 import h5py
 import numpy as np
+from scipy.cluster.hierarchy import single
 
 from scipy.spatial.transform import Rotation
 from tqdm import tqdm
@@ -26,6 +29,7 @@ def parse_args():
     parser.add_argument('--min_area_overlap', type=float, default=0.1, help='Minimum overlap area based on gt 3D keypoints')
     parser.add_argument('--name', type=str, default='dataset', help='Path to dataset files')
     parser.add_argument('--check_images', action='store_true', default=False, help='Keep only images that are actually available on disk')
+    parser.add_argument('--config_path', type=str, default=None, help='specify path to config to run for multiple datasets at the same time')
     parser.add_argument('out_path')
     parser.add_argument('dataset_path')
 
@@ -306,4 +310,28 @@ def process_colmap_dataset(args):
 
 if __name__ == '__main__':
     args = parse_args()
+    if args.config_path is not None:
+        with open(args.config_path) as f:
+            dataset_config = json.load(f)
+
+        for name, config in dataset_config.items():
+            single_args = copy.copy(args)
+            single_args.name = name
+            single_args.out_path = config["work_path"]
+            single_args.dataset_path = config["path"]
+            if "max_pairs" in config:
+                single_args.max_pairs = config["max_pairs"]
+            else:
+                single_args.max_pairs = None
+
+            if "max_images" in config:
+                single_args.max_images = config["max_images"]
+            else:
+                single_args.max_images = None
+
+            if "min_area_overlap" in config:
+                single_args.min_area_overlap = config["min_area_overlap"]
+
+            process_colmap_dataset(single_args)
+
     process_colmap_dataset(args)
