@@ -33,7 +33,6 @@ def parse_args():
     parser.add_argument('-ro',  '--include_reproj_only_ransac', action='store_true', default=False)
     parser.add_argument('-dr',  '--direct_read', action='store_true', default=False)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
-    parser.add_argument('--save_full_results', action='store_true', default=False)
     parser.add_argument('--recalc', action='store_true', default=False)
     parser.add_argument('-nw', '--num_workers', type=int, default=1)
     parser.add_argument('-l', '--load', action='store_true', default=False)
