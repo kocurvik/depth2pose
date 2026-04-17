@@ -30,8 +30,9 @@ def encode_result(result):
     """Encode a single result dict into a 1-D uint8 numpy array."""
     buf = io.BytesIO()
 
-    for key in _ENCODE_F32:
-        buf.write(struct.pack('<f', result[key]))
+    with np.errstate(over='ignore'):
+        for key in _ENCODE_F32:
+            buf.write(struct.pack('<f', float(np.float32(key))))
     for key in _ENCODE_I64:
         buf.write(struct.pack('<q', result[key]))
 
