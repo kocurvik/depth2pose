@@ -6,7 +6,8 @@
         "height": 1365,
         "depth_unit": 1,
         "contains_gt_depth": true,
-        "min_area_overlap": 0.025
+        "min_area_overlap": 0.025,
+        "cameras": "shared"
     },
     "scannetpp": {
         "path": "/projects/p1358-25-2/data/scannetpp",
@@ -16,7 +17,8 @@
         "depth_unit": 1,
         "contains_gt_depth": true,
         "requires_direct_read": true,
-        "max_pairs": 500
+        "max_pairs": 500,
+        "cameras": "shared"
     },
     "lamar": {
         "path": "/projects/p1358-25-2/data/lamar",
@@ -26,11 +28,13 @@
         "depth_unit": 1,
         "contains_gt_depth": true,
         "requires_direct_read": true,
-        "max_pairs": 2500
+        "max_pairs": 2500,
+        "cameras": "shared"
     },
     "pt": {
         "path": "/projects/p1358-25-2/data/pt_test",
         "work_path": "/projects/p1358-25-2/mdrpbench/pt",
-        "depth_unit": 1
+        "depth_unit": 1,
+        "cameras": "varying"
     }
 }

@@ -5,7 +5,8 @@ import os
 import submitit
 
 from eval_pose import eval_single_mde
-from utils.results import get_basename, get_full_results_h5_path, get_mde_list
+from utils.results import get_basename, get_mde_list
+from utils.storage import get_full_results_h5_path
 
 
 def parse_args():
@@ -20,6 +21,7 @@ def parse_args():
     parser.add_argument('-sf',  '--include_shared_focal', action='store_true', default=False)
     parser.add_argument('-vf',  '--include_varying_focal', action='store_true', default=False)
     parser.add_argument('-dr', '--direct_read', action='store_true', default=False)
+    parser.add_argument('--save_full_results', action='store_true', default=False)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
     parser.add_argument('--recalc', action='store_true', default=False)
     parser.add_argument('-nw', '--num_workers', type=int, default=1)
@@ -95,6 +97,15 @@ if __name__ == '__main__':
             single_args.name = name
             single_args.data_path = config["work_path"]
             single_args.direct_read = "requires_direct_read" in config.keys() and config["requires_direct_read"]
+
+            if "cameras" in config:
+                if config["cameras"] == 'shared':
+                    single_args.include_shared_focal = True
+                    single_args.include_varying_focal = False
+                if config["cameras"] == 'varying':
+                    single_args.include_shared_focal = False
+                    single_args.include_varying_focal = True
+
             main(single_args)
     else:
         main(args)
