@@ -1,4 +1,5 @@
 import argparse
+import shutil
 from multiprocessing import Process, Queue, Pool
 import time
 import os
@@ -294,7 +295,14 @@ def eval_single_mde(args):
         
         if args.depth != 'gt':
             if args.direct_read:
-                f_depth = h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r')
+                try:
+                    job_id = os.environ.get('SLURM_JOB_ID', 'local')
+                    print(f'Copying {name_path}_depth_{args.depth}.h5 to /work/{job_id}/{args.name}_depth_{args.depth}.h5')
+                    shutil.copy(f'{name_path}_depth_{args.depth}.h5', f'/work/{job_id}/{args.name}_depth_{args.depth}.h5')
+                    f_depth = h5py.File(f'/work/{job_id}/{args.name}_depth_{args.depth}.h5', 'r')
+                except Exception:
+                    print("Not running as a SLURM job could not move to work")
+                    f_depth = h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r')
                 mde_runtimes = [f_depth[f'{x}_runtime'][()] / 1e6 for x in image_list]
                 if 'completed' not in f_depth:
                     raise ValueError(f'{name_path}_depth_{args.depth}.h5 does not have the completed tag. Aborting.')
