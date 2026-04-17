@@ -10,6 +10,31 @@ from matplotlib.lines import Line2D
 from depth_estimators.vis_utils import MDE_BASENAME_COLOR_DICT
 
 
+def compute_recall(errors):
+    num_elements = len(errors)
+    sort_idx = np.argsort(errors)
+    errors = np.array(errors.copy())[sort_idx]
+    recall = (np.arange(num_elements) + 1) / num_elements
+    return errors, recall
+
+
+def compute_auc(errors, thresholds):
+    # code from https://github.com/cvg/GeoCalib/blob/982f625d822fbb2b50c65d123fd1362a5c01ec2c/siclib/utils/tools.py#L157
+    errors, recall = compute_recall(errors)
+
+    recall = np.r_[0, recall]
+    errors = np.r_[0, errors]
+
+    aucs = []
+    for t in thresholds:
+        last_index = np.searchsorted(errors, t, side="right")
+        r = np.r_[recall[:last_index], recall[last_index - 1]]
+        e = np.r_[errors[:last_index], t]
+        auc = np.trapz(r, x=e) / t
+        aucs.append(auc)
+    return aucs
+
+
 def get_summary_metrics(experiments, results):
     metrics = {}
     for exp in experiments:
@@ -29,15 +54,24 @@ def get_summary_metrics(experiments, results):
         times = np.array([x['runtime'] for x in exp_results])
         inliers = np.array([x['info']['inlier_ratio'] for x in exp_results])
 
+        pose_mAA_10, pose_mAA_5, pose_mAA_3 = compute_auc(p_errs, [10, 5, 3])
+        f_mAA_10, f_mAA_5, f_mAA_3 = compute_auc(p_errs, [0.1, 0.05, 0.03])
+
         metrics[exp] = {
             'median_pose_err': np.median(p_errs),
             'median_f_err': np.median(f_errs),
-            'pose_mAA_10': 100 * np.mean(p_res),
-            'pose_mAA_5': 100 * np.mean(p_res[:5]),
-            'pose_mAA_3': 100 * np.mean(p_res[:3]),
-            'f_mAA_10': 100 * np.mean(f_res),
-            'f_mAA_5': 100 * np.mean(f_res[:5]),
-            'f_mAA_3': 100 * np.mean(f_res[:3]),
+            'pose_mAA_10_approx': 100 * np.mean(p_res),
+            'pose_mAA_5_approx': 100 * np.mean(p_res[:5]),
+            'pose_mAA_3_approx': 100 * np.mean(p_res[:3]),
+            'f_mAA_10_approx': 100 * np.mean(f_res),
+            'f_mAA_5_approx': 100 * np.mean(f_res[:5]),
+            'f_mAA_3_approx': 100 * np.mean(f_res[:3]),
+            'pose_mAA_10': pose_mAA_10,
+            'pose_mAA_5': pose_mAA_5,
+            'pose_mAA_3': pose_mAA_3,
+            'f_mAA_10': f_mAA_10,
+            'f_mAA_5_': f_mAA_5,
+            'f_mAA_3_': f_mAA_3,
             'mean_runtime': np.mean(times) / 1e6,
             'mean_inliers': np.mean(inliers)
         }

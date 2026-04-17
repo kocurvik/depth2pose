@@ -12,10 +12,10 @@ import numpy as np
 import poselib
 from tqdm import tqdm
 
-from utils.geometry import R_err_fun, t_err_fun, get_kp_depth
+from utils.geometry import R_err_fun, t_err_fun, get_kp_depth, get_gt_inlier_mask
 from utils.mp import NoDaemonProcessPool
 from utils.results import save_summary_results, print_results_all, get_mde_list
-from utils.storage import encode_result, decode_result, save_full_results, get_full_results_h5_path, load_full_results
+from utils.storage import encode_result, save_full_results, get_full_results_h5_path, load_full_results
 
 MDE_K_WARNING_SHOWN = False
 
@@ -29,6 +29,7 @@ def parse_args():
     parser.add_argument('-ss',  '--include_shift_solvers', action='store_true', default=False)
     parser.add_argument('-sf',  '--include_shared_focal', action='store_true', default=False)
     parser.add_argument('-vf',  '--include_varying_focal', action='store_true', default=False)
+    parser.add_argument('-ro',  '--include_reproj_only_ransac', action='store_true', default=False)
     parser.add_argument('-dr',  '--direct_read', action='store_true', default=False)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
     parser.add_argument('--save_full_results', action='store_true', default=False)
@@ -83,7 +84,7 @@ def get_exception_result_dict(x):
 
 def eval_experiment(x):
     (experiment, iters, kp1, kp2, d1, d2, K1_mde, K2_mde, pp_center_1, pp_center_2, R_gt, t_gt, cam1_gt, cam2_gt,
-     img_name_1, img_name_2, t, r) = x
+     img_name_1, img_name_2, gt_inlier_mask, t, r) = x
 
     f1_gt = (cam1_gt['params'][0] + cam1_gt['params'][1]) / 2
     f2_gt = (cam2_gt['params'][0] + cam2_gt['params'][1]) / 2
@@ -105,6 +106,14 @@ def eval_experiment(x):
         camera2 = poselib.Camera(cam2_gt)
 
     monodepth_dict = {'max_errors': [r, t], 'estimate_shift': shift, 'ransac': ransac_dict}
+
+    if '_ro' in experiment:
+        monodepth_dict['weight_sampson'] = -1.0
+        bundle_dict['loss_type'] = 'TRUNCATED_CAUCHY'
+        kp1 = kp1[gt_inlier_mask]
+        kp2 = kp2[gt_inlier_mask]
+        d1 = d1[gt_inlier_mask]
+        d2 = d2[gt_inlier_mask]
 
     if 'baseline_calib' == experiment:
         bundle_dict['loss_type'] = 'CAUCHY'
@@ -363,6 +372,8 @@ def eval_single_mde(args):
                 else:
                     d1, d2 = get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt)
 
+                gt_inlier_mask = get_gt_inlier_mask(kp1, kp2, K1_gt, K2_gt, R_gt, t_gt, args.sampson_threshold)
+
                 try:
                     mde_K1 = np.array(f_depth[f'{img_name_1}_K'])
                     mde_K2 = np.array(f_depth[f'{img_name_2}_K'])
@@ -381,7 +392,7 @@ def eval_single_mde(args):
                     for iters in iters_list:
                         yield (experiment, iters, np.copy(kp1), np.copy(kp2), np.copy(d1), np.copy(d2),
                                mde_K1, mde_K2, pp_center_1, pp_center_2, R_gt, t_gt, cam1_gt, cam2_gt,
-                               img_name_1, img_name_2, args.sampson_threshold, args.reprojection_threshold)
+                               img_name_1, img_name_2, gt_inlier_mask, args.sampson_threshold, args.reprojection_threshold)
 
         total_length = len(experiments) * len(pair_list) * len(iters_list)
 
@@ -428,6 +439,11 @@ def get_solvers(args):
             experiments.append('vf')
     if args.include_shift_solvers:
         experiments.extend([f'{x}_shift' for x in experiments])
+
+    if args.include_reproj_only_ransac:
+        experiments.extend([f'{x}_ro' for x in experiments])
+
+
     if args.include_baseline_solver:
         experiments.append('baseline_calib')
 
@@ -436,6 +452,8 @@ def get_solvers(args):
 
         if args.include_varying_focal:
             experiments.append('baseline_vf')
+
+
     return experiments
 
 

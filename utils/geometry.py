@@ -71,3 +71,32 @@ def get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt):
         d2[i] = depths[1]
 
     return d1, d2
+
+
+def get_gt_inlier_mask(kp1, kp2, K1_gt, K2_gt, R_gt, t_gt, sampson_error):
+    # Normalize keypoints
+    kp1_norm = np.linalg.inv(K1_gt) @ np.hstack((kp1, np.ones((kp1.shape[0], 1)))).T
+    kp2_norm = np.linalg.inv(K2_gt) @ np.hstack((kp2, np.ones((kp2.shape[0], 1)))).T
+
+    # Essential matrix from GT
+    t_x = np.array([
+        [0, -t_gt[2], t_gt[1]],
+        [t_gt[2], 0, -t_gt[0]],
+        [-t_gt[1], t_gt[0], 0]
+    ])
+    E_gt = t_x @ R_gt
+
+    # Sampson error calculation
+    Ex1 = E_gt @ kp1_norm
+    Et_x2 = E_gt.T @ kp2_norm
+    x2t_E_x1 = np.sum(kp2_norm * Ex1, axis=0)
+
+    errors = (x2t_E_x1**2) / (
+        Ex1[0, :]**2 + Ex1[1, :]**2 + Et_x2[0, :]**2 + Et_x2[1, :]**2
+    )
+
+    # Convert threshold from pixels to normalized coordinates (approximate)
+    f_avg = (K1_gt[0, 0] + K1_gt[1, 1] + K2_gt[0, 0] + K2_gt[1, 1]) / 4.0
+    norm_threshold = (sampson_error / f_avg) ** 2
+
+    return errors < norm_threshold
