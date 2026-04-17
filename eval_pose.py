@@ -415,7 +415,7 @@ def eval_single_mde(args):
                 pool = Pool(args.num_workers)
                 full_results = [x for x in pool.imap(eval_experiment, tqdm(gen_data(), total=total_length))]
 
-        if args.direct_read:
+        if args.direct_read and f_depth is not None:
             f_depth.close()
 
         save_full_results(args, full_results)
