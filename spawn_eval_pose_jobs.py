@@ -28,6 +28,7 @@ def parse_args():
     parser.add_argument('-l', '--load', action='store_true', default=False)
     parser.add_argument('-f', '--first', type=int, default=None)
     parser.add_argument('--explicit_solvers', type=str, default=None)
+    parser.add_argument('--config_path', type=str, default=None)
     parser.add_argument('data_path')
     parser.add_argument('name')
     parser.add_argument('matches')
