@@ -2,14 +2,12 @@ import copy
 import json
 import os
 
-import h5py
 import numpy as np
 from matplotlib import pyplot as plt
 from prettytable import PrettyTable
 from matplotlib.lines import Line2D
 
 from depth_estimators.vis_utils import MDE_BASENAME_COLOR_DICT
-from utils.system_info import save_metadata
 
 
 def get_summary_metrics(experiments, results):
@@ -115,39 +113,6 @@ def save_summary_results(experiments, full_results, mde_runtimes, args):
         json.dump(metrics, f, indent=4)
 
 
-def save_full_results(args, full_results):
-    # Cache groups to avoid repeated lookups and string formatting
-
-    h5_path = get_full_results_h5_path(args)
-
-    with h5py.File(h5_path, 'w') as f_results:
-        save_metadata(f_results)
-        group_cache = {}
-        for result in full_results:
-            group_name = f"{result['image_name_1']}-{result['image_name_2']}"
-            if group_name not in group_cache:
-                group_cache[group_name] = f_results.require_group(group_name)
-            group = group_cache[group_name]
-
-            exp_group = group.create_group(result['experiment'])
-            for key, value in result.items():
-                if key in ('experiment', 'image_name_1', 'image_name_2'):
-                    continue
-                if isinstance(value, dict):
-                    info_group = exp_group.create_group(key)
-                    for k, v in value.items():
-                        info_group.create_dataset(k, data=v)
-                else:
-                    exp_group.create_dataset(key, data=value)
-
-
-def get_full_results_h5_path(args):
-    results_dir = get_results_dir(args, 'full')
-    os.makedirs(results_dir, exist_ok=True)
-    h5_path = os.path.join(results_dir, f'{args.depth}.h5')
-    return h5_path
-
-
 def merge_summary_results(args):
     """Read all per-depth JSONs and merge into a single unified dict."""
     results_dir = get_results_dir(args)
@@ -172,21 +137,6 @@ def merge_summary_depth_results(args):
         with open(os.path.join(results_dir, fname), 'r') as f:
             unified[depth_name] = json.load(f)
     return unified
-
-
-def load_full_results(f_results):
-    full_results = []
-    for group_name in f_results.keys():
-        group = f_results[group_name]
-        for exp_name in group.keys():
-            exp_group = group[exp_name]
-            res = {'experiment': exp_name}
-            for key in exp_group.keys():
-                if isinstance(exp_group[key], h5py.Group):
-                    res[key] = {k: np.array(v) for k, v in exp_group[key].items()}
-                else:
-                    res[key] = np.array(exp_group[key])
-            full_results.append(res)
 
 
 def get_basename(args, depth: str) -> str:

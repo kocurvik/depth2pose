@@ -14,8 +14,8 @@ from tqdm import tqdm
 
 from utils.geometry import R_err_fun, t_err_fun, get_kp_depth
 from utils.mp import NoDaemonProcessPool
-from utils.results import save_summary_results, print_results_all, save_full_results, get_full_results_h5_path, \
-    get_mde_list
+from utils.results import save_summary_results, print_results_all, get_mde_list
+from utils.storage import encode_result, decode_result, save_full_results, get_full_results_h5_path, load_full_results
 
 MDE_K_WARNING_SHOWN = False
 
@@ -31,6 +31,7 @@ def parse_args():
     parser.add_argument('-vf',  '--include_varying_focal', action='store_true', default=False)
     parser.add_argument('-dr',  '--direct_read', action='store_true', default=False)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
+    parser.add_argument('--save_full_results', action='store_true', default=False)
     parser.add_argument('--recalc', action='store_true', default=False)
     parser.add_argument('-nw', '--num_workers', type=int, default=1)
     parser.add_argument('-l', '--load', action='store_true', default=False)
@@ -81,7 +82,7 @@ def get_exception_result_dict(x):
 
 
 def eval_experiment(x):
-    experiment, kp1, kp2, d1, d2, K1_mde, K2_mde, R_gt, t_gt, cam1_gt, cam2_gt, img_name_1, img_name_2, t, r = x
+    experiment, iters, kp1, kp2, d1, d2, K1_mde, K2_mde, R_gt, t_gt, cam1_gt, cam2_gt, img_name_1, img_name_2, t, r = x
 
     f1_gt = (cam1_gt['params'][0] + cam1_gt['params'][1]) / 2
     f2_gt = (cam2_gt['params'][0] + cam2_gt['params'][1]) / 2
@@ -91,7 +92,7 @@ def eval_experiment(x):
     shift = 'shift' in experiment
 
     bundle_dict = {'max_iterations': 0, 'verbose': False, 'loss_type': 'TRUNCATED_CAUCHY'}
-    ransac_dict = {'max_iterations': 1000, 'min_iterations': 1000, 'progressive_sampling': False}
+    ransac_dict = {'max_iterations': iters, 'min_iterations': iters, 'progressive_sampling': False}
 
     if 'mdecalib' in experiment:
         camera1 = poselib.Camera({'model': 'PINHOLE', 'width': -1, 'height': -1,
@@ -153,7 +154,10 @@ def eval_experiment(x):
     result_dict['runtime'] = runtime
     result_dict['image_name_1'] = img_name_1
     result_dict['image_name_2'] = img_name_2
+    result_dict['iterations'] = iters
+    result_dict['encoded'] = encode_result(result_dict)
 
+    # test_dict = decode_result(result_dict['encoded'])
     # if runtime / 1e6 > 300:
     #     print(info)
     # print(f'For experimet: {experiment} runtime: {runtime / 1e6}')
@@ -229,6 +233,8 @@ def get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt):
 def eval_single_mde(args):
     experiments = get_solvers(args)
 
+    iters_list = [10, 100, 500, 1000]
+
     print(f"Running: {experiments}")
 
     basename = f'{args.name}_{args.matches}_{args.depth}_{args.sampson_threshold}t_{args.reprojection_threshold}r'
@@ -236,22 +242,30 @@ def eval_single_mde(args):
     os.makedirs(os.path.join(args.data_path, 'full_results'), exist_ok=True)
     os.makedirs(os.path.join(args.data_path, 'summary_results'), exist_ok=True)
 
-    if args.load:
-        raise NotImplementedError
-        # print("Loading: ", h5_path)
-        # with h5py.File(h5_path, 'r') as f_results:
-        #     load_full_results(f_results)
-    else:
-        name_path = os.path.join(args.data_path, args.name)
+    name_path = os.path.join(args.data_path, args.name)
 
+    image_list_path = f'{name_path}_image_list.txt'
+    with open(image_list_path, 'r') as f:
+        image_list = [x.strip() for x in f.readlines()]
+
+    if args.load:
+        full_results = load_full_results(args)
+
+        if args.depth == 'gt':
+            mde_runtimes = [0 for x in image_list]
+        else:
+            with h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r') as f_depth_h5:
+                if 'completed' not in f_depth_h5:
+                    raise ValueError(f'{name_path}_depth_{args.depth}.h5 does not have the completed tag. Aborting.')
+
+                mde_runtimes = [f_depth_h5[f'{x}_runtime'][()] / 1e6 for x in image_list]
+
+        save_summary_results(experiments, full_results, mde_runtimes, args)
+    else:
         image_pair_list_path = f'{name_path}_image_pairs.txt'
         with open(image_pair_list_path, 'r') as f:
             pair_list = [x.strip().split(',')[:2] for x in f.readlines()]
 
-        image_list_path = f'{name_path}_image_list.txt'
-        with open(image_list_path, 'r') as f:
-            image_list = [x.strip() for x in f.readlines()]
-        
         with h5py.File(f'{name_path}.h5') as f_images_h5:        
             f_images = {}
             for image_name in image_list:
@@ -359,11 +373,12 @@ def eval_single_mde(args):
                     mde_K1, mde_K2 = None, None
 
                 for experiment in experiments:
-                    yield (experiment, np.copy(kp1), np.copy(kp2), np.copy(d1), np.copy(d2),
-                           mde_K1, mde_K2, R_gt, t_gt, cam1_gt, cam2_gt, img_name_1, img_name_2,
-                           args.sampson_threshold, args.reprojection_threshold)
+                    for iters in iters_list:
+                        yield (experiment, iters, np.copy(kp1), np.copy(kp2), np.copy(d1), np.copy(d2),
+                               mde_K1, mde_K2, R_gt, t_gt, cam1_gt, cam2_gt, img_name_1, img_name_2,
+                               args.sampson_threshold, args.reprojection_threshold)
 
-        total_length = len(experiments) * len(pair_list)
+        total_length = len(experiments) * len(pair_list) * len(iters_list)
 
         print(f"Total runs: {total_length} for {len(pair_list)} samples")
 
