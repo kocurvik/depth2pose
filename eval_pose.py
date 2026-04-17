@@ -94,7 +94,7 @@ def eval_experiment(x):
 
     shift = 'shift' in experiment
 
-    bundle_dict = {'max_iterations': 0, 'verbose': False, 'loss_type': 'TRUNCATED_CAUCHY'}
+    bundle_dict = {'max_iterations': 100, 'verbose': False, 'loss_type': 'TRUNCATED_CAUCHY'}
     ransac_dict = {'max_iterations': iters, 'min_iterations': iters, 'progressive_sampling': False}
 
     if 'mdecalib' in experiment:
@@ -110,7 +110,7 @@ def eval_experiment(x):
 
     if '_ro' in experiment:
         monodepth_dict['weight_sampson'] = -1.0
-        bundle_dict['loss_type'] = 'TRUNCATED_CAUCHY'
+        bundle_dict['loss_type'] = 'CAUCHY'
         kp1 = kp1[gt_inlier_mask]
         kp2 = kp2[gt_inlier_mask]
         d1 = d1[gt_inlier_mask]
@@ -420,7 +420,6 @@ def eval_single_mde(args):
             f_depth.close()
 
         save_full_results(args, full_results)
-
         save_summary_results(experiments, full_results, mde_runtimes, args)
 
 
