@@ -82,12 +82,13 @@ def get_exception_result_dict(x):
 
 
 def eval_experiment(x):
-    experiment, iters, kp1, kp2, d1, d2, K1_mde, K2_mde, R_gt, t_gt, cam1_gt, cam2_gt, img_name_1, img_name_2, t, r = x
+    (experiment, iters, kp1, kp2, d1, d2, K1_mde, K2_mde, pp_center_1, pp_center_2, R_gt, t_gt, cam1_gt, cam2_gt,
+     img_name_1, img_name_2, t, r) = x
 
     f1_gt = (cam1_gt['params'][0] + cam1_gt['params'][1]) / 2
     f2_gt = (cam2_gt['params'][0] + cam2_gt['params'][1]) / 2
-    pp1 = np.array([cam1_gt['params'][2], cam1_gt['params'][3]])
-    pp2 = np.array([cam2_gt['params'][2], cam2_gt['params'][3]])
+    # pp1 = np.array([cam1_gt['params'][2], cam1_gt['params'][3]])
+    # pp2 = np.array([cam2_gt['params'][2], cam2_gt['params'][3]])
 
     shift = 'shift' in experiment
 
@@ -116,7 +117,8 @@ def eval_experiment(x):
         bundle_dict['loss_type'] = 'CAUCHY'
         relpose_dict = {'max_error': t, 'ransac': ransac_dict, 'bundle': bundle_dict}
         start_time = perf_counter_ns()
-        image_pair, info = poselib.estimate_shared_focal_relative_pose(kp1, kp2, (pp1 + pp2) / 2, relpose_dict)
+        image_pair, info = poselib.estimate_shared_focal_relative_pose(kp1, kp2, (pp_center_1 + pp_center_2) / 2,
+                                                                       relpose_dict)
         runtime = perf_counter_ns() - start_time
         monodepth_pair = poselib.MonoDepthImagePair(poselib.MonoDepthTwoViewGeometry(image_pair.pose),
                                                     image_pair.camera1, image_pair.camera2)
@@ -124,7 +126,8 @@ def eval_experiment(x):
         bundle_dict['loss_type'] = 'CAUCHY'
         relpose_dict = {'max_error': t, 'ransac': ransac_dict, 'bundle': bundle_dict}
         start_time = perf_counter_ns()
-        image_pair, info = poselib.estimate_varying_focal_relative_pose(kp1, kp2, pp1, pp2, relpose_dict)
+        image_pair, info = poselib.estimate_varying_focal_relative_pose(kp1, kp2, pp_center_1, pp_center_2,
+                                                                        relpose_dict)
         runtime = perf_counter_ns() - start_time
         monodepth_pair = poselib.MonoDepthImagePair(poselib.MonoDepthTwoViewGeometry(image_pair.pose),
                                                     image_pair.camera1, image_pair.camera2)
@@ -139,13 +142,15 @@ def eval_experiment(x):
 
     elif 'sf' in experiment:
         start_time = perf_counter_ns()
-        monodepth_pair, info = poselib.estimate_monodepth_shared_focal_relative_pose(kp1 - pp1, kp2 - pp2, d1, d2,
+        monodepth_pair, info = poselib.estimate_monodepth_shared_focal_relative_pose(kp1 - pp_center_1,
+                                                                                     kp2 - pp_center_2, d1, d2,
                                                                                      monodepth_dict)
         runtime = perf_counter_ns() - start_time
 
     elif 'vf' in experiment:
         start_time = perf_counter_ns()
-        monodepth_pair, info = poselib.estimate_monodepth_varying_focal_relative_pose(kp1 - pp1, kp2 - pp2, d1, d2,
+        monodepth_pair, info = poselib.estimate_monodepth_varying_focal_relative_pose(kp1 - pp_center_1,
+                                                                                      kp2 - pp_center_2, d1, d2,
                                                                                       monodepth_dict)
         runtime = perf_counter_ns() - start_time
 
@@ -268,12 +273,14 @@ def eval_single_mde(args):
 
         with h5py.File(f'{name_path}.h5') as f_images_h5:        
             f_images = {}
-            for image_name in image_list:
-                f_images[f'{image_name}_K'] = np.array(f_images_h5[f'{image_name}_K'])
-                f_images[f'{image_name}_R'] = np.array(f_images_h5[f'{image_name}_R'])
-                f_images[f'{image_name}_T'] = np.array(f_images_h5[f'{image_name}_T'])
-                if f'{image_name}_d' in f_images_h5:
-                    f_images[f'{image_name}_d'] = np.array(f_images_h5[f'{image_name}_d'])
+            # for image_name in image_list:
+            #     f_images[f'{image_name}_K'] = np.array(f_images_h5[f'{image_name}_K'])
+            #     f_images[f'{image_name}_R'] = np.array(f_images_h5[f'{image_name}_R'])
+            #     f_images[f'{image_name}_T'] = np.array(f_images_h5[f'{image_name}_T'])
+            #     if f'{image_name}_d' in f_images_h5:
+            #         f_images[f'{image_name}_d'] = np.array(f_images_h5[f'{image_name}_d'])
+            for key in f_images_h5.keys():
+                f_images[key] = np.array(f_images_h5[key])
 
             
         with h5py.File(f'{name_path}_{args.matches}.h5') as f_matches_h5:
@@ -319,6 +326,9 @@ def eval_single_mde(args):
 
                 R_gt = np.dot(R2, R1.T)
                 t_gt = T2 - np.dot(R_gt, T1)
+
+                pp_center_1 = np.array(f_images[f'{img_name_1}_size']) / 2
+                pp_center_2 = np.array(f_images[f'{img_name_2}_size']) / 2
 
                 if f'{img_name_1}_d' not in f_images:
                     cam1_gt = {'model': 'PINHOLE', 'width': -1, 'height': -1,
@@ -375,8 +385,8 @@ def eval_single_mde(args):
                 for experiment in experiments:
                     for iters in iters_list:
                         yield (experiment, iters, np.copy(kp1), np.copy(kp2), np.copy(d1), np.copy(d2),
-                               mde_K1, mde_K2, R_gt, t_gt, cam1_gt, cam2_gt, img_name_1, img_name_2,
-                               args.sampson_threshold, args.reprojection_threshold)
+                               mde_K1, mde_K2, pp_center_1, pp_center_2, R_gt, t_gt, cam1_gt, cam2_gt,
+                               img_name_1, img_name_2, args.sampson_threshold, args.reprojection_threshold)
 
         total_length = len(experiments) * len(pair_list) * len(iters_list)
 

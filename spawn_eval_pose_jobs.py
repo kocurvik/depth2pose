@@ -97,6 +97,15 @@ if __name__ == '__main__':
             single_args.name = name
             single_args.data_path = config["work_path"]
             single_args.direct_read = "requires_direct_read" in config.keys() and config["requires_direct_read"]
+
+            if "cameras" in config:
+                if config["cameras"] == 'shared':
+                    single_args.include_shared_focal = True
+                    single_args.include_varying_focal = False
+                if config["cameras"] == 'varying':
+                    single_args.include_shared_focal = False
+                    single_args.include_varying_focal = True
+
             main(single_args)
     else:
         main(args)

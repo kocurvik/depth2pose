@@ -6,7 +6,8 @@
         "height": 1365,
         "depth_unit": 1,
         "contains_gt_depth": true,
-        "min_area_overlap": 0.025
+        "min_area_overlap": 0.025,
+        "cameras": "shared"
     },
     "scannetpp": {
         "path": "/mnt/d/Research/data/scannetpp",
@@ -16,7 +17,8 @@
         "depth_unit": 1,
         "contains_gt_depth": true,
         "requires_direct_read": true,
-        "max_pairs": 500
+        "max_pairs": 500,
+        "cameras": "shared"
     },
     "lamar": {
         "path": "/mnt/d/Research/data/lamar",
@@ -26,11 +28,13 @@
         "depth_unit": 1,
         "contains_gt_depth": true,
         "requires_direct_read": true,
-        "max_pairs": 2500
+        "max_pairs": 2500,
+        "cameras": "shared"
     },
     "pt": {
         "path": "/mnt/d/Research/data/pt_test",
         "work_path": "/mnt/d/Research/data/mdrpbench/pt",
-        "max_pairs": 500
+        "max_pairs": 500,
+        "cameras": "varying"
     }
 }
