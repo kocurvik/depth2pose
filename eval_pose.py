@@ -273,12 +273,6 @@ def eval_single_mde(args):
 
         with h5py.File(f'{name_path}.h5') as f_images_h5:        
             f_images = {}
-            # for image_name in image_list:
-            #     f_images[f'{image_name}_K'] = np.array(f_images_h5[f'{image_name}_K'])
-            #     f_images[f'{image_name}_R'] = np.array(f_images_h5[f'{image_name}_R'])
-            #     f_images[f'{image_name}_T'] = np.array(f_images_h5[f'{image_name}_T'])
-            #     if f'{image_name}_d' in f_images_h5:
-            #         f_images[f'{image_name}_d'] = np.array(f_images_h5[f'{image_name}_d'])
             for key in f_images_h5.keys():
                 f_images[key] = np.array(f_images_h5[key])
 
@@ -292,6 +286,7 @@ def eval_single_mde(args):
         if args.depth != 'gt':
             if args.direct_read:
                 f_depth = h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r')
+                mde_runtimes = [f_depth[f'{x}_runtime'][()] / 1e6 for x in image_list]
                 if 'completed' not in f_depth:
                     raise ValueError(f'{name_path}_depth_{args.depth}.h5 does not have the completed tag. Aborting.')
             else:
