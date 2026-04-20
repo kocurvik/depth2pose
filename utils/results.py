@@ -186,30 +186,23 @@ def get_basename(args, depth: str) -> str:
             f'_{args.sampson_threshold}t_{args.reprojection_threshold}r')
 
 
-def get_best_calib_result(all_metrics, variants):
-    cal_solvers = ['calib', 'calib_shift']
+def get_best_result(all_metrics, variants, uncal=False, ro=False):
+    if uncal:
+        solvers = ['mdecalib', 'mdecalib_shift', 'sf', 'sf_shift', 'vf', 'vf_shift']
+    else:
+        solvers = ['calib', 'calib_shift']
+
+    if ro:
+        solvers = [f'{x}_ro' for x in solvers]
 
     results = []
     for variant in variants:
         for k, v in all_metrics[variant].items():
+            if 'Calib' in variant and uncal:
+                continue
             v['experiment'] = k
             v['variant'] = variant
-        valid_variant_results = [all_metrics[variant][solver] for solver in cal_solvers]
-        results.extend(valid_variant_results)
-    mAA_results = [x['pose_mAA_10'] for x in results]
-    return results[np.argmax(mAA_results)]
-
-def get_best_uncal_result(all_metrics, variants):
-    uncal_solvers = ['mdecalib', 'mdecalib_shift', 'sf', 'sf_shift', 'vf', 'vf_shift']
-
-    results = []
-    for variant in variants:
-        if 'Calib' in variant:
-            continue
-        for k, v in all_metrics[variant].items():
-            v['experiment'] = k
-            v['variant'] = variant
-        valid_variant_results = [all_metrics[variant][solver] for solver in all_metrics[variant].keys() if solver in uncal_solvers]
+        valid_variant_results = [all_metrics[variant][solver] for solver in solvers]
         results.extend(valid_variant_results)
     mAA_results = [x['pose_mAA_10'] for x in results]
     return results[np.argmax(mAA_results)]
@@ -230,10 +223,10 @@ def print_best_only(all_metrics):
     best_calib_results = {}
     best_uncal_results = {}
     for base_mde, variants in variant_dict.items():
-        best_result = get_best_calib_result(all_metrics, variants)
-        best_calib_results[best_result['variant']] ={best_result['experiment']: best_result}
-        best_result = get_best_uncal_result(all_metrics, variants)
-        best_uncal_results[best_result['variant']] ={best_result['experiment']: best_result}
+        best_result = get_best_result(all_metrics, variants)
+        best_calib_results[best_result['variant']] = {best_result['experiment']: best_result}
+        best_result = get_best_result(all_metrics, variants, uncal=True)
+        best_uncal_results[best_result['variant']] = {best_result['experiment']: best_result}
 
     best_calib_results['gt'] = {'baseline_calib': all_metrics['gt']['baseline_calib']}
 
@@ -279,7 +272,7 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics, name='default', remove_o
     base_names = list(set([x.split('-')[0].split('Calib')[0] for x in mde_list]))
 
     single_metric = depth_metrics[mde_list[0]]
-    depth_evals = [(k, x) for k, v in single_metric.items() for x in v.keys()]
+    depth_evals = [(k, x) for k, v in single_metric.items() for x in v.keys() if 'metric' not in k]
 
     # colors = get_n_colors(len(base_names))
     # color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
@@ -289,7 +282,12 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics, name='default', remove_o
     ncols = 2
     nrows = (n + ncols - 1) // ncols
 
-    for solver in ['calib', 'calib_shift', 'mdecalib', 'mdecalib_shift', 'sf', 'sf_shift', 'vf', 'vf_shift']:
+    # solvers = ['calib', 'calib_shift', 'mdecalib', 'mdecalib_shift', 'sf', 'sf_shift', 'vf', 'vf_shift']
+
+    all_solvers = [x for x in all_metrics['gt']['1000'].keys()]
+    solvers = [x for x in all_solvers if 'baseline' not in x]
+
+    for solver in solvers:
 
         fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 3 * nrows))
         fig.suptitle(f'Dataset: {name}, Solver: {solver}')
@@ -302,14 +300,24 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics, name='default', remove_o
                 if 'Calib' in mde and ('vf' in solver or 'sf' in solver or 'mdecalib' in solver):
                     continue
                 depth_val = depth_metrics[mde][type][metric]
+                if 'd1' in metric:
+                    depth_val = 100 - depth_val
                 try:
-                    pose_val = all_metrics[mde][solver]['pose_mAA_10']
+                    pose_val = [all_metrics[mde][k][solver]['pose_mAA_10'] for k in sorted(all_metrics[mde].keys())]
                 except:
                     continue
                 marker = 'o' if 'Calib' in mde else '*'
-                ax.plot(depth_val, pose_val, color=color_dict[base_name], marker=marker, linestyle='None')
+                ax.plot([depth_val for _ in pose_val], pose_val, color=color_dict[base_name], marker=marker, linestyle='dotted')
             ax.set_xlabel(f"Depth {type} - {metric}")
             ax.set_ylabel("Pose mAA(10)")
+
+            corresponding_baseline_solver = f'baseline_{solver.split("_shift")[0]}'
+            if corresponding_baseline_solver in all_solvers and '_ro' not in solver:
+                pose_vals = [all_metrics['gt'][k][corresponding_baseline_solver]['pose_mAA_10'] for k in
+                             sorted(all_metrics['gt'].keys())]
+                for pose_val in pose_vals:
+                    ax.axhline(pose_val, linestyle='dashed', color='gray')
+
 
         for idx in range(n, len(axes)):
             axes[idx].set_visible(False)
@@ -406,17 +414,17 @@ def main(args):
     print(f"Unified results written to {output_path}\n")
 
     print_results_all(args, all_metrics)
-    best_calib_results, best_uncal_results = print_best_only(all_metrics)
+    # best_calib_results, best_uncal_results = print_best_only(all_metrics)
     if args.eval_depth:
         depth_metrics = merge_summary_depth_results(args)
         plot_scatter_pose_depth(all_metrics, depth_metrics, args.name)
         plot_scatter_pose_depth(all_metrics, depth_metrics, args.name, remove_outliers=True)
-        plot_scatter_pose_depth_best(best_calib_results, depth_metrics, version='calib', name=args.name)
-        plot_scatter_pose_depth_best(best_calib_results, depth_metrics, version='calib', name=args.name,
-                                     remove_outliers=True)
-        plot_scatter_pose_depth_best(best_uncal_results, depth_metrics, version='uncal', name=args.name)
-        plot_scatter_pose_depth_best(best_uncal_results, depth_metrics, version='uncal', name=args.name,
-                                     remove_outliers=True)
+        # plot_scatter_pose_depth_best(best_calib_results, depth_metrics, version='calib', name=args.name)
+        # plot_scatter_pose_depth_best(best_calib_results, depth_metrics, version='calib', name=args.name,
+        #                              remove_outliers=True)
+        # plot_scatter_pose_depth_best(best_uncal_results, depth_metrics, version='uncal', name=args.name)
+        # plot_scatter_pose_depth_best(best_uncal_results, depth_metrics, version='uncal', name=args.name,
+        #                              remove_outliers=True)
 
 
 if __name__ == '__main__':
