@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!-- TODO: Meta Tags -->
+
+	<!-- Favicon and App Icons -->
+	<link rel="icon" type="image/x-icon" href="static/images/vrg.png">
+	<link rel="apple-touch-icon" href="static/images/vrg.png">
+
+	<!-- Critical CSS - Load synchronously -->
+	<link rel="stylesheet" href="static/css/bulma.min.css">
+	<link rel="stylesheet" href="static/css/index.css">
+	<link rel="stylesheet" href="static/css/benchmark_viewer.css">
+
+	<!-- Fonts - Optimized loading -->
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+	<!-- Main JavaScript -->
+	<script type="module" src="static/js/benchmark_viewer.js"></script>
+
+	<title>Benchmarking Monocular Depth Estimators via Relative Pose Estimation</title>
+</head>
+<body>
+
+	<!-- Hero Section -->
+	<section class="hero benchmark-hero">
+		<div class="hero-body benchmark-hero-body">
+			<div class="container benchmark-hero-container is-max-desktop has-text-centered">
+				<h1 class="title is-2 publication-title">Benchmarking Monocular Depth Estimators via Relative Pose Estimation</h1>
+				<p class="subtitle is-5 mb-3">Frontend viewer for the benchmark section on the paper website</p>
+				<div class="author-row">
+					<span>Monocular depth estimators</span>
+					<span>•</span>
+					<span>Relative pose solvers</span>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- Benchmark Viewer Section -->
+	<section class="section">
+		<div class="container is-max-desktop">
+
+			<!-- Controls Card (filters) -->
+			<div class="controls-card" id="controlsCard">
+				<button class="controls-toggle" type="button" id="controlsToggle" aria-expanded="true" aria-controls="controlsContent">
+					Hide controls
+				</button>
+
+				<!-- Controls Stack -->
+				<div class="controls-stack" id="controlsContent">
+
+					<!-- Controls for dataset, search, and metric -->
+					<div class="top-controls-grid row-content">
+						<div class="field mb-0">
+							<label class="label">Dataset</label>
+							<div class="select is-fullwidth">
+								<select id="datasetSelect"></select>
+							</div>
+						</div>
+
+						<div class="field mb-0">
+							<label class="label">Search model</label>
+							<input id="searchInput" class="input" type="text" placeholder="DepthAnything, UniDepth, MoGe, ..."/>
+						</div>
+
+						<div class="field mb-0">
+							<label class="label">Metric</label>
+							<div class="select is-fullwidth">
+								<select id="scoreMetricSelect">
+									<option value="pose_mAA_10">pose_mAA_10</option>
+									<option value="pose_mAA_5">pose_mAA_5</option>
+									<option value="pose_mAA_3">pose_mAA_3</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="field mb-0">
+							<label class="label">Other</label>
+							<label class="checkbox is-block pt-3" title="gt = ground-truth / oracle reference row, not a regular depth estimator.">
+								<input type="checkbox" id="hideGtOnly" checked/>
+								Hide <code>gt</code> / oracle rows
+							</label>
+						</div>
+					</div>
+
+					<!-- Evaluation Cases -->
+					<div class="control-row">
+						<div class="row-label">Evaluation case</div>
+						<div class="row-content">
+							<div class="columns is-multiline is-mobile">
+								<div class="column is-12">
+									<label class="case-box is-block">
+										<div class="flex-row">
+											<input type="radio" name="mode" value="calibrated" checked/>
+											<strong>With calibration</strong>
+										</div>
+										<small>Show mainly <code>calib</code> and <code>calib_shift</code>. Include both model names with <code>Calib</code> and without it.</small>
+									</label>
+								</div>
+
+								<div class="column is-12">
+									<label class="case-box is-block">
+										<div class="flex-row">
+											<input type="radio" name="mode" value="uncalibrated"/>
+											<strong>Without calibration</strong>
+										</div>
+										<small>Show <code>sf</code>, <code>sf_shift</code>, <code>vf</code>, <code>vf_shift</code>, <code>mdecalib</code>, <code>mdecalib_shift</code> and drop model names containing <code>Calib</code>.</small>
+									</label>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Checkboxes -->
+					<div class="control-row">
+						<div class="row-label">Filtering</div>
+						<div class="row-content">
+							<div class="inline-checkboxes">
+								<label class="checkbox">
+									<input type="checkbox" id="bestBackboneOnly"/>
+									Show only the best backbone per estimator family and solver family
+								</label>
+								<label class="checkbox">
+									<input type="checkbox" id="bestSolverOnly"/>
+									Show only the better solver variant inside one solver family
+								</label>
+							</div>
+						</div>
+					</div>
+
+				</div>
+			</div>
+			<script>
+				const controlsCard = document.getElementById('controlsCard');
+				const controlsToggle = document.getElementById('controlsToggle');
+
+				controlsToggle.addEventListener('click', () => {
+					const collapsed = controlsCard.classList.toggle('is-collapsed');
+					controlsToggle.textContent = collapsed ? 'Show controls' : 'Hide controls';
+					controlsToggle.setAttribute('aria-expanded', String(!collapsed));
+				});
+			</script>
+
+			<!-- Results Table -->
+			<div class="table-card mt-5">
+				<div class="table-container">
+					<table class="table is-fullwidth is-striped is-hoverable benchmark-table">
+						<thead>
+							<tr>
+								<th>#</th>
+								<th>Estimator</th>
+								<th>Backbone</th>
+								<th>Model name</th>
+								<th>Solver</th>
+								<th>mAA@10</th>
+								<th>mAA@5</th>
+								<th>mAA@3</th>
+								<th>Median pose err</th>
+								<th>Runtime (ms)</th>
+								<th>MDE runtime (ms)</th>
+								<th>Inliers</th>
+							</tr>
+						</thead>
+						<tbody id="resultsBody"></tbody>
+					</table>
+				</div>
+				<div class="empty-box" id="emptyState" hidden></div>
+			</div>
+
+			<!-- Summary Grid -->
+			<div class="controls-card mt-5">
+				<h2 class="title is-4 mb-1">Results</h2>
+				<p class="muted-note">Rows are computed directly in the browser from the selected JSON file.</p>
+				<div class="summary-grid" id="summaryGrid"></div>
+			</div>
+
+		</div>
+	</section>
+
+</body>
+</html>
