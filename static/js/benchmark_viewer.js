@@ -1,11 +1,4 @@
-// TODO: After initial commit -> Fetch from repo
-const DATASETS = [
-	{ id: 'eth3d_splg_2048_noresize_2.0t_16.0r', label: 'eth3d_splg_2048_noresize_2.0t_16.0r', path: '../data/benchmark/eth3d_splg_2048_noresize_2.0t_16.0r.json' },
-	{ id: 'eth3d_splg_2048_noresize_4.0t_32.0r', label: 'eth3d_splg_2048_noresize_4.0t_32.0r', path: '../data/benchmark/eth3d_splg_2048_noresize_4.0t_32.0r.json' },
-	{ id: 'pt_splg_2048_noresize_2.0t_16.0r', label: 'pt_splg_2048_noresize_2.0t_16.0r', path: '../data/benchmark/pt_splg_2048_noresize_2.0t_16.0r.json' },
-	{ id: 'vfcheckall_pt_splg_2048_noresize_2.0t_16.0r', label: 'vfcheckall_pt_splg_2048_noresize_2.0t_16.0r', path: '../data/benchmark/vfcheckall_pt_splg_2048_noresize_2.0t_16.0r.json' },
-	{ id: 'vfcheckone_pt_splg_2048_noresize_2.0t_16.0r', label: 'vfcheckone_pt_splg_2048_noresize_2.0t_16.0r', path: '../data/benchmark/vfcheckone_pt_splg_2048_noresize_2.0t_16.0r.json' }
-];
+let DATASETS = [];
 
 const MODE_CONFIG = {
 	calibrated: {
@@ -19,7 +12,8 @@ const MODE_CONFIG = {
 };
 
 const state = {
-	datasets: {}, currentDatasetId: DATASETS[0].id,
+	datasets: {},
+	currentDatasetId: '',
 	search: '',
 	scoreMetric: 'pose_mAA_10',
 	mode: 'calibrated',
@@ -49,10 +43,45 @@ function fmt(value, digits = 2) {
 
 
 // Dataset loading and preprocessing
+async function loadDatasetList() {
+	const owner_repo = 'lbujnak/depth2pose_webdata';
+	const branch = 'main';
+	const path = 'benchmark';
+
+	const url = `https://api.github.com/repos/${owner_repo}/contents/${path}?ref=${branch}`;
+
+	const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github+json' } });
+	if (!res.ok) throw new Error(`Failed to load dataset list: ${res.status}`);
+
+	const items = await res.json();
+	
+	return items
+		.filter(item => item.type === 'file' && item.name.endsWith('.json'))
+		.map(item => ({
+			id: item.name.replace(/\.json$/, ''),
+			label: item.name.replace(/\.json$/, ''),
+			file: item.download_url
+		}))
+		.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function populateDatasetSelect() {
+	const select = document.getElementById('datasetSelect');
+
+	select.innerHTML = '';
+	for (const ds of DATASETS) {
+		const option = document.createElement('option');
+		option.value = ds.id;
+		option.textContent = ds.label;
+		select.appendChild(option);
+	}
+}
+
+
 async function loadDatasets() {
 	const results = await Promise.all(DATASETS.map(async (dataset) => {
-		const response = await fetch(dataset.path);
-		if (!response.ok) throw new Error(`Failed to load ${dataset.path}`);
+		const response = await fetch(dataset.file);
+		if (!response.ok) throw new Error(`Failed to load ${dataset.file}`);
 
 		const json = await response.json();
 		return [dataset.id, flattenDataset(json)];
@@ -211,13 +240,6 @@ function renderSummary(rows) {
 
 // UI binding to state and event listeners
 function bindControls() {
-	DATASETS.forEach((dataset) => {
-		const option = document.createElement('option');
-		option.value = dataset.id;
-		option.textContent = dataset.label;
-		els.datasetSelect.appendChild(option);
-	});
-
 	els.datasetSelect.value = state.currentDatasetId;
 	els.scoreMetricSelect.value = state.scoreMetric;
 	els.hideGtOnly.checked = state.hideGtOnly;
@@ -269,6 +291,10 @@ async function init() {
 	bindControls();
 
 	try {
+		DATASETS = await loadDatasetList();
+		state.currentDatasetId = DATASETS[0]?.id ?? '';
+		populateDatasetSelect();
+
 		await loadDatasets();
 		renderTable();
 	}
