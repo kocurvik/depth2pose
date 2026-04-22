@@ -47,17 +47,19 @@ def run_for_model(args):
 
     if args.work_dir:
         job_id = os.environ.get('SLURM_JOB_ID', 'local')
-        tmp_out_path = f'/work/{job_id}'
-        os.makedirs(tmp_out_path, exist_ok=True)
+        tmp_out_path = f'/work/{job_id}/'
+        # os.makedirs(tmp_out_path, exist_ok=True)
 
         final_out_path = args.out_path
         args = copy.copy(args)
         args.temp_out_path = tmp_out_path
+        print(f"Working in {tmp_out_path}")
 
         infer_depth(model, args)
 
         name_path = os.path.join(tmp_out_path, args.name)
         src = f'{name_path}_depth_{model.name}.h5'
+        print(f"Moving back from {src} to {final_out_path}")
         os.makedirs(final_out_path, exist_ok=True)
         shutil.move(src, final_out_path)
     else:
