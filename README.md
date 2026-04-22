@@ -20,9 +20,6 @@ pip install torch==2.8.0 torchvision==0.23.0 xformers==0.0.32.post1 --index-url 
 
 Install MDE models:
 ```bash
-# install depth-anything-3
-pip install git+https://github.com/ByteDance-Seed/Depth-Anything-3.git
-
 # install depth-anything-2
 pip install git+https://github.com/badayvedat/Depth-Anything-V2.git@2ca8cd3dd7dc8b0a7386126ad65e58c7fc44e925
 
@@ -41,11 +38,17 @@ pip install git+https://github.com/kocurvik/UniK3D.git
 
 Install multiview models:
 ```bash
+# install depth-anything-3
+pip install git+https://github.com/ByteDance-Seed/Depth-Anything-3.git
+
 # install vggt
 pip install git+https://github.com/facebookresearch/vggt.git
 
 # install pi3
 pip install git+https://github.com/yyfz/Pi3.git
+
+# install mapanything
+pip install git+https://github.com/facebookresearch/map-anything.git
 ```
 
 Install matching models:
