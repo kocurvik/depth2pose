@@ -32,7 +32,9 @@ ALL_MDEs = {
     'UniDepthV1Calib': ['vitl14', 'cnvnxtl'],
     'DepthPro': ['vitl'],
     'DepthProCalib': ['vitl'],
-    "VGGT": ['VGGT-1B']
+    'VGGT': ['VGGT-1B'],
+    'Pi3': ['Pi3X'],
+    'Pi3Calib': ['Pi3X'],
     }
 
 
@@ -89,6 +91,10 @@ def get_mde_model(model_name, weights):
     elif model_name == 'VGGT':
         from depth_estimators.VGGT import VGGT
         return VGGT(weights)
+
+    elif model_name == 'Pi3' or model_name == 'Pi3Calib':
+        from depth_estimators.Pi3 import Pi3
+        return Pi3(weights, requires_intrinsics='Calib' in model_name)
 
     else:
         raise NotImplementedError(f"Model {model_name} not implemented")
