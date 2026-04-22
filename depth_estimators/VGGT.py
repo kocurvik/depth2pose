@@ -206,14 +206,14 @@ class VGGT(BaseDepthEstimator):
             new_depth_confs.append(depth_conf)
         return torch.stack(new_depth_maps), torch.stack(new_depth_confs), intrinsics
 
-    def infer(self, images: list[str | Path], size=None, **kwargs):
-        tensor_image, orig_coords = load_and_preprocess_images(images, self.vggt_fixed_resolution)
+    def infer(self, image, size=None, **kwargs):
+        tensor_image, orig_coords = load_and_preprocess_images([image], self.vggt_fixed_resolution)
         tensor_image = tensor_image.cuda()
         depth_map, depth_conf, intrinsic, extrinsic, runtime = self.run_VGGT(tensor_image, orig_coords)
         if depth_map.shape[0] == 1:
             depth_map, depth_conf = depth_map[0], depth_conf[0]
             intrinsic, extrinsic = intrinsic[0], extrinsic[0]
-        return {"depth": depth_map, "runtime": runtime}
+        return {"depth": depth_map, "K": intrinsic, "runtime": runtime}
 
 if __name__ == '__main__':
     image_path = "./assets/kitchen/images/00.png"

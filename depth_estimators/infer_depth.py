@@ -9,16 +9,8 @@ from tqdm import tqdm
 
 import torch
 
-from depth_estimators.InfiniDepthWrapper import InfiniDepth
+torch.backends.cudnn.benchmark = True
 
-torch.backends.cudnn.benchmark = True  # Pick fastest kernels
-
-from depth_estimators.Metric3D import Metric3D
-from depth_estimators.DepthAnything import DepthAnything
-from depth_estimators.MoGe import MoGe
-from depth_estimators.UniDepth import UniDepth
-from depth_estimators.UniK3D import UniK3D
-from depth_estimators.DepthPro import DepthPro
 from utils.system_info import save_metadata
 
 ALL_MDEs = {
@@ -63,49 +55,41 @@ def parse_args():
 
 def get_mde_model(model_name, weights):
     if model_name == 'InfiniDepth':
+        from depth_estimators.InfiniDepthWrapper import InfiniDepth
         return InfiniDepth(weights, requires_intrinsics=False)
 
-    if model_name == 'MoGeV2':
-        return MoGe(weights, version=2, requires_intrinsics=False)
-    elif model_name == 'MoGeV2Calib':
-        return MoGe(weights, version=2, requires_intrinsics=True)
+    if model_name in ('MoGeV1', 'MoGeV2', 'MoGeV1Calib', 'MoGeV2Calib'):
+        from depth_estimators.MoGe import MoGe
+        version = 2 if 'V2' in model_name else 1
+        requires_intrinsics = 'Calib' in model_name
+        return MoGe(weights, version=version, requires_intrinsics=requires_intrinsics)
 
-    elif model_name == 'Metric3DV2':
-        return Metric3D(weights, version=2, requires_intrinsics=False)
-    elif model_name == 'Metric3DV2Calib':
-        return Metric3D(weights, version=2, requires_intrinsics=True)
+    elif model_name in ('Metric3DV2', 'Metric3DV2Calib'):
+        from depth_estimators.Metric3D import Metric3D
+        return Metric3D(weights, version=2, requires_intrinsics='Calib' in model_name)
 
-    elif model_name == 'MoGeV1':
-        return MoGe(weights, version=1, requires_intrinsics=False)
-    elif model_name == 'MoGeV1Calib':
-        return MoGe(weights, version=1, requires_intrinsics=True)
+    elif model_name in ('UniK3D', 'UniK3DCalib'):
+        from depth_estimators.UniK3D import UniK3D
+        return UniK3D(weights, version=1, requires_intrinsics='Calib' in model_name)
 
-    elif model_name == 'UniK3D':
-        return UniK3D(weights, version=1, requires_intrinsics=False)
-    elif model_name == 'UniK3DCalib':
-        return UniK3D(weights, version=1, requires_intrinsics=True)
+    elif model_name in ('DepthPro', 'DepthProCalib'):
+        from depth_estimators.DepthPro import DepthPro
+        return DepthPro(weights, version=1, requires_intrinsics='Calib' in model_name)
 
-    elif model_name == 'DepthPro':
-        return DepthPro(weights, version=1, requires_intrinsics=False)
-    elif model_name == 'DepthProCalib':
-        return DepthPro(weights, version=1, requires_intrinsics=True)
+    elif model_name in ('UniDepthV1', 'UniDepthV2', 'UniDepthV1Calib', 'UniDepthV2Calib'):
+        from depth_estimators.UniDepth import UniDepth
+        version = 2 if 'V2' in model_name else 1
+        return UniDepth(weights, version=version, requires_intrinsics='Calib' in model_name)
 
-    elif model_name == 'UniDepthV1':
-        return UniDepth(weights, version=1)
-    elif model_name == 'UniDepthV2':
-        return UniDepth(weights, version=2)
+    elif model_name in ('DepthAnythingV2', 'DepthAnythingV3', 'DepthAnythingV3Calib'):
+        from depth_estimators.DepthAnything import DepthAnything
+        version = 2 if 'V2' in model_name else 3
+        return DepthAnything(weights, version=version, requires_intrinsics='Calib' in model_name)
 
-    elif model_name == 'UniDepthV1Calib':
-        return UniDepth(weights, version=1, requires_intrinsics=True)
-    elif model_name == 'UniDepthV2Calib':
-        return UniDepth(weights, version=2, requires_intrinsics=True)
+    elif model_name == 'VGGT':
+        from depth_estimators.VGGT import VGGT
+        return VGGT(weights)
 
-    elif model_name == 'DepthAnythingV2':
-        return DepthAnything(weights, version=2)
-    elif model_name == 'DepthAnythingV3':
-        return DepthAnything(weights, version=3)
-    elif model_name == 'DepthAnythingV3Calib':
-        return DepthAnything(weights, version=3, requires_intrinsics=True)
     else:
         raise NotImplementedError(f"Model {model_name} not implemented")
 

@@ -22,6 +22,9 @@ wget "https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main
 pip install --no-deps git+https://github.com/kocurvik/InfiniDepth
 wget https://huggingface.co/ritianyu/InfiniDepth/resolve/main/infinidepth.ckpt -O checkpoints/infinidepth.ckpt
 
+#VGGT
+
+
 # poselib with all solvers
 pip install git+https://github.com/kocurvik/PoseLib.git@mdrpbench
 ```
