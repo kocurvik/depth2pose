@@ -17,6 +17,7 @@ def parse_args():
     parser.add_argument('--device', type=str, default='cuda',
                         help='Device to run inference on')
     parser.add_argument('--name', type=str, default='dataset')
+    parser.add_argument('--temp_out_path', type=str, default=None)
     parser.add_argument('out_path', type=str, help='Path to output directory')
     parser.add_argument('dataset_path', type=str, help='Path to dataset')
     # --- slurm-specific args ---
