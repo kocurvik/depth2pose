@@ -122,8 +122,6 @@ class MapAnything(BaseDepthEstimator):
         if depth_map.shape[0] == 1:
             depth_map, depth_conf = depth_map[0], depth_conf[0]
             intrinsic, extrinsic = intrinsic[0], extrinsic[0]
-        print(depth_map.shape, depth_conf.shape)
-        print(intrinsic)
         return {"depth": depth_map, "K": intrinsic, "runtime": runtime}
 
 if __name__ == '__main__':
