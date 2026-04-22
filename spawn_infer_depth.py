@@ -47,10 +47,11 @@ def run_for_model(args):
 
     if args.work_dir:
         job_id = os.environ.get('SLURM_JOB_ID', 'local')
-        array_task_id = os.environ.get('SLURM_ARRAY_TASK_ID')
-        if array_task_id:
-            job_id = f'{job_id}_{array_task_id}'
-        tmp_out_path = f'/work/{job_id}/'
+        # array_task_id = os.environ.get('SLURM_ARRAY_TASK_ID')
+        # if array_task_id:
+        #     job_id = f'{job_id}'
+        tmp_out_path = f'/work/{job_id}/infer_depth/'
+
         os.makedirs(tmp_out_path, exist_ok=True)
 
         final_out_path = args.out_path
