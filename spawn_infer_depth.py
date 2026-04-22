@@ -3,6 +3,7 @@ import copy
 import json
 import os
 import shutil
+import h5py
 import submitit
 
 from depth_estimators.infer_depth import ALL_MDEs, get_mde_model, infer_depth
@@ -85,8 +86,14 @@ def main(args):
             model = get_mde_model(model_name, weights)
             f_depth_path = f'{name_path}_depth_{model.name}.h5'
             if os.path.exists(f_depth_path) and not args.recalc:
-                print(f"Output for {model_name} ({weights}) already exists at {f_depth_path}. Skipping.")
-                continue
+                try:
+                    with h5py.File(f_depth_path, 'r') as f_check:
+                        if 'completed' in f_check:
+                            print(f"Output for {model_name} ({weights}) already complete at {f_depth_path}. Skipping.")
+                            continue
+                        print(f"Output for {model_name} ({weights}) exists but is incomplete. Resubmitting.")
+                except Exception:
+                    print(f"Output for {model_name} ({weights}) exists but is broken. Resubmitting.")
 
             job_args = copy.copy(args)
             job_args.model_name = model_name
