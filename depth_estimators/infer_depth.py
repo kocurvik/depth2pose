@@ -40,6 +40,7 @@ ALL_MDEs = {
     'UniDepthV1Calib': ['vitl14', 'cnvnxtl'],
     'DepthPro': ['vitl'],
     'DepthProCalib': ['vitl'],
+    "VGGT": ['VGGT-1B']
     }
 
 

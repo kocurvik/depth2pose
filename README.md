@@ -39,6 +39,15 @@ pip install git+https://github.com/lpiccinelli-eth/UniDepth.git
 pip install git+https://github.com/kocurvik/UniK3D.git
 ```
 
+Install multiview models:
+```bash
+# install vggt
+pip install git+https://github.com/facebookresearch/vggt.git
+
+# install pi3
+pip install git+https://github.com/yyfz/Pi3.git
+```
+
 Install matching models:
 ```bash
 # install romav1
