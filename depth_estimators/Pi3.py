@@ -14,8 +14,8 @@ from pi3.utils.geometry import depth_edge, recover_intrinsic_from_rays_d
 from pi3.models.pi3x import Pi3X as Pi3XModel
 
 
-import sys
-sys.path.insert(0, "./")
+# import sys
+# sys.path.insert(0, "./")
 from depth_estimators.base import BaseDepthEstimator
 
 PIXEL_LIMIT = 255000
