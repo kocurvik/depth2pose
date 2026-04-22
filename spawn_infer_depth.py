@@ -51,7 +51,7 @@ def run_for_model(args):
         if array_task_id:
             job_id = f'{job_id}_{array_task_id}'
         tmp_out_path = f'/work/{job_id}/'
-        # os.makedirs(tmp_out_path, exist_ok=True)
+        os.makedirs(tmp_out_path, exist_ok=True)
 
         final_out_path = args.out_path
         args = copy.copy(args)
