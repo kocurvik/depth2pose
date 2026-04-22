@@ -23,7 +23,7 @@ pip install --no-deps git+https://github.com/kocurvik/InfiniDepth
 wget https://huggingface.co/ritianyu/InfiniDepth/resolve/main/infinidepth.ckpt -O checkpoints/infinidepth.ckpt
 
 #VGGT
-
+pip install --no-deps git+https://github.com/facebookresearch/vggt.git
 
 # poselib with all solvers
 pip install git+https://github.com/kocurvik/PoseLib.git@mdrpbench
