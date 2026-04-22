@@ -46,16 +46,12 @@ def run_for_model(args):
     model = get_mde_model(args.model_name, args.pretrained_weights)
 
     if args.work_dir:
-        slurm_tmpdir = os.environ.get('SLURM_TMPDIR') or os.environ.get('TMPDIR')
-        if slurm_tmpdir:
-            tmp_out_path = slurm_tmpdir
-        else:
-            job_id = os.environ.get('SLURM_JOB_ID', 'local')
-            array_task_id = os.environ.get('SLURM_ARRAY_TASK_ID')
-            if array_task_id:
-                job_id = f'{job_id}_{array_task_id}'
-            tmp_out_path = f'/work/{job_id}/'
-            os.makedirs(tmp_out_path, exist_ok=True)
+        job_id = os.environ.get('SLURM_JOB_ID', 'local')
+        array_task_id = os.environ.get('SLURM_ARRAY_TASK_ID')
+        if array_task_id:
+            job_id = f'{job_id}_{array_task_id}'
+        tmp_out_path = f'/work/{job_id}/'
+        os.makedirs(tmp_out_path, exist_ok=True)
 
         final_out_path = args.out_path
         args = copy.copy(args)
