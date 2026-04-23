@@ -340,6 +340,9 @@ if __name__ == '__main__':
             if "min_area_overlap" in config:
                 single_args.min_area_overlap = config["min_area_overlap"]
 
+            if "min_area_overlap" in config:
+                single_args.min_keypoint_overlap = config["min_keypoint_overlap"]
+
             process_colmap_dataset(single_args)
 
     process_colmap_dataset(args)

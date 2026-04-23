@@ -31,6 +31,20 @@
         "max_pairs": 2500,
         "cameras": "shared"
     },
+    "sintel": {
+        "path": "/projects/p1358-25-2/data/sintel",
+        "work_path": "/projects/p1358-25-2/mdrpbench/sintel",
+        "width": 1024,
+        "height": 436,
+        "depth_unit": 1,
+        "contains_gt_depth": true,
+        "requires_direct_read": false,
+        "max_pairs": 250,
+        "min_area_overlap": 0.0,
+        "min_keypoint_overlap": 0,
+        "cameras": "shared"
+    },
+
     "pt": {
         "path": "/projects/p1358-25-2/data/pt_test",
         "work_path": "/projects/p1358-25-2/mdrpbench/pt",
