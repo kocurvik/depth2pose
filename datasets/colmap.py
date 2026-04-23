@@ -76,8 +76,8 @@ def get_dataset_paths(basename, dataset_path, subset):
         model_path = os.path.join('dslr_calibration_undistorted')
         img_path = os.path.join('images')
     else:
-        model_path = os.path.join('sfm')
-        img_path = os.path.join('images_full')
+        model_path = os.path.join('colmap_gt')
+        img_path = os.path.join('images')
     return img_path, model_path, subset_path
 
 
