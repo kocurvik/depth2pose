@@ -29,8 +29,8 @@ def parse_args():
     parser.add_argument('-f', '--first', type=int, default=None)
     parser.add_argument('--explicit_solvers', type=str, default=None)
     parser.add_argument('--config_path', type=str, default=None)
-    parser.add_argument('data_path')
-    parser.add_argument('name')
+    parser.add_argument('--data_path', type=str, default=None)
+    parser.add_argument('--name', type=str, default=None)
     parser.add_argument('matches')
     # --- slurm-specific args ---
     parser.add_argument('--account', type=str, default='p1358-25-2',
