@@ -162,7 +162,7 @@ def main():
             cpus_per_task=args.num_workers
         )
 
-        jobs = executor.map_array(evaluate_model, job_args)
+        jobs = executor.map_array(evaluate_model, *zip(*job_args))
 
         print(f"\nSubmitted {len(jobs)} job(s):")
         for job_arg, job in zip(job_args, jobs):
