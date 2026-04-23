@@ -27,7 +27,7 @@ def norm3d(x: np.ndarray) -> np.ndarray:
 class EvalDataLoaderPipeline:
     def __init__(
         self,
-        path: str,
+        work_path: str,
         depth: str,
         width: int,
         height: int,
@@ -35,6 +35,7 @@ class EvalDataLoaderPipeline:
         num_load_workers: int = 4,
         num_process_workers: int = 8,
         depth_unit: str = None,
+        **kwargs,
     ):
         self.width, self.height = width, height
         self.drop_max_depth = drop_max_depth
