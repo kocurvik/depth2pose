@@ -148,7 +148,7 @@ def main():
 
             job_args.append((mde_model, benchmark_name, benchmark_config, device, args.work_dir, args.recalc))
 
-        log_dir = args.log_dir or os.path.join(benchmark_config['work_path'], 'slurm_logs')
+        log_dir = os.path.join(benchmark_config['work_path'], 'slurm_logs')
         os.makedirs(log_dir, exist_ok=True)
 
         executor = submitit.AutoExecutor(folder=log_dir)
