@@ -165,8 +165,8 @@ def main():
         jobs = executor.map_array(evaluate_model, job_args)
 
         print(f"\nSubmitted {len(jobs)} job(s):")
-        for job_args, job in zip(job_args, jobs):
-            print(f"Model: {job_args[0]} dataset: {job_args[1]} job_id={job.job_id}")
+        for job_arg, job in zip(job_args, jobs):
+            print(f"Model: {job_arg[0]} dataset: {job_arg[1]} job_id={job.job_id}")
 
 
 if __name__ == "__main__":
