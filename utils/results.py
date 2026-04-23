@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from prettytable import PrettyTable
 from matplotlib.lines import Line2D
 
-from depth_estimators.vis_utils import MDE_BASENAME_COLOR_DICT
+from depth_estimators.vis_utils import get_mde_basename_color_dict
 
 
 def compute_recall(errors):
@@ -251,16 +251,6 @@ def get_mde_list(name, data_path):
     return mde_list
 
 
-def get_n_colors(n):
-    if n <= 10:
-        cmap = plt.get_cmap('tab10')
-        return [cmap(i) for i in range(n)]
-    if n <= 20:
-        cmap = plt.get_cmap('tab20')
-        return [cmap(i) for i in range(n)]
-    return [plt.cm.hsv(i / n) for i in range(n)]
-
-
 def plot_scatter_pose_depth(all_metrics, depth_metrics, name='default', remove_outliers=False):
     mde_list = list(depth_metrics.keys())
 
@@ -276,7 +266,7 @@ def plot_scatter_pose_depth(all_metrics, depth_metrics, name='default', remove_o
 
     # colors = get_n_colors(len(base_names))
     # color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
-    color_dict = MDE_BASENAME_COLOR_DICT
+    color_dict = get_mde_basename_color_dict()
 
     n = len(depth_evals)
     ncols = 2
@@ -350,7 +340,7 @@ def plot_scatter_pose_depth_best(best_metrics, depth_metrics, version='calib', n
 
     # colors = get_n_colors(len(base_names))
     # color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
-    color_dict = MDE_BASENAME_COLOR_DICT
+    color_dict = get_mde_basename_color_dict()
 
     n = len(depth_evals)
     ncols = 2

@@ -1,10 +1,17 @@
-MDE_BASENAME_COLOR_DICT = {'DepthAnythingV2': (0.09019607843137255, 0.7450980392156863, 0.8117647058823529, 1.0),
-                          'DepthAnythingV3': (1.0, 0.4980392156862745, 0.054901960784313725, 1.0),
-                          'DepthPro': (0.4980392156862745, 0.4980392156862745, 0.4980392156862745, 1.0),
-                          'InfiniDepth': (0.7372549019607844, 0.7411764705882353, 0.13333333333333333, 1.0),
-                          'Metric3DV2': (0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0),
-                          'MoGeV1': (0.8392156862745098, 0.15294117647058825, 0.1568627450980392, 1.0),
-                          'MoGeV2': (0.17254901960784313, 0.6274509803921569, 0.17254901960784313, 1.0),
-                          'UniDepth1': (0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1.0),
-                          'UniDepth2': (0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1.0),
-                          'UniK3D': (0.8901960784313725, 0.4666666666666667, 0.7607843137254902, 1.0)}
+from matplotlib import pyplot as plt
+
+from depth_estimators.infer_depth import ALL_MDEs
+
+def get_n_colors(n):
+    if n <= 10:
+        cmap = plt.get_cmap('tab10')
+        return [cmap(i) for i in range(n)]
+    if n <= 20:
+        cmap = plt.get_cmap('tab20')
+        return [cmap(i) for i in range(n)]
+    return [plt.cm.hsv(i / n) for i in range(n)]
+
+def get_mde_basename_color_dict():
+    basenames = [x.split('Calib')[0] for x in sorted(ALL_MDEs.keys())]
+    colors = get_n_colors(len(basenames))
+    return {base_name: colors[i] for i, base_name in enumerate(basenames)}

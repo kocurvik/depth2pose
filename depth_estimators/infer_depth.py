@@ -26,10 +26,10 @@ ALL_MDEs = {
     'MoGeV2': ['moge-2-vitl'],
     'MoGeV1Calib': ['moge-vitl'],
     'MoGeV2Calib': ['moge-2-vitl'],
-    'UniDepthV2': ['vits14', 'vitb14', 'vitl14'],
-    'UniDepthV2Calib': ['vits14', 'vitb14', 'vitl14'],
-    'UniDepthV1': ['vitl14', 'cnvnxtl'],
-    'UniDepthV1Calib': ['vitl14', 'cnvnxtl'],
+    'UniDepth2': ['vits14', 'vitb14', 'vitl14'],
+    'UniDepth2Calib': ['vits14', 'vitb14', 'vitl14'],
+    'UniDepth1': ['vitl14', 'cnvnxtl'],
+    'UniDepth1Calib': ['vitl14', 'cnvnxtl'],
     'DepthPro': ['vitl'],
     'DepthProCalib': ['vitl'],
     'VGGT': ['VGGT-1B'],
@@ -80,9 +80,9 @@ def get_mde_model(model_name, weights):
         from depth_estimators.DepthPro import DepthPro
         return DepthPro(weights, version=1, requires_intrinsics='Calib' in model_name)
 
-    elif model_name in ('UniDepthV1', 'UniDepthV2', 'UniDepthV1Calib', 'UniDepthV2Calib'):
+    elif model_name in ('UniDepth1', 'UniDepth2', 'UniDepth1Calib', 'UniDepth2Calib'):
         from depth_estimators.UniDepth import UniDepth
-        version = 2 if 'V2' in model_name else 1
+        version = 2 if '2' in model_name else 1
         return UniDepth(weights, version=version, requires_intrinsics='Calib' in model_name)
 
     elif model_name in ('DepthAnythingV2', 'DepthAnythingV3', 'DepthAnythingV3Calib'):
