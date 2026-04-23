@@ -134,9 +134,9 @@ def main():
     first_dataset_name = list(dataset_config.keys())[0]
     depth_models = get_mde_list(first_dataset_name, dataset_config[first_dataset_name]['work_path'])
 
-    job_args = []
-
     for benchmark_name, benchmark_config in dataset_config.items():
+        job_args = []
+
         if 'contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth']:
             continue
 
