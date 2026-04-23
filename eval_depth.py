@@ -1,11 +1,13 @@
 import argparse
 import json
 import os
+import shutil
 import sys
 from pathlib import Path
 import h5py
 import numpy as np
 import torch
+from sympy.physics.units import action
 from tqdm import tqdm
 from collections import defaultdict
 
@@ -18,6 +20,7 @@ from utils.metrics import DepthMetrics, key_average
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--work_dir', action='store_true', default=False)
     parser.add_argument('all_results_path')
     parser.add_argument('config_path')
 
@@ -34,7 +37,7 @@ def get_depth_from_h5(f_depth_h5, scene_name, file_name):
     depth[depth <= 0] = np.inf
     return depth
 
-def evaluate_model(mde_model, dataset_config, save_dir_all, device, recalc=False):
+def evaluate_model(mde_model, dataset_config, save_dir_all, device, use_work_dir=False, recalc=False):
     metric_result_path = save_dir_all / "metric_depth_results.json"
     scale_result_path = save_dir_all / "scale_inv_depth_results.json"
     affine_result_path = save_dir_all / "affine_inv_depth_results.json"
@@ -60,11 +63,19 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device, recalc=False
             all_affine_depth_results[benchmark_name] = single_results['affine']
         else:
 
+            h5_depth_path = Path(benchmark_config['work_path']) / f'{benchmark_name}_depth_{mde_model}.h5'
+            if use_work_dir:
+                job_id = os.environ.get('SLURM_JOB_ID', 'local')
+                work_dir = f'/work/{job_id}'
+                tmp_path = Path(work_dir) / f'{benchmark_name}_depth_{mde_model}.h5'
+                shutil.copy(h5_depth_path, tmp_path)
+                h5_depth_path = tmp_path
+
             metric_result_list, scale_result_list, affine_result_list = [], [], []
             with (
                 EvalDataLoaderPipeline(**benchmark_config) as eval_data_pipe,
                 tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
-                h5py.File(Path(benchmark_config['work_path']) / f'{benchmark_name}_depth_{mde_model}.h5',
+                h5py.File(h5_depth_path,
                           'r') as f_depth_h5
             ):
                 for i in range(len(eval_data_pipe)):
@@ -135,7 +146,7 @@ def main():
         # if model_name != "Metric3DV2-vit_giant2": continue
         save_dir = Path(args.all_results_path) / model_name
         save_dir.mkdir(parents=True, exist_ok=True)
-        evaluate_model(model_name, dataset_config, save_dir, device, recalc=args.recalc)
+        evaluate_model(model_name, dataset_config, save_dir, device, use_work_dir=args.work_dir, recalc=args.recalc)
 
 
 if __name__ == "__main__":
