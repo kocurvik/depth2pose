@@ -25,12 +25,12 @@ def parse_args():
     parser.add_argument('-st',  '--sampson_threshold', type=float, default=2.0)
     parser.add_argument('-sw',  '--sampson_weight', type=float, default=1.0)
     parser.add_argument('-rt',  '--reprojection_threshold', type=float, default=16.0)
-    parser.add_argument('-mk',  '--include_mde_K', action='store_true', default=False)
+    parser.add_argument('-nmk', '--no_mde_K', action='store_true', default=False)
     parser.add_argument('-bs',  '--include_baseline_solver', action='store_true', default=False)
-    parser.add_argument('-ss',  '--include_shift_solvers', action='store_true', default=False)
+    parser.add_argument('-nss', '--no_shift_solvers', action='store_true', default=False)
     parser.add_argument('-sf',  '--include_shared_focal', action='store_true', default=False)
     parser.add_argument('-vf',  '--include_varying_focal', action='store_true', default=False)
-    parser.add_argument('-ro',  '--include_reproj_only_ransac', action='store_true', default=False)
+    parser.add_argument('-nro', '--no_reproj_only_ransac', action='store_true', default=False)
     parser.add_argument('-dr',  '--direct_read', action='store_true', default=False)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
     parser.add_argument('--recalc', action='store_true', default=False)
@@ -428,7 +428,7 @@ def get_solvers(args):
         return experiments
 
     experiments = ['calib']
-    if args.include_mde_K:
+    if not args.no_mde_K:
         if 'Calib' in args.depth:
             print("Solver using MDE inferred camera params requested, but MDE used GT calibration. Skipping.")
         else:
@@ -443,10 +443,10 @@ def get_solvers(args):
             print("Varying focal solver requested, but MDE used GT calibration. Skipping.")
         else:
             experiments.append('vf')
-    if args.include_shift_solvers:
+    if not args.no_shift_solvers:
         experiments.extend([f'{x}_shift' for x in experiments])
 
-    if args.include_reproj_only_ransac:
+    if not args.no_reproj_only_ransac:
         experiments.extend([f'{x}_ro' for x in experiments])
 
 
