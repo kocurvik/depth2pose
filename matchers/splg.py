@@ -84,8 +84,6 @@ def extract_features(args):
         kp_tensor = extractor.extract(image_tensor, resize=args.resize)
         feature_dict[img_name] = kp_tensor
 
-    f_images.close()
-
     torch.save(feature_dict, cache_path)
     print("Features saved to: ", cache_path)
 
