@@ -75,7 +75,7 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device, use_work_dir
 
             metric_result_list, scale_result_list, affine_result_list = [], [], []
             with (
-                EvalDataLoaderPipeline(benchmark_config['work_path'], benchmark_config['path'],
+                EvalDataLoaderPipeline(benchmark_config['path'], benchmark_config['work_path'],
                                        width=benchmark_config['width'], height=benchmark_config['height'],
                                        depth_unit=benchmark_config['depth_unit']) as eval_data_pipe,
                 tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
