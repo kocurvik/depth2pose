@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument('--config_path', type=str, default=None)
     parser.add_argument('--data_path', type=str, default=None)
     parser.add_argument('--name', type=str, default=None)
-    parser.add_argument('matches')
+    parser.add_argument('--matches', type=str, default='splg_2048_noresize')
     # --- slurm-specific args ---
     parser.add_argument('--account', type=str, default='p1358-25-2',
                         help='Slurm account name')

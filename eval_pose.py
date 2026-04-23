@@ -39,9 +39,9 @@ def parse_args():
     parser.add_argument('-f', '--first', type=int, default=None)
     parser.add_argument('--depth', type=str, default=None)
     parser.add_argument('--explicit_solvers', type=str, default=None)
-    parser.add_argument('data_path')
-    parser.add_argument('name')
-    parser.add_argument('matches')
+    parser.add_argument('--data_path')
+    parser.add_argument('--name')
+    parser.add_argument('--matches', type=str, default='splg_2048_noresize')
 
 
     return parser.parse_args()
