@@ -49,7 +49,7 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device, use_work_dir
     for benchmark_name, benchmark_config in tqdm(
         list(dataset_config.items()), desc="Benchmarks"
     ):
-        if not benchmark_config['contains_gt_depth']:
+        if 'contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth']:
             continue
         single_results_path = Path(benchmark_config['work_path']) / 'depth_results' / f'{mde_model}.json'
 
@@ -68,6 +68,7 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device, use_work_dir
                 job_id = os.environ.get('SLURM_JOB_ID', 'local')
                 work_dir = f'/work/{job_id}'
                 tmp_path = Path(work_dir) / f'{benchmark_name}_depth_{mde_model}.h5'
+                print(f"Copying {h5_depth_path} to {tmp_path}")
                 shutil.copy(h5_depth_path, tmp_path)
                 h5_depth_path = tmp_path
 
