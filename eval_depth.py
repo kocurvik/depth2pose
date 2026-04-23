@@ -137,35 +137,36 @@ def main():
 
     job_args = []
 
-    for mde_model in depth_models:
-        for benchmark_name, benchmark_config in dataset_config.items():
-            if 'contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth']:
-                continue
+    for benchmark_name, benchmark_config in dataset_config.items():
+        if 'contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth']:
+            continue
+
+        for mde_model in depth_models:
             single_results_path = Path(benchmark_config['work_path']) / 'depth_results' / f'{mde_model}.json'
 
             if os.path.exists(single_results_path) and not args.recalc:
                 print(f"Skipping: {benchmark_name} - {mde_model} since the results already exists in {single_results_path}")
 
-            job_args.append((mde_model, benchmark_name, benchmark_config, args.device, args.work_dir, args.recalc))
+            job_args.append((mde_model, benchmark_name, benchmark_config, device, args.work_dir, args.recalc))
 
-    log_dir = args.log_dir or os.path.join(args.out_path, 'slurm_logs')
-    os.makedirs(log_dir, exist_ok=True)
+        log_dir = args.log_dir or os.path.join(benchmark_config['work_path'], 'slurm_logs')
+        os.makedirs(log_dir, exist_ok=True)
 
-    executor = submitit.AutoExecutor(folder=log_dir)
-    executor.update_parameters(
-        slurm_account=args.account,
-        slurm_partition=args.queue,
-        mem_gb=args.mem_gb,
-        timeout_min=args.timeout_min,
-        gpus_per_node=args.gpus_per_node,
-        cpus_per_task=args.num_workers
-    )
+        executor = submitit.AutoExecutor(folder=log_dir)
+        executor.update_parameters(
+            slurm_account=args.account,
+            slurm_partition=args.queue,
+            mem_gb=args.mem_gb,
+            timeout_min=args.timeout_min,
+            gpus_per_node=args.gpus_per_node,
+            cpus_per_task=args.num_workers
+        )
 
-    jobs = executor.map_array(evaluate_model, job_args)
+        jobs = executor.map_array(evaluate_model, job_args)
 
-    print(f"\nSubmitted {len(jobs)} job(s):")
-    for job_args, job in zip(job_args, jobs):
-        print(f"Model: {job_args[0]} dataset: {job_args[1]} job_id={job.job_id}")
+        print(f"\nSubmitted {len(jobs)} job(s):")
+        for job_args, job in zip(job_args, jobs):
+            print(f"Model: {job_args[0]} dataset: {job_args[1]} job_id={job.job_id}")
 
 
 if __name__ == "__main__":
