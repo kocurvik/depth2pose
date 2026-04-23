@@ -366,21 +366,24 @@ def read_points3D_text(path):
                 break
             line = line.strip()
             if len(line) > 0 and line[0] != "#":
-                elems = line.split()
-                point3D_id = int(elems[0])
-                xyz = np.array(tuple(map(float, elems[1:4])))
-                rgb = np.array(tuple(map(int, elems[4:7])))
-                error = float(elems[7])
-                image_ids = np.array(tuple(map(int, elems[8::2])))
-                point2D_idxs = np.array(tuple(map(int, elems[9::2])))
-                points3D[point3D_id] = Point3D(
-                    id=point3D_id,
-                    xyz=xyz,
-                    rgb=rgb,
-                    error=error,
-                    image_ids=image_ids,
-                    point2D_idxs=point2D_idxs,
-                )
+                try:
+                    elems = line.split()
+                    point3D_id = int(elems[0])
+                    xyz = np.array(tuple(map(float, elems[1:4])))
+                    rgb = np.array(tuple(map(int, elems[4:7])))
+                    error = float(elems[7])
+                    image_ids = np.array(tuple(map(int, elems[8::2])))
+                    point2D_idxs = np.array(tuple(map(int, elems[9::2])))
+                    points3D[point3D_id] = Point3D(
+                        id=point3D_id,
+                        xyz=xyz,
+                        rgb=rgb,
+                        error=error,
+                        image_ids=image_ids,
+                        point2D_idxs=point2D_idxs,
+                    )
+                except Exception as e:
+                    ...
     return points3D
 
 
