@@ -249,62 +249,6 @@ def get_mde_list(name, data_path):
     return mde_list
 
 
-def plot_scatter_pose_depth_best(best_metrics, depth_metrics, version='calib', name='default', remove_outliers=False):
-    mde_list = list(best_metrics.keys())
-
-    mde_list = [x for x in mde_list if 'gt' != x]
-
-    if remove_outliers:
-        mde_list = [x for x in mde_list if 'Infini' not in x and 'AnythingV2' not in x]
-    if remove_outliers and name == 'lamar':
-        mde_list = [x for x in mde_list if 'DepthPro' not in x]
-
-    single_metric = depth_metrics[mde_list[0]]
-    depth_evals = [(k, x) for k, v in single_metric.items() for x in v.keys() if 'metric' not in k]
-
-    base_names = list(set([x.split('-')[0].split('Calib')[0] for x in mde_list]))
-
-    # colors = get_n_colors(len(base_names))
-    # color_dict = {base_name: colors[i] for i, base_name in enumerate(base_names)}
-    color_dict = get_mde_basename_color_dict()
-
-    n = len(depth_evals)
-    ncols = 2
-    nrows = (n + ncols - 1) // ncols
-
-
-    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 3 * nrows))
-    fig.suptitle(f'Dataset: {name}, Case: {version}')
-    axes = np.array(axes).flatten()
-
-    for idx, (type, metric) in enumerate(depth_evals):
-        ax = axes[idx]
-        for mde in mde_list:
-            base_name = mde.split('-')[0].split('Calib')[0]
-            depth_val = depth_metrics[mde][type][metric]
-            try:
-                pose_val = list(best_metrics[mde].items())[0][1]['pose_mAA_10']
-            except:
-                continue
-            marker = 'o' if 'Calib' in mde else '*'
-            ax.plot(depth_val, pose_val, color=color_dict[base_name], marker=marker, linestyle='None')
-        ax.set_xlabel(f"Depth {type} - {metric}")
-        ax.set_ylabel("Pose mAA(10)")
-
-        for idx in range(n, len(axes)):
-            axes[idx].set_visible(False)
-
-        color_handles = [Line2D([0], [0], color=c, marker='s', linestyle='None', label=name)
-                         for name, c in color_dict.items() if name in base_names]
-        marker_handles = [Line2D([0], [0], color='gray', marker='*', linestyle='None', label='Normal'),
-                          Line2D([0], [0], color='gray', marker='o', linestyle='None', label='Calib')]
-
-        fig.legend(handles=color_handles + marker_handles, loc='center right')
-        plt.tight_layout(rect=[0, 0, 0.82, 1])
-        plt.savefig(f'vis/scatter_pose_depth_{name}_best_{version}{"_no_outliers" if remove_outliers else "_all"}.png')
-        # plt.show()
-
-
 def flatten_depth_metrics(all_metrics):
     rows = []
 
