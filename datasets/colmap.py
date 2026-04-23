@@ -185,7 +185,7 @@ def enforce_max_images_pairs(model, args):
     return image_ids, pairs
 
 
-def order_pairs_approx(pairs):
+def order_pairs_approx(pairs, args):
     id_freq = collections.Counter(id_ for pair in pairs for id_ in pair)
 
     # Weight inversely proportional to frequency
@@ -193,7 +193,7 @@ def order_pairs_approx(pairs):
     weights /= np.sum(weights)
 
     # Weighted sample without replacement for the first max_pairs
-    indices = np.random.choice(range(len(pairs)), p=weights, size=args.max_pairs, replace=False)
+    indices = np.random.choice(list(range(len(pairs))), p=weights, size=args.max_pairs, replace=False)
 
     return [pairs[i] for i in indices]
 
@@ -239,7 +239,7 @@ def process_subsets(args, subsets):
         create_gt_h5(model, image_ids, subset, f, f_txt, args)
 
         if args.max_pairs is not None and len(pairs) > args.max_pairs:
-            pairs = order_pairs_approx(pairs)[:args.max_pairs]
+            pairs = order_pairs_approx(pairs, args)[:args.max_pairs]
 
         create_gt_pairs(model, pairs, subset, f_pairs)
         del model
@@ -340,7 +340,7 @@ if __name__ == '__main__':
             if "min_area_overlap" in config:
                 single_args.min_area_overlap = config["min_area_overlap"]
 
-            if "min_area_overlap" in config:
+            if "min_keypoint_overlap" in config:
                 single_args.min_keypoint_overlap = config["min_keypoint_overlap"]
 
             process_colmap_dataset(single_args)

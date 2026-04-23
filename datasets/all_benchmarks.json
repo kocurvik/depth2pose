@@ -1,9 +1,0 @@
-{
-    "eth3d": {
-        "path": "/mnt/data/gg/benchmarks/ETH3D",
-        "work_path": "/mnt/data/gg/benchmarks_depth/ETH3D",
-        "width": 2048,
-        "height": 1365,
-        "depth_unit": 1
-    }
-}
