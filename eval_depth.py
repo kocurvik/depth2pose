@@ -8,6 +8,7 @@ import h5py
 import numpy as np
 import torch
 from sympy.physics.units import action
+from torch.backends.cudnn import benchmark
 from tqdm import tqdm
 from collections import defaultdict
 
@@ -74,7 +75,9 @@ def evaluate_model(mde_model, dataset_config, save_dir_all, device, use_work_dir
 
             metric_result_list, scale_result_list, affine_result_list = [], [], []
             with (
-                EvalDataLoaderPipeline(**benchmark_config) as eval_data_pipe,
+                EvalDataLoaderPipeline(benchmark_config['work_path'], benchmark_config['path'],
+                                       width=benchmark_config['width'], height=benchmark_config['height'],
+                                       depth_unit=benchmark_config['depth_unit']) as eval_data_pipe,
                 tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
                 h5py.File(h5_depth_path,
                           'r') as f_depth_h5
