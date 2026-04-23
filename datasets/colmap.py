@@ -344,5 +344,6 @@ if __name__ == '__main__':
                 single_args.min_keypoint_overlap = config["min_keypoint_overlap"]
 
             process_colmap_dataset(single_args)
+    else:
 
-    process_colmap_dataset(args)
+        process_colmap_dataset(args)
