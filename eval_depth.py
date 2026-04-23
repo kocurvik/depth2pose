@@ -145,6 +145,7 @@ def main():
 
             if os.path.exists(single_results_path) and not args.recalc:
                 print(f"Skipping: {benchmark_name} - {mde_model} since the results already exists in {single_results_path}")
+                continue
 
             job_args.append((mde_model, benchmark_name, benchmark_config, device, args.work_dir, args.recalc))
 
