@@ -30,6 +30,7 @@ def parse_args():
     parser.add_argument('--name', type=str, default='dataset', help='Path to dataset files')
     parser.add_argument('--check_images', action='store_true', default=False, help='Keep only images that are actually available on disk')
     parser.add_argument('--config_path', type=str, default=None, help='specify path to config to run for multiple datasets at the same time')
+    parser.add_argument('--recalc', action='store_true', default=False)
     parser.add_argument('out_path')
     parser.add_argument('dataset_path')
 
@@ -315,6 +316,13 @@ if __name__ == '__main__':
             dataset_config = json.load(f)
 
         for name, config in dataset_config.items():
+            out_path = os.path.join(config["work_path"], name)
+            h5_path = f'{out_path}.h5'
+
+            if os.path.exists(h5_path) and not args.recalc:
+                print(f"Skipping {out_path} since {h5_path} already exists.")
+                continue
+
             single_args = copy.copy(args)
             single_args.name = name
             single_args.out_path = config["work_path"]
