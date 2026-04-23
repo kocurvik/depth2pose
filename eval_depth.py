@@ -22,7 +22,6 @@ from utils.metrics import DepthMetrics, key_average
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('all_results_path')
     parser.add_argument('config_path')
 
     parser.add_argument('--device', type=str, default='cuda',
