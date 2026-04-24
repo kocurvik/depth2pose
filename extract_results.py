@@ -12,7 +12,7 @@ def parse_args():
     global args
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_path', type=str, default='data')
+    parser.add_argument('--work_path', type=str, default='data')
     parser.add_argument('--name', type=str, default='default')
     parser.add_argument('--config_path', default=None, type=str)
     parser.add_argument('-st', '--sampson_threshold', type=float, default=2.0)
@@ -74,7 +74,7 @@ if __name__ == '__main__':
             single_args = copy.copy(args)
             single_args.name = name
             single_args.eval_depth = args.eval_depth and "contains_gt_depth" in config and config["contains_gt_depth"]
-            single_args.data_path = config["work_path"]
+            single_args.work_path = config["work_path"]
             flat_pose_results, flat_depth_results = process_single_dataset(single_args)
             flat_pose_results.insert(0, 'dataset', name)
             pose_dfs.append(flat_pose_results)
@@ -95,7 +95,7 @@ if __name__ == '__main__':
              ['dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite)
     save_csv(all_pose_df, os.path.join(args.out_dir, 'slim_pose_results.csv'),
              ['dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite,
-             keep_slim_cols=['pose_mAA_10', 'focal_mAA_10', 'median_pose_err', 'median_f_err', 'mean_mde_runtime', 'mean_runtime', 'mean_inliers'])
+             keep_slim_cols=['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers'])
     if all_depth_df is not None:
         save_csv(all_depth_df, os.path.join(args.out_dir, 'depth_results.csv'), ['dataset', 'mde'], args.append, args.overwrite)
 
