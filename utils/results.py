@@ -133,7 +133,7 @@ def draw_cumplots(experiments, results):
 
 
 def get_results_dir(args, type='summary'):
-    return os.path.join(args.data_path, f'{type}_results',
+    return os.path.join(args.work_path, f'{type}_results',
                         f'{args.dataset_name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r')
 
 
@@ -168,7 +168,7 @@ def merge_summary_results(args):
 
 def merge_summary_depth_results(args):
     """Read all per-depth JSONs and merge into a single unified dict."""
-    results_dir = os.path.join(args.data_path, f'depth_results')
+    results_dir = os.path.join(args.work_path, f'depth_results')
     unified = {}
     for fname in sorted(os.listdir(results_dir)):
         if not fname.endswith('.json') or fname == 'all.json':
@@ -242,8 +242,8 @@ def print_best_only(all_metrics):
     return best_calib_results, best_uncal_results
 
 
-def get_mde_list(name, data_path):
-    mde_list = [x.split('_depth_')[1].split('.h5')[0] for x in os.listdir(data_path)
+def get_mde_list(name, work_path):
+    mde_list = [x.split('_depth_')[1].split('.h5')[0] for x in os.listdir(work_path)
                 if x.startswith(f'{name}_depth_') and x.endswith('.h5')]
 
     return mde_list

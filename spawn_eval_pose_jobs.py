@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('-f', '--first', type=int, default=None)
     parser.add_argument('--explicit_solvers', type=str, default=None)
     parser.add_argument('--config_path', type=str, default=None)
-    parser.add_argument('--data_path', type=str, default=None)
+    parser.add_argument('--work_path', type=str, default=None)
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--matches', type=str, default='splg_2048_noresize')
     # --- slurm-specific args ---
@@ -42,7 +42,7 @@ def parse_args():
     parser.add_argument('--timeout_min', type=int, default=20,
                         help='Expected max runtime per job in minutes')
     parser.add_argument('--log_dir', type=str, default=None,
-                        help='Directory for submitit logs (default: <data_path>/slurm_logs)')
+                        help='Directory for submitit logs (default: <work_path>/slurm_logs)')
     return parser.parse_args()
 
 def run_for_depth(args):
@@ -52,7 +52,7 @@ def run_for_depth(args):
 
 
 def main(args):
-    log_dir = args.log_dir or os.path.join(args.data_path, 'slurm_logs')
+    log_dir = args.log_dir or os.path.join(args.work_path, 'slurm_logs')
     os.makedirs(log_dir, exist_ok=True)
 
     executor = submitit.AutoExecutor(folder=log_dir)
@@ -64,7 +64,7 @@ def main(args):
         cpus_per_task=args.num_workers
     )
 
-    mde_list = get_mde_list(args.name, args.data_path)
+    mde_list = get_mde_list(args.name, args.work_path)
 
     depths_to_run = ['gt'] + mde_list
 
@@ -96,7 +96,7 @@ if __name__ == '__main__':
         for name, config in dataset_config.items():
             single_args = copy.copy(args)
             single_args.name = name
-            single_args.data_path = config["work_path"]
+            single_args.work_path = config["work_path"]
             single_args.direct_read = "requires_direct_read" in config.keys() and config["requires_direct_read"]
 
             if "cameras" in config:

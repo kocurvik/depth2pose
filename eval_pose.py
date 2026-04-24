@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument('-f', '--first', type=int, default=None)
     parser.add_argument('--depth', type=str, default=None)
     parser.add_argument('--explicit_solvers', type=str, default=None)
-    parser.add_argument('--data_path')
+    parser.add_argument('--work_path')
     parser.add_argument('--name')
     parser.add_argument('--matches', type=str, default='splg_2048_noresize')
 
@@ -253,10 +253,10 @@ def eval_single_mde(args):
 
     basename = f'{args.name}_{args.matches}_{args.depth}_{args.sampson_threshold}t_{args.reprojection_threshold}r'
 
-    os.makedirs(os.path.join(args.data_path, 'full_results'), exist_ok=True)
-    os.makedirs(os.path.join(args.data_path, 'summary_results'), exist_ok=True)
+    os.makedirs(os.path.join(args.work_path, 'full_results'), exist_ok=True)
+    os.makedirs(os.path.join(args.work_path, 'summary_results'), exist_ok=True)
 
-    name_path = os.path.join(args.data_path, args.name)
+    name_path = os.path.join(args.work_path, args.name)
 
     image_list_path = f'{name_path}_image_list.txt'
     with open(image_list_path, 'r') as f:
@@ -466,7 +466,7 @@ def get_solvers(args):
 if __name__ == '__main__':
     args = parse_args()
     if args.depth is None:
-        mde_list = get_mde_list(args.name, args.data_path)
+        mde_list = get_mde_list(args.name, args.work_path)
 
         for depth_name in mde_list:
             args.depth = depth_name
