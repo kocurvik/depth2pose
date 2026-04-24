@@ -134,7 +134,7 @@ def draw_cumplots(experiments, results):
 
 def get_results_dir(args, type='summary'):
     return os.path.join(args.work_path, f'{type}_results',
-                        f'{args.dataset_name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r')
+                        f'{args.name}_{args.matches}_{args.sampson_threshold}t_{args.reprojection_threshold}r')
 
 
 def save_summary_results(experiments, full_results, mde_runtimes, args):
@@ -180,7 +180,7 @@ def merge_summary_depth_results(args):
 
 
 def get_basename(args, depth: str) -> str:
-    return (f'{args.dataset_name}_{args.matches}_{depth}'
+    return (f'{args.name}_{args.matches}_{depth}'
             f'_{args.sampson_threshold}t_{args.reprojection_threshold}r')
 
 
