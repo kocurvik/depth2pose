@@ -1,4 +1,17 @@
 {
+    "sintel": {
+        "path": "/mnt/d/Research/data/sintel",
+        "work_path": "/mnt/d/Research/data/mdrpbench/sintel",
+        "width": 1024,
+        "height": 436,
+        "depth_unit": 1,
+        "contains_gt_depth": true,
+        "requires_direct_read": false,
+        "max_pairs": 250,
+        "min_area_overlap": 0.0,
+        "min_keypoint_overlap": 0,
+        "cameras": "shared"
+    },
     "eth3d": {
         "path": "/mnt/d/Research/data/ETH3D_depth",
         "work_path": "/mnt/d/Research/data/mdrpbench/eth3d",
@@ -31,10 +44,4 @@
         "max_pairs": 2500,
         "cameras": "shared"
     },
-    "pt": {
-        "path": "/mnt/d/Research/data/pt_test",
-        "work_path": "/mnt/d/Research/data/mdrpbench/pt",
-        "max_pairs": 500,
-        "cameras": "varying"
-    }
 }

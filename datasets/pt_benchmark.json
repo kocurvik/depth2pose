@@ -1,0 +1,8 @@
+{
+  "pt": {
+        "path": "/projects/p1358-25-2/data/pt_test",
+        "work_path": "/projects/p1358-25-2/mdrpbench/pt",
+        "depth_unit": 1,
+        "cameras": "varying"
+    }
+}

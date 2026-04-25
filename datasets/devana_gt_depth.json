@@ -43,12 +43,5 @@
         "min_area_overlap": 0.0,
         "min_keypoint_overlap": 0,
         "cameras": "shared"
-    },
-
-    "pt": {
-        "path": "/projects/p1358-25-2/data/pt_test",
-        "work_path": "/projects/p1358-25-2/mdrpbench/pt",
-        "depth_unit": 1,
-        "cameras": "varying"
     }
 }
