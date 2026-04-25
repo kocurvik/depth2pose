@@ -248,6 +248,8 @@ def save_json(worst_pairs_dict, args):
         elif isinstance(obj, list):
             return [convert(item) for item in obj]
         elif isinstance(obj, np.ndarray):
+            if key in ('kp1', 'kp2'):
+                return np.round(obj, 2).tolist()
             lst = obj.ravel().tolist()
             if key == 'inliers':
                 return [int(x) for x in lst]
