@@ -224,7 +224,7 @@ def export_images(worst_pairs_dict, args):
     for pair, d in worst_pairs_dict.items():
         for mde, mde_dict in d['results'].items():
             if mde == 'gt':
-                mde_dict['used_kps_inliers'] = np.arange(len(d['kp1']))
+                mde_dict['unused_kps'] = []
                 continue
 
             d1 = mde_dict['d1']
