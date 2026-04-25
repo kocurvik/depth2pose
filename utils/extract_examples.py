@@ -263,7 +263,7 @@ def save_json(worst_pairs_dict, args):
         pair_json_path = os.path.join(results_dir, pair_json_name)
         with open(pair_json_path, 'w') as f:
             json.dump(convert(d), f)
-        top_level = {k: convert(v, k) for k, v in d.items() if k not in ('results', 'kp1', 'kp2', 'd1', 'd2')}
+        top_level = {k: convert(v, k) for k, v in d.items() if k != 'results'}
         top_level['result_path'] = f'results/{pair_json_name}'
         main_index[f'{pair[0]}-{pair[1]}'] = top_level
 
