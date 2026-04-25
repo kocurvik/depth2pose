@@ -1,5 +1,6 @@
 import argparse
 import copy
+import json
 import os
 from argparse import Namespace
 from pathlib import PureWindowsPath, Path
@@ -9,6 +10,7 @@ import h5py
 import numpy as np
 import matplotlib
 
+from utils.geometry import get_kp_depth
 from utils.results import get_mde_list, compute_auc
 from utils.storage import load_full_results
 
@@ -37,17 +39,17 @@ def get_worst_pairs(args):
     gt_results = load_full_results(gt_args)
 
     baseline_by_pair = {}
+    inliers_by_pair = {}
     for r in gt_results:
         if r['experiment'] == 'baseline_calib' and r['iterations'] == 1000:
             pair = (r['image_name_1'], r['image_name_2'])
             err = max(r['R_err'], r['t_err'])
             baseline_by_pair[pair] = 180.0 if np.isnan(err) else err
+            inliers_by_pair[pair] = r['info']['inliers']
 
     pairs = list(baseline_by_pair.keys())
-
     pair_ids = {pair: index for index, pair in enumerate(pairs)}
-
-    mde_list = get_mde_list(name, work_path)[:1]
+    mde_list = get_mde_list(name, work_path)[::10]
 
     p_errs = np.full([len(pairs), len(mde_list) + 1], np.nan)
     inliers = np.empty([len(pairs), len(mde_list) + 1], dtype=object)
@@ -55,6 +57,8 @@ def get_worst_pairs(args):
 
     for i, pair in enumerate(pairs):
         p_errs[i, -1] = baseline_by_pair[pair]
+        inliers[i, -1] = inliers_by_pair[pair]
+        shift_solver[i, -1] = False
 
     for mde_id, mde in enumerate(mde_list):
         mde_args = copy.copy(args)
@@ -73,41 +77,61 @@ def get_worst_pairs(args):
             p_err = max(r['R_err'], r['t_err'])
             pair = (r['image_name_1'], r['image_name_2'])
             pair_id = pair_ids[pair]
-            inliers = r['info']['inliers']
+            r_inliers = r['info']['inliers']
             if np.isnan(p_errs[pair_id, mde_id]):
                 p_errs[pair_id, mde_id] = p_err
-                inliers[pair_id, mde_id] = inliers
+                inliers[pair_id, mde_id] = r_inliers
                 shift_solver[pair_id, mde_id] = r['experiment'] == 'calib_shift'
+
+                # print('******')
+                # print(len(r_inliers), len(inliers[pair_id, mde_id]),len(inliers[pair_id, -1]))
+                # print(np.sum(r_inliers), np.sum(inliers[pair_id, -1]))
+
             elif p_errs[pair_id, mde_id] > p_err:
                 p_errs[pair_id, mde_id] = p_err
                 shift_solver[pair_id, mde_id] = r['experiment'] == 'calib_shift'
-                inliers[pair_id, mde_id] = inliers
+                inliers[pair_id, mde_id] = r_inliers
 
+                # print('******')
+                # print(len(r_inliers), len(inliers[pair_id, mde_id]),len(inliers[pair_id, -1]))
+                # print(np.sum(r_inliers), np.sum(inliers[pair_id, -1]))
+
+
+
+    gt_mask = p_errs[:, -1] < 10.0
     difference = p_errs[:, :-1] - p_errs[:, -1:]
-    best = np.nanmin(difference, axis=1)
-    worst_best = np.argpartition(-best, 20)[:20]
+    best = np.where(gt_mask, np.nanmin(difference, axis=1), np.nan)
+    valid_indices = np.where(~np.isnan(best))[0]
+    worst_best = valid_indices[np.argpartition(-best[valid_indices], min(args.n_pairs, len(valid_indices)))[:min(args.n_pairs, len(valid_indices))]]
 
     worst_pairs_dict = {}
 
     for id in worst_best:
         pair = pairs[id]
-        worst_pairs_dict[pair] = {'results': {}}
-        worst_pairs_dict[pair]['results']['gt'] = {'p_err': p_errs[id, -1], 'solver': 'baseline'}
+        best_mde_id = int(np.nanargmin(p_errs[id, :-1]))
+        worst_pairs_dict[pair] = {
+            'baseline_p_err': p_errs[id, -1],
+            'best_mde_p_err': p_errs[id, best_mde_id],
+            'best_mde': mde_list[best_mde_id],
+            'results': {},
+        }
+        worst_pairs_dict[pair]['results']['gt'] = {'p_err': p_errs[id, -1], 'solver': 'baseline', 'inliers': inliers[id, -1]}
         for mde_id, mde in enumerate(mde_list):
              worst_pairs_dict[pair]['results'][mde] = {'p_err': p_errs[id, mde_id],
-                                                       'solver': 'calib_shift' if shift_solver[id, mde_id] else 'calib'}
+                                                       'solver': 'calib_shift' if shift_solver[id, mde_id] else 'calib',
+                                                       'inliers': inliers[id, mde_id]}
 
     return worst_pairs_dict
 
 
 def get_matches(worst_pairs_dict, args):
-    matches_path = os.path.join(args.work_path, f'{args.name}__{args.matches}')
+    matches_path = os.path.join(args.work_path, f'{args.name}_{args.matches}.h5')
     with h5py.File(matches_path) as f:
         for pair, d in worst_pairs_dict.items():
             kp = np.array(f[f'{pair[0]}-{pair[1]}'])
             # do not forget to convert to list later!
             kp1 = kp[:, :2]
-            kp2 = kp[:, :2]
+            kp2 = kp[:, 2:]
             d['kp1'] = kp1
             d['kp2'] = kp2
 
@@ -148,18 +172,23 @@ def export_images(worst_pairs_dict, args):
     mde_ids = {mde: i for i, mde in enumerate(mde_list)}
 
     for pair, d in worst_pairs_dict.items():
-        d['exported_rgb_image1_path'] = f'image_{image_ids[pair[0]]}.png'
-        d['exported_rgb_image2_path'] = f'image_{image_ids[pair[1]]}.png'
+        d['image1_id'] = image_ids[pair[0]]
+        d['image2_id'] = image_ids[pair[1]]
+        d['exported_rgb_image1_path'] = f'images/image_{image_ids[pair[0]]}.png'
+        d['exported_rgb_image2_path'] = f'images/image_{image_ids[pair[1]]}.png'
 
         for mde, mde_dict in d['results'].items():
             if mde == 'gt':
                 continue
-            mde_dict['exported_rgb_image1_path'] = f'depth_{image_ids[pair[0]]}_{mde_ids[mde]}.png'
-            mde_dict['exported_rgb_image2_path'] = f'depth_{image_ids[pair[1]]}_{mde_ids[mde]}.png'
+            mde_dict['exported_depth_image1_path'] = f'depths/depth_{image_ids[pair[0]]}_{mde_ids[mde]}.png'
+            mde_dict['exported_depth_image2_path'] = f'depths/depth_{image_ids[pair[1]]}_{mde_ids[mde]}.png'
 
 
     worst_examples_dir = os.path.join(work_path, 'examples')
-    os.makedirs(worst_examples_dir, exist_ok=True)
+    images_dir = os.path.join(worst_examples_dir, 'images')
+    depths_dir = os.path.join(worst_examples_dir, 'depths')
+    os.makedirs(images_dir, exist_ok=True)
+    os.makedirs(depths_dir, exist_ok=True)
 
     for mde_id, mde in enumerate(mde_list):
         if mde == 'gt':
@@ -168,21 +197,83 @@ def export_images(worst_pairs_dict, args):
             for i, image_name in enumerate(images):
                 depth = np.array(f[f'{image_name}_depth'])
                 depth_color = colorize_depth(depth)
-
-                save_image_path = os.path.join(worst_examples_dir, f'depth_{i}_{mde_id}.png')
+                save_image_path = os.path.join(depths_dir, f'depth_{i}_{mde_id}.png')
                 cv2.imwrite(save_image_path, enforce_max_width(depth_color))
+
+                for dd in worst_pairs_dict.values():
+                    if dd['image1_id'] == i:
+                        dd['results'][mde]['d1'] = get_kp_depth(dd['kp1'], depth, interpolation='nearest')
+                    if dd['image2_id'] == i:
+                        dd['results'][mde]['d2'] = get_kp_depth(dd['kp2'], depth, interpolation='nearest')
 
     for i, image_name in enumerate(images):
         image = cv2.imread(os.path.join(dataset_path, Path(PureWindowsPath(image_name))))
-        save_image_path = os.path.join(worst_examples_dir, f'image_{i}.png')
-        cv2.imwrite(save_image_path, enforce_max_width(image))
+        save_image_path = os.path.join(images_dir, f'image_{i}.png')
+        resized_image = enforce_max_width(image)
+        cv2.imwrite(save_image_path, resized_image)
 
-    return worst_pairs_dict
+        for dd in worst_pairs_dict.values():
+            if dd['image1_id'] == i:
+                dd['kp1'][:, 0] *= resized_image.shape[1] / image.shape[1]
+                dd['kp1'][:, 1] *= resized_image.shape[0] / image.shape[0]
+            if dd['image2_id'] == i:
+                dd['kp2'][:, 0] *= resized_image.shape[1] / image.shape[1]
+                dd['kp2'][:, 1] *= resized_image.shape[0] / image.shape[0]
 
 
+    for pair, d in worst_pairs_dict.items():
+        for mde, mde_dict in d['results'].items():
+            if mde == 'gt':
+                mde_dict['used_kps_inliers'] = np.arange(len(d['kp1']))
+                continue
+
+            d1 = mde_dict['d1']
+            d2 = mde_dict['d2']
+            l = np.logical_and(np.isfinite(d1), np.isfinite(d2))
+            l = np.logical_and(d1 > 0, l)
+            l = np.logical_and(d2 > 0, l)
+            mde_dict['unused_kps'] = np.argwhere(~l)
+
+    # print(worst_pairs_dict)
+
+
+def save_json(worst_pairs_dict, args):
+    examples_dir = os.path.join(args.work_path, 'examples')
+    results_dir = os.path.join(examples_dir, 'results')
+    os.makedirs(results_dir, exist_ok=True)
+
+    def convert(obj, key=None):
+        if isinstance(obj, dict):
+            return {(f'{k[0]}-{k[1]}' if isinstance(k, tuple) else k): convert(v, k) for k, v in obj.items() if k not in ('d1', 'd2')}
+        elif isinstance(obj, list):
+            return [convert(item) for item in obj]
+        elif isinstance(obj, np.ndarray):
+            lst = obj.ravel().tolist()
+            if key == 'inliers':
+                return [int(x) for x in lst]
+            return lst
+        elif isinstance(obj, np.generic):
+            return obj.item()
+        return obj
+
+    main_index = {}
+    for pair, d in worst_pairs_dict.items():
+        pair_key = f'{pair[0]}-{pair[1]}'.replace('/', '_').replace('\\', '_')
+        pair_json_name = f'{pair_key}.json'
+        pair_json_path = os.path.join(results_dir, pair_json_name)
+        with open(pair_json_path, 'w') as f:
+            json.dump(convert(d), f)
+        top_level = {k: convert(v, k) for k, v in d.items() if k not in ('results', 'kp1', 'kp2', 'd1', 'd2')}
+        top_level['result_path'] = f'results/{pair_json_name}'
+        main_index[f'{pair[0]}-{pair[1]}'] = top_level
+
+    main_json_path = os.path.join(examples_dir, f'{args.name}_examples.json')
+    with open(main_json_path, 'w') as f:
+        json.dump(main_index, f)
 
 if __name__ == '__main__':
     args = parse_args()
     worst_pairs_dict = get_worst_pairs(args)
-    worst_pairs_dict = get_matches(worst_pairs_dict, args)
-    worst_pairs_dict = export_images(worst_pairs_dict, arg)
+    get_matches(worst_pairs_dict, args)
+    export_images(worst_pairs_dict, args)
+    save_json(worst_pairs_dict, args)
