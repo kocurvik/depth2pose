@@ -64,8 +64,8 @@ def get_dataset_paths(basename, dataset_path, subset):
         model_path = os.path.join('dense', 'sparse')
         img_path = os.path.join('dense', 'images')
     elif 'd2p' in basename.lower():
-        model_path = os.path.join(dataset_path, 'sparse')
-        img_path = os.path.join(dataset_path, 'images')
+        model_path = os.path.join('sparse')
+        img_path = os.path.join('images')
     elif basename.lower() == 'eth3d_depth' or basename.lower() == 'scannetpp' or basename.lower() == 'lamar':
         model_path = os.path.join('colmap_gt')
         img_path = os.path.join('images')
