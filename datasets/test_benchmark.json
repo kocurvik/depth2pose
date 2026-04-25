@@ -1,6 +1,6 @@
 {
   "d2p_test": {
-    "path": "/projects/p1358-25-2/data/d2p/test",
+    "path": "/projects/p1358-25-2/data/d2p/d2p_test",
     "work_path": "/projects/p1358-25-2/mdrpbench/d2p_test",
     "cameras": "shared",
     "max_pairs": 250
