@@ -17,8 +17,7 @@ def parse_args():
     parser.add_argument('--config_path', default=None, type=str)
     parser.add_argument('-st', '--sampson_threshold', type=float, default=2.0)
     parser.add_argument('-rt', '--reprojection_threshold', type=float, default=16.0)
-    parser.add_argument('--output', type=str, default=None,
-                        help='Path to write unified JSON (default: <results_dir>/all.json)')
+    parser.add_argument('--prefix', type=str, default='')
     parser.add_argument('-ed', '--eval_depth', action='store_true', default=False)
     parser.add_argument('--matches', type=str, default='splg_2048_noresize')
     parser.add_argument('--out_dir', type=str, default='csv_results')
@@ -91,13 +90,13 @@ if __name__ == '__main__':
             all_depth_df.insert(0, 'dataset', args.name)
 
     os.makedirs(args.out_dir, exist_ok=True)
-    save_csv(all_pose_df, os.path.join(args.out_dir, 'pose_results.csv'),
+    save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}pose_results.csv'),
              ['dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite)
-    save_csv(all_pose_df, os.path.join(args.out_dir, 'slim_pose_results.csv'),
+    save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}slim_pose_results.csv'),
              ['dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite,
              keep_slim_cols=['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers'])
     if all_depth_df is not None:
-        save_csv(all_depth_df, os.path.join(args.out_dir, 'depth_results.csv'), ['dataset', 'mde'], args.append, args.overwrite)
+        save_csv(all_depth_df, os.path.join(args.out_dir, f'{args.prefix}depth_results.csv'), ['dataset', 'mde'], args.append, args.overwrite)
 
 
 
