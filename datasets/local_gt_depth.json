@@ -43,5 +43,5 @@
         "requires_direct_read": true,
         "max_pairs": 2500,
         "cameras": "shared"
-    },
+    }
 }
