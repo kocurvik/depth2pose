@@ -249,7 +249,7 @@ def save_json(worst_pairs_dict, args):
             return [convert(item) for item in obj]
         elif isinstance(obj, np.ndarray):
             if key in ('kp1', 'kp2'):
-                return np.round(obj, 2).tolist()
+                return [[round(float(x), 2) for x in row] for row in obj]
             lst = obj.ravel().tolist()
             if key == 'inliers':
                 return [int(x) for x in lst]
