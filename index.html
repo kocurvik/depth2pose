@@ -14,12 +14,16 @@
 	<link rel="stylesheet" href="static/css/bulma.min.css">
 	<link rel="stylesheet" href="static/css/index.css">
 	<link rel="stylesheet" href="static/css/benchmark_viewer.css">
+	<link rel="stylesheet" href="static/css/primeicons.css">
 
 	<!-- Fonts - Optimized loading -->
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 	<!-- Main JavaScript -->
-	<script type="module" src="static/js/benchmark_viewer.js"></script>
+	<script type="module">
+		import { init } from "./static/js/benchmark_viewer.js";
+		init();
+	</script>
 
 	<title>Benchmarking Monocular Depth Estimators via Relative Pose Estimation</title>
 </head>
@@ -53,7 +57,7 @@
 				<!-- Controls Stack -->
 				<div class="controls-stack" id="controlsContent">
 
-					<!-- Controls for dataset, search, and metric -->
+					<!-- Controls for dataset, iterations, search, page size -->
 					<div class="top-controls-grid row-content">
 						<div class="field mb-0">
 							<label class="label">Dataset</label>
@@ -63,31 +67,31 @@
 						</div>
 
 						<div class="field mb-0">
-							<label class="label">Search model</label>
-							<input id="searchInput" class="input" type="text" placeholder="DepthAnything, UniDepth, MoGe, ..."/>
-						</div>
-
-						<div class="field mb-0">
-							<label class="label">Metric</label>
+							<label class="label">Iters</label>
 							<div class="select is-fullwidth">
-								<select id="scoreMetricSelect">
-									<option value="pose_mAA_10">pose_mAA_10</option>
-									<option value="pose_mAA_5">pose_mAA_5</option>
-									<option value="pose_mAA_3">pose_mAA_3</option>
-								</select>
+								<select id="itersSelect"></select>
 							</div>
 						</div>
 
 						<div class="field mb-0">
-							<label class="label">Other</label>
-							<label class="checkbox is-block pt-3" title="gt = ground-truth / oracle reference row, not a regular depth estimator.">
-								<input type="checkbox" id="hideGtOnly" checked/>
-								Hide <code>gt</code> / oracle rows
-							</label>
+							<label class="label">Search</label>
+							<input id="searchInput" class="input" type="text" placeholder="DepthAnything, calib_shift, pt, ..." />
+						</div>
+
+						<div class="field mb-0">
+							<label class="label">Page size</label>
+							<div class="select is-fullwidth">
+								<select id="pageSizeSelect">
+									<option value="10">10</option>
+									<option value="25" selected>25</option>
+									<option value="50">50</option>
+									<option value="100">100</option>
+								</select>
+							</div>
 						</div>
 					</div>
 
-					<!-- Evaluation Cases -->
+					<!-- Evaluation case selection -->
 					<div class="control-row">
 						<div class="row-label">Evaluation case</div>
 						<div class="row-content">
@@ -95,38 +99,33 @@
 								<div class="column is-12">
 									<label class="case-box is-block">
 										<div class="flex-row">
-											<input type="radio" name="mode" value="calibrated" checked/>
+											<input type="radio" name="mode" value="calibrated" checked />
 											<strong>With calibration</strong>
 										</div>
-										<small>Show mainly <code>calib</code> and <code>calib_shift</code>. Include both model names with <code>Calib</code> and without it.</small>
+										<small>Show <code>calib</code>, <code>calib_shift</code>, <code>calib_ro</code>, <code>calib_shift_ro</code>, <code>baseline_calib</code>.</small>
 									</label>
 								</div>
-
 								<div class="column is-12">
 									<label class="case-box is-block">
 										<div class="flex-row">
-											<input type="radio" name="mode" value="uncalibrated"/>
+											<input type="radio" name="mode" value="uncalibrated" />
 											<strong>Without calibration</strong>
 										</div>
-										<small>Show <code>sf</code>, <code>sf_shift</code>, <code>vf</code>, <code>vf_shift</code>, <code>mdecalib</code>, <code>mdecalib_shift</code> and drop model names containing <code>Calib</code>.</small>
+										<small>Show <code>sf</code>, <code>sf_shift</code>, <code>sf_ro</code>, <code>sf_shift_ro</code>, <code>vf</code>, <code>vf_shift</code>, <code>vf_ro</code>, <code>vf_shift_ro</code>, <code>mdecalib</code>, <code>mdecalib_shift</code>, <code>mdecalib_ro</code>, <code>mdecalib_shift_ro</code>, <code>baseline_sf</code>, <code>baseline_vf</code>.</small>
 									</label>
 								</div>
 							</div>
 						</div>
 					</div>
 
-					<!-- Checkboxes -->
+					<!-- Filters -->
 					<div class="control-row">
-						<div class="row-label">Filtering</div>
+						<div class="row-label">Filters</div>
 						<div class="row-content">
 							<div class="inline-checkboxes">
 								<label class="checkbox">
-									<input type="checkbox" id="bestBackboneOnly"/>
-									Show only the best backbone per estimator family and solver family
-								</label>
-								<label class="checkbox">
-									<input type="checkbox" id="bestSolverOnly"/>
-									Show only the better solver variant inside one solver family
+									<input type="checkbox" id="hideGtOnly" checked/>
+									Hide <code>gt</code> / oracle rows
 								</label>
 							</div>
 						</div>
@@ -134,48 +133,41 @@
 
 				</div>
 			</div>
-			<script>
-				const controlsCard = document.getElementById('controlsCard');
-				const controlsToggle = document.getElementById('controlsToggle');
-
-				controlsToggle.addEventListener('click', () => {
-					const collapsed = controlsCard.classList.toggle('is-collapsed');
-					controlsToggle.textContent = collapsed ? 'Show controls' : 'Hide controls';
-					controlsToggle.setAttribute('aria-expanded', String(!collapsed));
-				});
-			</script>
 
 			<!-- Results Table -->
-			<div class="table-card mt-5">
-				<div class="table-container">
-					<table class="table is-fullwidth is-striped is-hoverable benchmark-table">
-						<thead>
-							<tr>
-								<th>#</th>
-								<th>Estimator</th>
-								<th>Backbone</th>
-								<th>Model name</th>
-								<th>Solver</th>
-								<th>mAA@10</th>
-								<th>mAA@5</th>
-								<th>mAA@3</th>
-								<th>Median pose err</th>
-								<th>Runtime (ms)</th>
-								<th>MDE runtime (ms)</th>
-								<th>Inliers</th>
-							</tr>
-						</thead>
-						<tbody id="resultsBody"></tbody>
-					</table>
+			<div class="table-card mt-5" id="tableCard">
+				<button class="controls-toggle" type="button" id="tableToggle" aria-expanded="true" aria-controls="tableContent">
+					Hide table
+				</button>
+				<div class="card-content-stack" id="tableContent">
+					<div class="table-container">
+						<table class="table is-striped is-hoverable benchmark-table">
+							<colgroup id="resultsColgroup"></colgroup>
+							<thead class="benchmark-table-head" id="resultsHead"></thead>
+							<tbody class="benchmark-table-body" id="resultsBody"></tbody>
+						</table>
+					</div>
+					<div class="empty-box" id="emptyState" hidden></div>
+					<div class="pagination-bar" id="paginationBar">
+						<div class="pagination-info" id="paginationInfo"></div>
+						<div class="pagination-actions">
+							<button class="button is-light is-small" type="button" id="prevPageBtn">Previous</button>
+							<button class="button is-light is-small" type="button" id="nextPageBtn">Next</button>
+						</div>
+					</div>
 				</div>
-				<div class="empty-box" id="emptyState" hidden></div>
 			</div>
 
 			<!-- Summary Grid -->
-			<div class="controls-card mt-5">
-				<h2 class="title is-4 mb-1">Results</h2>
-				<p class="muted-note">Rows are computed directly in the browser from the selected JSON file.</p>
-				<div class="summary-grid" id="summaryGrid"></div>
+			<div class="controls-card mt-5" id="resultsCard">
+				<button class="controls-toggle" type="button" id="resultsToggle" aria-expanded="true" aria-controls="resultsContent">
+					Hide results
+				</button>
+				<div class="card-content-stack" id="resultsContent">
+					<h2 class="title is-4 mb-1">Results</h2>
+					<p class="muted-note">Rows are computed directly in the browser from the selected CSV file.</p>
+					<div class="summary-grid" id="summaryGrid"></div>
+				</div>
 			</div>
 
 		</div>

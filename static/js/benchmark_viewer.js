@@ -1,232 +1,433 @@
-let DATASETS = [];
+const CSV_URL = 'https://raw.githubusercontent.com/lbujnak/depth2pose_webdata/main/benchmark/new/slim_pose_results.csv';
 
 const MODE_CONFIG = {
 	calibrated: {
 		label: 'With calibration',
-		solvers: new Set(['calib', 'calib_shift', 'baseline_calib', 'baseline'])
+		solvers: new Set(['calib', 'calib_shift', 'calib_ro', 'calib_shift_ro', 'baseline_calib'])
 	},
 	uncalibrated: {
 		label: 'Without calibration',
-		solvers: new Set(['sf', 'sf_shift', 'vf', 'vf_shift', 'mdecalib', 'mdecalib_shift', 'baseline_vf'])
+		solvers: new Set([
+			'sf', 'sf_shift', 'sf_ro', 'sf_shift_ro',
+			'vf', 'vf_shift', 'vf_ro', 'vf_shift_ro',
+			'mdecalib', 'mdecalib_shift', 'mdecalib_ro', 'mdecalib_shift_ro',
+			'baseline_sf', 'baseline_vf'
+		])
 	}
 };
 
 const state = {
-	datasets: {},
-	currentDatasetId: '',
+	rawRows: [],
+	columns: [],
+	numericColumns: new Set(),
+	datasets: [],
+	itersOptions: [],
+	currentDataset: 'mean',
+	currentIters: 'all',
 	search: '',
-	scoreMetric: 'pose_mAA_10',
 	mode: 'calibrated',
-	bestBackboneOnly: false,
-	bestSolverOnly: false,
-	hideGtOnly: true
+	hideGtOnly: true,
+	sortKey: 'pose_mAA_10',
+	sortDir: 'desc',
+	page: 1,
+	pageSize: 25,
+	columnWidths: {}
 };
 
 const els = {
 	datasetSelect: document.getElementById('datasetSelect'),
-	scoreMetricSelect: document.getElementById('scoreMetricSelect'),
+	itersSelect: document.getElementById('itersSelect'),
 	searchInput: document.getElementById('searchInput'),
-	bestBackboneOnly: document.getElementById('bestBackboneOnly'),
-	bestSolverOnly: document.getElementById('bestSolverOnly'),
+	pageSizeSelect: document.getElementById('pageSizeSelect'),
 	hideGtOnly: document.getElementById('hideGtOnly'),
+	resultsColgroup: document.getElementById('resultsColgroup'),
+	resultsHead: document.getElementById('resultsHead'),
 	resultsBody: document.getElementById('resultsBody'),
 	summaryGrid: document.getElementById('summaryGrid'),
-	emptyState: document.getElementById('emptyState')
+	emptyState: document.getElementById('emptyState'),
+	paginationBar: document.getElementById('paginationBar'),
+	paginationInfo: document.getElementById('paginationInfo'),
+	prevPageBtn: document.getElementById('prevPageBtn'),
+	nextPageBtn: document.getElementById('nextPageBtn')
 };
 
 
-// Utility functions
-function fmt(value, digits = 2) {
-	if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
-	return Number(value).toFixed(digits);
+/* Attach toggle functionality to a card, allowing it to collapse/expand when the button is clicked. */
+function attachCardToggle(cardId, buttonId, contentId, showText, hideText) {
+	const card = document.getElementById(cardId);
+	const button = document.getElementById(buttonId);
+	const content = document.getElementById(contentId);
+	if (!card || !button || !content) return;
+
+	button.addEventListener('click', () => {
+		const collapsed = card.classList.toggle('is-collapsed');
+		button.textContent = collapsed ? showText : hideText;
+		button.setAttribute('aria-expanded', String(!collapsed));
+	});
 }
 
+/* Load CSV data from the specified URL, parse it, and populate the state with columns, rows, and options for controls. */
+async function loadData() {
+	let csvText;
 
-// Dataset loading and preprocessing
-async function loadDatasetList() {
-	const owner_repo = 'lbujnak/depth2pose_webdata';
-	const branch = 'main';
-	const path = 'benchmark';
-
-	const url = `https://api.github.com/repos/${owner_repo}/contents/${path}?ref=${branch}`;
-
-	const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github+json' } });
-	if (!res.ok) throw new Error(`Failed to load dataset list: ${res.status}`);
-
-	const items = await res.json();
-	
-	return items
-		.filter(item => item.type === 'file' && item.name.endsWith('.json'))
-		.map(item => ({
-			id: item.name.replace(/\.json$/, ''),
-			label: item.name.replace(/\.json$/, ''),
-			file: item.download_url
-		}))
-		.sort((a, b) => a.label.localeCompare(b.label));
-}
-
-function populateDatasetSelect() {
-	const select = document.getElementById('datasetSelect');
-
-	select.innerHTML = '';
-	for (const ds of DATASETS) {
-		const option = document.createElement('option');
-		option.value = ds.id;
-		option.textContent = ds.label;
-		select.appendChild(option);
+	try {
+		const response = await fetch(CSV_URL);
+		if (!response.ok) throw new Error(`Failed to load CSV from ${CSV_URL}: ${response.status}`);
+		
+		csvText = await response.text();
+		console.log('CSV data loaded successfully.');
 	}
+	catch (error) {
+		throw new Error('Failed to load CSV.');
+	}
+
+	const { columns, rows } = parseCsv(csvText);
+
+	state.columns = columns;
+	state.rawRows = rows;
+	state.numericColumns = new Set(columns.filter((column) => rows.every((row) => typeof row[column] === 'number' || row[column] === '')));
+	state.datasets = [...new Set(rows.map((row) => String(row.dataset)))].sort((a, b) => a.localeCompare(b));
+	state.itersOptions = [...new Set(rows.map((row) => String(row.iters)))].sort((a, b) => Number(a) - Number(b));
+	computeColumnWidths();
 }
 
+/* Populate the dataset and iters dropdowns based on the loaded data, and set initial values for all controls. */
+function populateControls() {
+	els.datasetSelect.innerHTML = '';
+	[
+		{ value: 'mean', label: 'Mean over datasets' }, ...state.datasets.map((dataset) => ({ value: dataset, label: dataset }))
+	].forEach(({ value, label }) => {
+		const option = document.createElement('option');
+		
+		option.value = value;
+		option.textContent = label;
+		els.datasetSelect.appendChild(option);
+	});
 
-async function loadDatasets() {
-	const results = await Promise.all(DATASETS.map(async (dataset) => {
-		const response = await fetch(dataset.file);
-		if (!response.ok) throw new Error(`Failed to load ${dataset.file}`);
+	els.itersSelect.innerHTML = '';
+	[
+		{ value: 'all', label: 'All' }, ...state.itersOptions.map((iters) => ({ value: iters, label: iters }))
+	].forEach(({ value, label }) => {
+		const option = document.createElement('option');
+		
+		option.value = value;
+		option.textContent = label;
+		els.itersSelect.appendChild(option);
+	});
 
-		const json = await response.json();
-		return [dataset.id, flattenDataset(json)];
-	}));
+	els.datasetSelect.value = state.currentDataset;
+	els.itersSelect.value = state.currentIters;
+	els.pageSizeSelect.value = String(state.pageSize);
+	els.hideGtOnly.checked = state.hideGtOnly;
 
-	state.datasets = Object.fromEntries(results);
+	const checkedMode = document.querySelector(`input[name="mode"][value="${state.mode}"]`);
+	if (checkedMode) checkedMode.checked = true;
 }
 
-function flattenDataset(raw) {
-	const rows = [];
-	Object.entries(raw).forEach(([modelName, solverMap]) => {
-		const parsed = parseModelName(modelName);
-		Object.entries(solverMap).forEach(([solver, metrics]) => {
-			rows.push({
-				modelName, family: parsed.family,
-				backbone: parsed.backbone, solver,
-				solverFamily: solverFamily(solver),
-				pose_mAA_10: metrics.pose_mAA_10,
-				pose_mAA_5: metrics.pose_mAA_5,
-				pose_mAA_3: metrics.pose_mAA_3,
-				median_pose_err: metrics.median_pose_err,
-				mean_runtime: metrics.mean_runtime,
-				mean_mde_runtime: metrics.mean_mde_runtime,
-				mean_inliers: metrics.mean_inliers,
-			});
+/* Bind event listeners to all controls, updating the state and re-rendering the table whenever a control value changes. */
+function bindControls() {
+	els.datasetSelect.addEventListener('change', (event) => {
+		state.currentDataset = event.target.value;
+		state.page = 1;
+		render();
+	});
+
+	els.itersSelect.addEventListener('change', (event) => {
+		state.currentIters = event.target.value;
+		state.page = 1;
+		render();
+	});
+
+	els.searchInput.addEventListener('input', (event) => {
+		state.search = event.target.value;
+		state.page = 1;
+		render();
+	});
+
+	els.pageSizeSelect.addEventListener('change', (event) => {
+		state.pageSize = Number(event.target.value);
+		state.page = 1;
+		render();
+	});
+
+	els.hideGtOnly.addEventListener('change', (event) => {
+		state.hideGtOnly = event.target.checked;
+		state.page = 1;
+		render();
+	});
+
+	document.querySelectorAll('input[name="mode"]').forEach((input) => {
+		input.addEventListener('change', (event) => {
+			state.mode = event.target.value;
+			state.page = 1;
+			render();
 		});
 	});
-	return rows;
+
+	els.prevPageBtn.addEventListener('click', () => {
+		if (state.page > 1) {
+			state.page -= 1;
+			render();
+		}
+	});
+
+	els.nextPageBtn.addEventListener('click', () => {
+		state.page += 1;
+		render();
+	});
 }
 
-function parseModelName(modelName) {
-	const dashIndex = modelName.indexOf('-');
-	if (dashIndex === -1) return { family: modelName, backbone: '—' };
-	return { family: modelName.slice(0, dashIndex), backbone: modelName.slice(dashIndex + 1) };
+
+
+/* Parses a CSV string into columns and rows. */
+function parseCsv(text) {
+	const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(line => line.trim().length);
+	if (!lines.length) return { columns: [], rows: [] };
+
+	const columns = parseCsvLine(lines[0]).map(col => col.trim());
+	const rows = lines.slice(1).map((line) => {
+		const values = parseCsvLine(line);
+		const row = {};
+		
+		columns.forEach((column, index) => {
+			const raw = (values[index] ?? '').trim();
+			row[column] = isNumericValue(raw) ? Number(raw) : raw;
+		});
+		return row;
+	});
+
+	return { columns, rows };
 }
 
-function solverFamily(solver) {
-	if (solver.endsWith('_shift')) return solver.replace(/_shift$/, '');
-	return solver;
+/* Parses a single line of CSV, handling quoted values and commas. */
+function parseCsvLine(line) {
+	const out = [];
+	let current = '';
+	let inQuotes = false;
+
+	for (let i = 0; i < line.length; i += 1) {
+		const char = line[i];
+		const next = line[i + 1];
+
+		if (char === '"') {
+			if (inQuotes && next === '"') {
+				current += '"';
+				i += 1;
+			}
+			else inQuotes = !inQuotes;
+		}
+		else if (char === ',' && !inQuotes) {
+			out.push(current);
+			current = '';
+		}
+		else current += char;
+	}
+
+	out.push(current);
+	return out;
 }
 
 
-// Table rendering
-function renderTable() {
-	const rows = getProcessedRows();
-	renderSummary(rows);
 
-	if (!rows.length) {
+/* Main render function that processes the rows based on current state, renders the table head, body, and summary. */
+function render() {
+	const tableRows = () => {
+		let rows = [...state.rawRows];
+		rows = applyMode(rows);
+		rows = applyIters(rows);
+		rows = applyDatasetOrMean(rows);
+
+		if (state.hideGtOnly) rows = rows.filter((row) => !isGtRow(row));
+
+		rows = applySearch(rows);
+		rows = sortRows(rows);
+		return rows;
+	};
+
+	renderTableHead();
+	renderTable(tableRows());
+	renderSummary(tableRows());
+}
+
+
+
+/* Filter rows based on the selected mode, which determines which solvers to include. */
+function applyMode(rows) {
+	const cfg = MODE_CONFIG[state.mode];
+	return rows.filter((row) => cfg.solvers.has(String(row.solver)));
+}
+
+/* Filter rows based on the selected number of iterations, or return all rows if 'all' is selected. */
+function applyIters(rows) {
+	if (state.currentIters === 'all') return rows;
+	return rows.filter((row) => String(row.iters) === String(state.currentIters));
+}
+
+/* Either filter rows by the selected dataset or compute the mean across datasets for each unique combination of other parameters. */
+function applyDatasetOrMean(rows) {
+	if (state.currentDataset !== 'mean') {
+		return rows.filter((row) => String(row.dataset) === state.currentDataset);
+	}
+
+	const numericColumns = state.columns.filter((column) => state.numericColumns.has(column) && column !== 'iters');
+	const groupColumns = state.columns.filter((column) => !numericColumns.includes(column) && column !== 'dataset');
+	const groups = new Map();
+
+	for (const row of rows) {
+		const key = groupColumns.map((column) => String(row[column] ?? '')).join('||');
+
+		if (!groups.has(key)) {
+			groups.set(key, {
+				count: 0,
+				sums: Object.fromEntries(numericColumns.map((column) => [column, 0])),
+				base: Object.fromEntries(groupColumns.map((column) => [column, row[column]]))
+			});
+		}
+
+		const group = groups.get(key);
+		group.count += 1;
+
+		numericColumns.forEach((column) => {
+			const value = Number(row[column]);
+			if (!Number.isNaN(value)) group.sums[column] += value;
+		});
+	}
+
+	const aggregated = [];
+
+	for (const group of groups.values()) {
+		const row = { dataset: 'Mean', ...group.base };
+
+		numericColumns.forEach((column) => {
+			row[column] = group.count ? group.sums[column] / group.count : null;
+		});
+
+		aggregated.push(row);
+	}
+	return aggregated;
+}
+
+/* Filter rows based on the search query, checking if any of the specified columns contain the query string. */
+function applySearch(rows) {
+	const query = state.search.trim().toLowerCase();
+	if (!query) return rows;
+	return rows.filter((row) => state.columns.some((column) => normalizeForSearch(row[column]).includes(query)));
+}
+
+/* Sort rows based on the current sort key and direction, handling both numeric and string values appropriately. */
+function sortRows(rows) {
+	const direction = state.sortDir === 'asc' ? 1 : (state.sortDir === 'desc' ? -1 : 0);
+
+	if (!state.sortKey || direction === 0) return rows;
+	else return [...rows].sort((a, b) => {
+		const aValue = a[state.sortKey];
+		const bValue = b[state.sortKey];
+		const aIsNumber = typeof aValue === 'number';
+		const bIsNumber = typeof bValue === 'number';
+
+		if (aIsNumber && bIsNumber) {
+			if (aValue === bValue) return 0;
+			return (aValue - bValue) * direction;
+		}
+
+		return String(aValue ?? '').localeCompare(String(bValue ?? ''), undefined, { numeric: true, sensitivity: 'base' }) * direction;
+	});
+}
+
+
+
+/* Render the table head with sortable column headers, indicating the current sort column and direction. */
+function renderTableHead() {
+	els.resultsHead.innerHTML = `
+		<tr>
+			${state.columns.map((column) => {
+				const isActive = state.sortKey === column;
+				const icon = isActive ? (state.sortDir === 'asc' ? 'pi-sort-up' : 'pi-sort-down') : 'pi-sort-alt';
+
+				return `
+					<th>
+						<button class="sort-button ${isActive ? 'is-active' : ''}" type="button" data-column="${column}">
+							<span>${column}</span>
+							<i class="pi ${icon}"></i>
+						</button>
+					</th>
+				`;
+			}).join('')}
+		</tr>
+	`;
+
+	els.resultsHead.querySelectorAll('[data-column]').forEach((button) => {
+		button.addEventListener('click', () => {
+			const column = button.dataset.column;
+
+			if (state.sortKey === column) {
+				if (state.sortDir === 'desc') state.sortDir = 'asc';
+				else if (state.sortDir === 'asc') {
+					state.sortDir = null;
+					state.sortKey = null;
+				}
+			}
+			else {
+				state.sortKey = column;
+				state.sortDir = 'desc';
+			}
+
+			state.page = 1;
+			render();
+		});
+	});
+}
+
+/* Render the table body with the current page of rows, applying special styling for top-ranked pose_mAA_10 values. */
+function renderTable(rows) {
+	const totalRows = rows.length;
+	const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
+	state.page = Math.min(state.page, totalPages);
+
+	if (!totalRows) {
 		els.resultsBody.innerHTML = '';
 		els.emptyState.hidden = false;
 		els.emptyState.textContent = 'No rows match the current filters.';
+		els.paginationBar.hidden = true;
 		return;
 	}
 
+	const topRanks = getTopPoseRanks(rows);
+	const start = (state.page - 1) * state.pageSize;
+	const pageRows = rows.slice(start, start + state.pageSize);
+
 	els.emptyState.hidden = true;
-	els.resultsBody.innerHTML = rows.map((row, index) => `
-		<tr>
-			<td><strong>${index + 1}</strong></td>
-			<td>${row.family}</td>
-			<td>${row.backbone}</td>
-			<td><span class="tag is-soft">${row.modelName}</span></td>
-			<td><span class="tag is-soft">${row.solver}</span></td>
-			<td ${state.scoreMetric === 'pose_mAA_10' ? 'class="metric-strong"' : ''}>${fmt(row.pose_mAA_10)}</td>
-			<td ${state.scoreMetric === 'pose_mAA_5' ? 'class="metric-strong"' : ''}>${fmt(row.pose_mAA_5)}</td>
-			<td ${state.scoreMetric === 'pose_mAA_3' ? 'class="metric-strong"' : ''}>${fmt(row.pose_mAA_3)}</td>
-			<td>${fmt(row.median_pose_err)}</td>
-			<td>${fmt(row.mean_runtime)}</td>
-			<td>${fmt(row.mean_mde_runtime)}</td>
-			<td>${fmt(row.mean_inliers, 3)}</td>
-		</tr>
-	`).join('');
+	els.paginationBar.hidden = false;
+	els.paginationInfo.textContent = `Showing ${start + 1}–${Math.min(start + state.pageSize, totalRows)} of ${totalRows} rows · page ${state.page} / ${totalPages}`;
+	els.prevPageBtn.disabled = state.page <= 1;
+	els.nextPageBtn.disabled = state.page >= totalPages;
+
+	els.resultsBody.innerHTML = pageRows.map((row) => {
+		const rowId = getRowId(row);
+		const topRank = topRanks.get(rowId);
+		
+		return `
+			<tr>
+				${state.columns.map((column) => {
+					const classes = [];
+					if (column === 'pose_mAA_10' && topRank) classes.push(`pose-top-${topRank}`);
+					return `<td class="${classes.join(' ')}">${formatValue(row[column])}</td>`;
+				}).join('')}
+			</tr>
+		`;
+	}).join('');
 }
 
-// Table rendering - get filtered/sorted rows
-function getProcessedRows() {
-	let rows = [...(state.datasets[state.currentDatasetId] || [])];
-	rows = applyCaseLogic(rows);
-	rows = applySearch(rows);
-
-	if (state.hideGtOnly) rows = rows.filter((row) => row.modelName !== 'gt');
-	if (state.bestSolverOnly) rows = pickBest(rows, (row) => `${row.modelName}__${row.solverFamily}`, state.scoreMetric);
-	if (state.bestBackboneOnly) rows = pickBest(rows, (row) => `${row.family}__${row.solverFamily}`, state.scoreMetric);
-	return sortRows(rows);
-}
-
-function applyCaseLogic(rows) {
-	const modeCfg = MODE_CONFIG[state.mode];
-	return rows.filter((row) => {
-		if (!modeCfg.solvers.has(row.solver)) return false;
-		if (state.mode === 'uncalibrated' && row.modelName.includes('Calib')) return false;
-		return true;
-	});
-}
-
-function applySearch(rows) {
-	const q = state.search.trim().toLowerCase();
-	if (!q) return rows;
-	return rows.filter((row) => [row.family, row.backbone, row.modelName, row.solver].join(' ').toLowerCase().includes(q));
-}
-
-function pickBest(rows, keyFn, scoreKey) {
-	const best = new Map();
-	for (const row of rows) {
-		const key = keyFn(row), prev = best.get(key);
-		if (!prev || betterRow(row, prev, scoreKey)) best.set(key, row);
-	}
-	return [...best.values()];
-}
-
-function betterRow(candidate, current, scoreKey) {
-	const candidateScore = candidate[scoreKey] ?? -Infinity;
-	const currentScore = current[scoreKey] ?? -Infinity;
-	if (candidateScore !== currentScore) return candidateScore > currentScore;
-
-	const tieBreakers = [
-		(candidate.pose_mAA_5 ?? -Infinity) - (current.pose_mAA_5 ?? -Infinity),
-		(candidate.pose_mAA_3 ?? -Infinity) - (current.pose_mAA_3 ?? -Infinity),
-		(current.median_pose_err ?? Infinity) - (candidate.median_pose_err ?? Infinity)
-	];
-	return tieBreakers.find(v => v !== 0) > 0;
-}
-
-function sortRows(rows) {
-	return rows.sort((a, b) => {
-		const primary = (b[state.scoreMetric] ?? -Infinity) - (a[state.scoreMetric] ?? -Infinity);
-		if (primary !== 0) return primary;
-
-		const second = (b.pose_mAA_5 ?? -Infinity) - (a.pose_mAA_5 ?? -Infinity);
-		if (second !== 0) return second;
-
-		return (a.median_pose_err ?? Infinity) - (b.median_pose_err ?? Infinity);
-	});
-}
-
-
-// Render summary statistics
+/* Render the summary section with statistics about the current view, including the best pose_mAA_10 value and counts of datasets, estimators, and solvers. */
 function renderSummary(rows) {
-	const families = new Set(rows.map(r => r.family)).size;
-	const backbones = new Set(rows.map(r => `${r.family}__${r.backbone}`)).size;
-	const leader = rows[0];
+	const datasetsShown = new Set(rows.map((row) => String(row.dataset))).size;
+	const estimators = new Set(rows.map((row) => String(row.mde))).size;
+	const solvers = new Set(rows.map((row) => String(row.solver))).size;
 	const stats = [
 		['Visible rows', rows.length],
-		['Estimator families', families],
-		['Visible backbones', backbones],
-		[state.scoreMetric + ' leader', leader ? `${leader.modelName} / ${leader.solver}` : '—']
+		['Datasets in view', datasetsShown],
+		['Estimators', estimators],
+		['Solvers', solvers]
 	];
 
 	els.summaryGrid.innerHTML = stats.map(([label, value]) => `
@@ -238,71 +439,116 @@ function renderSummary(rows) {
 }
 
 
-// UI binding to state and event listeners
-function bindControls() {
-	els.datasetSelect.value = state.currentDatasetId;
-	els.scoreMetricSelect.value = state.scoreMetric;
-	els.hideGtOnly.checked = state.hideGtOnly;
-	els.bestBackboneOnly.checked = state.bestBackboneOnly;
-	els.bestSolverOnly.checked = state.bestSolverOnly;
-	document.querySelector(`input[name="mode"][value="${state.mode}"]`).checked = true;
 
-	els.datasetSelect.addEventListener('change', (event) => {
-		state.currentDatasetId = event.target.value;
-		renderTable();
-	});
+/* Generate a unique ID for a row based on the values of all columns, used for ranking purposes. */
+function getRowId(row) {
+	return state.columns.map((column) => `${column}:${String(row[column] ?? '')}`).join('|');
+}
 
-	els.scoreMetricSelect.addEventListener('change', (event) => {
-		state.scoreMetric = event.target.value;
-		renderTable();
+/* Determine the top 3 rows based on the 'pose_mAA_10' metric and return a map of row IDs to their rank (1, 2, or 3). */
+function getTopPoseRanks(rows) {
+	if (!state.columns.includes('pose_mAA_10')) return new Map();
+	const ranked = [...rows].sort((a, b) => (b.pose_mAA_10 ?? -Infinity) - (a.pose_mAA_10 ?? -Infinity));
+	const rankMap = new Map();
+	[1, 2, 3].forEach((rank, index) => {
+		const row = ranked[index];
+		if (row) rankMap.set(getRowId(row), rank);
 	});
-
-	els.searchInput.addEventListener('input', (event) => {
-		state.search = event.target.value;
-		renderTable();
-	});
-
-	els.bestBackboneOnly.addEventListener('change', (event) => {
-		state.bestBackboneOnly = event.target.checked;
-		renderTable();
-	});
-
-	els.bestSolverOnly.addEventListener('change', (event) => {
-		state.bestSolverOnly = event.target.checked;
-		renderTable();
-	});
-
-	els.hideGtOnly.addEventListener('change', (event) => {
-		state.hideGtOnly = event.target.checked;
-		renderTable();
-	});
-
-	document.querySelectorAll('input[name="mode"]').forEach((input) => {
-		input.addEventListener('change', (event) => {
-			state.mode = event.target.value;
-			renderTable();
-		});
-	});
+	return rankMap;
 }
 
 
-// Initialize the viewer
-async function init() {
-	bindControls();
+
+/* Utility function to check if a value is numeric. */
+function isNumericValue(value) {
+	if (value === '' || value === null || value === undefined) return false;
+	return !Number.isNaN(Number(value));
+}
+
+/* Formats a value for display, handling null, undefined, and numeric values. */
+function formatValue(value) {
+	if (value === null || value === undefined || value === '') return '—';
+	if (typeof value === 'number') {
+		if (Number.isInteger(value)) return String(value);
+		return value.toFixed(6).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+	}
+	return String(value);
+}
+
+/* Normalize a value for search by converting it to a lowercase string, treating null and undefined as empty strings. */
+function normalizeForSearch(value) {
+	return String(value ?? '').toLowerCase();
+}
+
+/* Check if a row corresponds to a ground truth entry based on the 'mde' column value. */
+function isGtRow(row) {
+	const mdeValue = normalizeForSearch(row.mde);
+	return mdeValue === 'gt' || mdeValue === 'ground-truth' || mdeValue === 'ground_truth';
+}
+
+/* Compute the optimal column widths based on the content of the cells and headers, and store them in the state for use in rendering. */
+function computeColumnWidths() {
+	const measurer = document.createElement('span');
+	measurer.style.position = 'absolute';
+	measurer.style.visibility = 'hidden';
+	measurer.style.whiteSpace = 'nowrap';
+	measurer.style.fontFamily = 'Inter, sans-serif';
+	measurer.style.fontSize = '14px';
+	measurer.style.fontWeight = '400';
+	measurer.style.padding = '0';
+	measurer.style.margin = '0';
+	document.body.appendChild(measurer);
+
+	const widths = {};
+
+	for (const column of state.columns) {
+		let maxWidth = 0;
+
+		// header
+		measurer.style.fontWeight = '700';
+		measurer.textContent = column;
+		maxWidth = Math.max(maxWidth, Math.ceil(measurer.getBoundingClientRect().width));
+
+		// cells
+		measurer.style.fontWeight = '400';
+		for (const row of state.rawRows) {
+			const text = formatValue(row[column]);
+			measurer.textContent = text;
+			maxWidth = Math.max(maxWidth, Math.ceil(measurer.getBoundingClientRect().width));
+		}
+
+		maxWidth += 10;
+
+		if (column === 'mde') maxWidth = Math.min(Math.max(maxWidth, 180), 320);
+		else if (column === 'solver') maxWidth = Math.min(Math.max(maxWidth, 140), 240);
+		else if (column === 'dataset') maxWidth = Math.min(Math.max(maxWidth, 120), 180);
+		else maxWidth = Math.min(Math.max(maxWidth, 100), 220);
+
+		widths[column] = maxWidth;
+	}
+
+	document.body.removeChild(measurer);
+	state.columnWidths = widths;
+}
+
+
+
+/* Initialize the benchmark viewer */
+export async function init() {
+	attachCardToggle('controlsCard', 'controlsToggle', 'controlsContent', 'Show controls', 'Hide controls');
+	attachCardToggle('tableCard', 'tableToggle', 'tableContent', 'Show table', 'Hide table');
+	attachCardToggle('resultsCard', 'resultsToggle', 'resultsContent', 'Show results', 'Hide results');
 
 	try {
-		DATASETS = await loadDatasetList();
-		state.currentDatasetId = DATASETS[0]?.id ?? '';
-		populateDatasetSelect();
-
-		await loadDatasets();
-		renderTable();
+		await loadData();
+		populateControls();
+		bindControls();
+		render();
 	}
 	catch (error) {
 		console.error(error);
 		els.emptyState.hidden = false;
-		els.emptyState.textContent = 'Failed to load JSON results.';
+		els.emptyState.textContent = 'Failed to load CSV results.';
+		els.paginationBar.hidden = true;
 	}
 }
-
-init();
