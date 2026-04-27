@@ -119,11 +119,16 @@ body {
 	align-items: start;
 }
 
+.field-search-wide {
+	grid-column: span 3;
+}
+
 .control-row {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
 	gap: 1rem;
 	align-items: start;
+	padding-top: 1rem;
 }
 
 .row-label {
@@ -137,7 +142,7 @@ body {
 	min-width: 0;
 }
 
-/* Evaluation case */
+/* Deprecated styles for boxed selectors */
 
 .case-box {
 	border: 1px solid #e7edf6;
@@ -168,6 +173,7 @@ body {
 
 .inline-checkboxes {
 	display: flex;
+	flex-direction: column;
 	flex-wrap: wrap;
 	gap: 1rem 1.25rem;
 	padding-top: 0.35rem;
@@ -300,6 +306,10 @@ body {
 	.top-controls-grid {
 		grid-template-columns: 1fr 1fr;
 	}
+
+	.field-search-wide {
+		grid-column: span 2;
+	}
 }
 
 @media (max-width: 768px) {
@@ -309,6 +319,10 @@ body {
 
 	.top-controls-grid {
 		grid-template-columns: 1fr;
+	}
+
+	.field-search-wide {
+		grid-column: span 1;
 	}
 
 	.pagination-bar {

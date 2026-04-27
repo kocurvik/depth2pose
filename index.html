@@ -15,6 +15,7 @@
 	<link rel="stylesheet" href="static/css/index.css">
 	<link rel="stylesheet" href="static/css/benchmark_viewer.css">
 	<link rel="stylesheet" href="static/css/primeicons.css">
+	<!--<link rel="stylesheet" href="static/css/benchmark_examples_modal.css">-->
 
 	<!-- Fonts - Optimized loading -->
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,7 +23,10 @@
 	<!-- Main JavaScript -->
 	<script type="module">
 		import { init } from "./static/js/benchmark_viewer.js";
+		//import { initBenchmarkExamplesModal } from "./static/js/benchmark_examples_modal.js";
+
 		init();
+		//initBenchmarkExamplesModal();
 	</script>
 
 	<title>Benchmarking Monocular Depth Estimators via Relative Pose Estimation</title>
@@ -57,7 +61,7 @@
 				<!-- Controls Stack -->
 				<div class="controls-stack" id="controlsContent">
 
-					<!-- Controls for dataset, iterations, search, page size -->
+					<!-- Controls for dataset, iterations, evaluation case, solver variant, search, page size -->
 					<div class="top-controls-grid row-content">
 						<div class="field mb-0">
 							<label class="label">Dataset</label>
@@ -74,6 +78,20 @@
 						</div>
 
 						<div class="field mb-0">
+							<label class="label">Evaluation case</label>
+							<div class="select is-fullwidth">
+								<select id="evaluationCaseSelect"></select>
+							</div>
+						</div>
+
+						<div class="field mb-0">
+							<label class="label">Solver variant</label>
+							<div class="select is-fullwidth">
+								<select id="solverVariantSelect"></select>
+							</div>
+						</div>
+
+						<div class="field mb-0 field-search-wide">
 							<label class="label">Search</label>
 							<input id="searchInput" class="input" type="text" placeholder="DepthAnything, calib_shift, pt, ..." />
 						</div>
@@ -91,41 +109,19 @@
 						</div>
 					</div>
 
-					<!-- Evaluation case selection -->
-					<div class="control-row">
-						<div class="row-label">Evaluation case</div>
-						<div class="row-content">
-							<div class="columns is-multiline is-mobile">
-								<div class="column is-12">
-									<label class="case-box is-block">
-										<div class="flex-row">
-											<input type="radio" name="mode" value="calibrated" checked />
-											<strong>With calibration</strong>
-										</div>
-										<small>Show <code>calib</code>, <code>calib_shift</code>, <code>calib_ro</code>, <code>calib_shift_ro</code>, <code>baseline_calib</code>.</small>
-									</label>
-								</div>
-								<div class="column is-12">
-									<label class="case-box is-block">
-										<div class="flex-row">
-											<input type="radio" name="mode" value="uncalibrated" />
-											<strong>Without calibration</strong>
-										</div>
-										<small>Show <code>sf</code>, <code>sf_shift</code>, <code>sf_ro</code>, <code>sf_shift_ro</code>, <code>vf</code>, <code>vf_shift</code>, <code>vf_ro</code>, <code>vf_shift_ro</code>, <code>mdecalib</code>, <code>mdecalib_shift</code>, <code>mdecalib_ro</code>, <code>mdecalib_shift_ro</code>, <code>baseline_sf</code>, <code>baseline_vf</code>.</small>
-									</label>
-								</div>
-							</div>
-						</div>
-					</div>
-
 					<!-- Filters -->
 					<div class="control-row">
 						<div class="row-label">Filters</div>
 						<div class="row-content">
 							<div class="inline-checkboxes">
 								<label class="checkbox">
-									<input type="checkbox" id="hideGtOnly" checked/>
+									<input type="checkbox" id="hideGtOnly" checked />
 									Hide <code>gt</code> / oracle rows
+								</label>
+
+								<label class="checkbox">
+									<input type="checkbox" id="bestMdeOnly" />
+									Show only best row for each MDE
 								</label>
 							</div>
 						</div>
@@ -142,7 +138,6 @@
 				<div class="card-content-stack" id="tableContent">
 					<div class="table-container">
 						<table class="table is-striped is-hoverable benchmark-table">
-							<colgroup id="resultsColgroup"></colgroup>
 							<thead class="benchmark-table-head" id="resultsHead"></thead>
 							<tbody class="benchmark-table-body" id="resultsBody"></tbody>
 						</table>

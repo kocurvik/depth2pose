@@ -3,14 +3,14 @@ const CSV_URL = 'https://raw.githubusercontent.com/lbujnak/depth2pose_webdata/ma
 const MODE_CONFIG = {
 	calibrated: {
 		label: 'With calibration',
-		solvers: new Set(['calib', 'calib_shift', 'calib_ro', 'calib_shift_ro', 'baseline_calib'])
+		solvers: new Set(['calib', 'calib_shift', 'baseline_calib'])
 	},
 	uncalibrated: {
 		label: 'Without calibration',
 		solvers: new Set([
-			'sf', 'sf_shift', 'sf_ro', 'sf_shift_ro',
-			'vf', 'vf_shift', 'vf_ro', 'vf_shift_ro',
-			'mdecalib', 'mdecalib_shift', 'mdecalib_ro', 'mdecalib_shift_ro',
+			'sf', 'sf_shift',
+			'vf', 'vf_shift',
+			'mdecalib', 'mdecalib_shift',
 			'baseline_sf', 'baseline_vf'
 		])
 	}
@@ -26,20 +26,25 @@ const state = {
 	currentIters: 'all',
 	search: '',
 	mode: 'calibrated',
+	roVariant: 'non_ro',
 	hideGtOnly: true,
+	bestMdeOnly: false,
 	sortKey: 'pose_mAA_10',
 	sortDir: 'desc',
 	page: 1,
-	pageSize: 25
+	pageSize: 25,
+	visibleRows: []
 };
 
 const els = {
 	datasetSelect: document.getElementById('datasetSelect'),
 	itersSelect: document.getElementById('itersSelect'),
+	evaluationCaseSelect: document.getElementById('evaluationCaseSelect'),
+	solverVariantSelect: document.getElementById('solverVariantSelect'),
 	searchInput: document.getElementById('searchInput'),
 	pageSizeSelect: document.getElementById('pageSizeSelect'),
 	hideGtOnly: document.getElementById('hideGtOnly'),
-	resultsColgroup: document.getElementById('resultsColgroup'),
+	bestMdeOnly: document.getElementById('bestMdeOnly'),
 	resultsHead: document.getElementById('resultsHead'),
 	resultsBody: document.getElementById('resultsBody'),
 	summaryGrid: document.getElementById('summaryGrid'),
@@ -95,7 +100,7 @@ function populateControls() {
 		{ value: 'mean', label: 'Mean over datasets' }, ...state.datasets.map((dataset) => ({ value: dataset, label: dataset }))
 	].forEach(({ value, label }) => {
 		const option = document.createElement('option');
-		
+
 		option.value = value;
 		option.textContent = label;
 		els.datasetSelect.appendChild(option);
@@ -106,19 +111,43 @@ function populateControls() {
 		{ value: 'all', label: 'All' }, ...state.itersOptions.map((iters) => ({ value: iters, label: iters }))
 	].forEach(({ value, label }) => {
 		const option = document.createElement('option');
-		
+
 		option.value = value;
 		option.textContent = label;
 		els.itersSelect.appendChild(option);
 	});
 
+	els.evaluationCaseSelect.innerHTML = '';
+	[
+		{ value: 'calibrated', label: 'With calibration' },
+		{ value: 'uncalibrated', label: 'Without calibration' }
+	].forEach(({ value, label }) => {
+		const option = document.createElement('option');
+
+		option.value = value;
+		option.textContent = label;
+		els.evaluationCaseSelect.appendChild(option);
+	});
+
+	els.solverVariantSelect.innerHTML = '';
+	[
+		{ value: 'non_ro', label: 'Standard solvers' },
+		{ value: 'ro', label: 'Rotation-only solvers' }
+	].forEach(({ value, label }) => {
+		const option = document.createElement('option');
+
+		option.value = value;
+		option.textContent = label;
+		els.solverVariantSelect.appendChild(option);
+	});
+
 	els.datasetSelect.value = state.currentDataset;
 	els.itersSelect.value = state.currentIters;
+	els.evaluationCaseSelect.value = state.mode;
+	els.solverVariantSelect.value = state.roVariant;
 	els.pageSizeSelect.value = String(state.pageSize);
 	els.hideGtOnly.checked = state.hideGtOnly;
-
-	const checkedMode = document.querySelector(`input[name="mode"][value="${state.mode}"]`);
-	if (checkedMode) checkedMode.checked = true;
+	els.bestMdeOnly.checked = state.bestMdeOnly;
 }
 
 /* Bind event listeners to all controls, updating the state and re-rendering the table whenever a control value changes. */
@@ -131,6 +160,18 @@ function bindControls() {
 
 	els.itersSelect.addEventListener('change', (event) => {
 		state.currentIters = event.target.value;
+		state.page = 1;
+		render();
+	});
+
+	els.evaluationCaseSelect.addEventListener('change', (event) => {
+		state.mode = event.target.value;
+		state.page = 1;
+		render();
+	});
+
+	els.solverVariantSelect.addEventListener('change', (event) => {
+		state.roVariant = event.target.value;
 		state.page = 1;
 		render();
 	});
@@ -153,12 +194,10 @@ function bindControls() {
 		render();
 	});
 
-	document.querySelectorAll('input[name="mode"]').forEach((input) => {
-		input.addEventListener('change', (event) => {
-			state.mode = event.target.value;
-			state.page = 1;
-			render();
-		});
+	els.bestMdeOnly.addEventListener('change', (event) => {
+		state.bestMdeOnly = event.target.checked;
+		state.page = 1;
+		render();
 	});
 
 	els.prevPageBtn.addEventListener('click', () => {
@@ -172,8 +211,26 @@ function bindControls() {
 		state.page += 1;
 		render();
 	});
-}
 
+	els.resultsBody.addEventListener('click', (event) => {
+		const rowEl = event.target.closest('tr[data-row-index]');
+		if (!rowEl) return;
+
+		const rowIndex = Number(rowEl.dataset.rowIndex);
+		const row = state.visibleRows[rowIndex];
+		if (!row) return;
+
+		document.dispatchEvent(new CustomEvent('benchmark:row-click', {
+			detail: {
+				row: { ...row },
+				currentDataset: state.currentDataset,
+				currentIters: state.currentIters,
+				mode: state.mode,
+				roVariant: state.roVariant
+			}
+		}));
+	});
+}
 
 
 /* Parses a CSV string into columns and rows. */
@@ -231,12 +288,14 @@ function render() {
 	const tableRows = () => {
 		let rows = [...state.rawRows];
 		rows = applyMode(rows);
+		rows = applyRoVariant(rows);
 		rows = applyIters(rows);
 		rows = applyDatasetOrMean(rows);
 
 		if (state.hideGtOnly) rows = rows.filter((row) => !isGtRow(row));
 
 		rows = applySearch(rows);
+		rows = applyBestMdeOnly(rows);
 		rows = sortRows(rows);
 		return rows;
 	};
@@ -251,7 +310,15 @@ function render() {
 /* Filter rows based on the selected mode, which determines which solvers to include. */
 function applyMode(rows) {
 	const cfg = MODE_CONFIG[state.mode];
-	return rows.filter((row) => cfg.solvers.has(String(row.solver)));
+	return rows.filter((row) => cfg.solvers.has(baseSolverName(row.solver)));
+}
+
+/* Filter rows based on the selected 'ro' variant, either including only 'ro' solvers or excluding them. */
+function applyRoVariant(rows) {
+	return rows.filter((row) => {
+		if (state.roVariant === 'ro') return isRoSolver(row.solver);
+		return !isRoSolver(row.solver);
+	});
 }
 
 /* Filter rows based on the selected number of iterations, or return all rows if 'all' is selected. */
@@ -311,6 +378,24 @@ function applySearch(rows) {
 	return rows.filter((row) => state.columns.some((column) => normalizeForSearch(row[column]).includes(query)));
 }
 
+/* Filter rows to include only the best MDE for each MDE family, based on pose_mAA_10, mean_inliers, and mean_mde_runtime metrics. */
+function applyBestMdeOnly(rows) {
+	if (!state.bestMdeOnly) return rows;
+
+	const bestRows = new Map();
+
+	for (const row of rows) {
+		const key = String(row.mde ?? '');
+		const previous = bestRows.get(key);
+
+		if (!previous || isBetterBestMdeCandidate(row, previous)) {
+			bestRows.set(key, row);
+		}
+	}
+
+	return [...bestRows.values()];
+}
+
 /* Sort rows based on the current sort key and direction, handling both numeric and string values appropriately. */
 function sortRows(rows) {
 	const direction = state.sortDir === 'asc' ? 1 : (state.sortDir === 'desc' ? -1 : 0);
@@ -329,6 +414,39 @@ function sortRows(rows) {
 
 		return String(aValue ?? '').localeCompare(String(bValue ?? ''), undefined, { numeric: true, sensitivity: 'base' }) * direction;
 	});
+}
+
+
+/* Extract the base solver name by removing any '_ro' suffix, used for grouping related solvers together. */
+function baseSolverName(solver) {
+	return String(solver ?? '').replace(/_ro$/, '');
+}
+
+/* Check if a solver name indicates that it is a 'ro' variant, based on the presence of the '_ro' suffix. */
+function isRoSolver(solver) {
+	return String(solver ?? '').endsWith('_ro');
+}
+
+/* Determine if a candidate row is a better choice for the best MDE than the current row, based on pose_mAA_10, mean_inliers, and mean_mde_runtime. */
+function isBetterBestMdeCandidate(candidate, current) {
+	const candidateScore = Number(candidate.pose_mAA_10 ?? Number.NEGATIVE_INFINITY);
+	const currentScore = Number(current.pose_mAA_10 ?? Number.NEGATIVE_INFINITY);
+
+	if (candidateScore !== currentScore) {
+		return candidateScore > currentScore;
+	}
+
+	const candidateInliers = Number(candidate.mean_inliers ?? Number.NEGATIVE_INFINITY);
+	const currentInliers = Number(current.mean_inliers ?? Number.NEGATIVE_INFINITY);
+
+	if (candidateInliers !== currentInliers) {
+		return candidateInliers > currentInliers;
+	}
+
+	const candidateRuntime = Number(candidate.mean_mde_runtime ?? Number.POSITIVE_INFINITY);
+	const currentRuntime = Number(current.mean_mde_runtime ?? Number.POSITIVE_INFINITY);
+
+	return candidateRuntime < currentRuntime;
 }
 
 
@@ -382,6 +500,7 @@ function renderTable(rows) {
 	state.page = Math.min(state.page, totalPages);
 
 	if (!totalRows) {
+		state.visibleRows = [];
 		els.resultsBody.innerHTML = '';
 		els.emptyState.hidden = false;
 		els.emptyState.textContent = 'No rows match the current filters.';
@@ -392,6 +511,7 @@ function renderTable(rows) {
 	const topRanks = getTopPoseRanks(rows);
 	const start = (state.page - 1) * state.pageSize;
 	const pageRows = rows.slice(start, start + state.pageSize);
+	state.visibleRows = pageRows;
 
 	els.emptyState.hidden = true;
 	els.paginationBar.hidden = false;
@@ -399,16 +519,17 @@ function renderTable(rows) {
 	els.prevPageBtn.disabled = state.page <= 1;
 	els.nextPageBtn.disabled = state.page >= totalPages;
 
-	els.resultsBody.innerHTML = pageRows.map((row) => {
+	els.resultsBody.innerHTML = pageRows.map((row, rowIndex) => {
 		const rowId = getRowId(row);
 		const topRank = topRanks.get(rowId);
 		
 		return `
-			<tr>
+			<tr class="benchmark-row is-clickable" data-row-index="${rowIndex}">
 				${state.columns.map((column) => {
 					const classes = [];
 					if (column === 'pose_mAA_10' && topRank) classes.push(`pose-top-${topRank}`);
-					return `<td class="${classes.join(' ')}">${formatValue(row[column])}</td>`;
+					const value = formatValue(row[column]);
+					return `<td class="${classes.join(' ')}" title="${String(value).replace(/"/g, '&quot;')}">${value}</td>`;
 				}).join('')}
 			</tr>
 		`;
