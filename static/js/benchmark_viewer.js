@@ -30,8 +30,7 @@ const state = {
 	sortKey: 'pose_mAA_10',
 	sortDir: 'desc',
 	page: 1,
-	pageSize: 25,
-	columnWidths: {}
+	pageSize: 25
 };
 
 const els = {
@@ -75,7 +74,6 @@ async function loadData() {
 		if (!response.ok) throw new Error(`Failed to load CSV from ${CSV_URL}: ${response.status}`);
 		
 		csvText = await response.text();
-		console.log('CSV data loaded successfully.');
 	}
 	catch (error) {
 		throw new Error('Failed to load CSV.');
@@ -88,7 +86,6 @@ async function loadData() {
 	state.numericColumns = new Set(columns.filter((column) => rows.every((row) => typeof row[column] === 'number' || row[column] === '')));
 	state.datasets = [...new Set(rows.map((row) => String(row.dataset)))].sort((a, b) => a.localeCompare(b));
 	state.itersOptions = [...new Set(rows.map((row) => String(row.iters)))].sort((a, b) => Number(a) - Number(b));
-	computeColumnWidths();
 }
 
 /* Populate the dataset and iters dropdowns based on the loaded data, and set initial values for all controls. */
@@ -484,51 +481,6 @@ function normalizeForSearch(value) {
 function isGtRow(row) {
 	const mdeValue = normalizeForSearch(row.mde);
 	return mdeValue === 'gt' || mdeValue === 'ground-truth' || mdeValue === 'ground_truth';
-}
-
-/* Compute the optimal column widths based on the content of the cells and headers, and store them in the state for use in rendering. */
-function computeColumnWidths() {
-	const measurer = document.createElement('span');
-	measurer.style.position = 'absolute';
-	measurer.style.visibility = 'hidden';
-	measurer.style.whiteSpace = 'nowrap';
-	measurer.style.fontFamily = 'Inter, sans-serif';
-	measurer.style.fontSize = '14px';
-	measurer.style.fontWeight = '400';
-	measurer.style.padding = '0';
-	measurer.style.margin = '0';
-	document.body.appendChild(measurer);
-
-	const widths = {};
-
-	for (const column of state.columns) {
-		let maxWidth = 0;
-
-		// header
-		measurer.style.fontWeight = '700';
-		measurer.textContent = column;
-		maxWidth = Math.max(maxWidth, Math.ceil(measurer.getBoundingClientRect().width));
-
-		// cells
-		measurer.style.fontWeight = '400';
-		for (const row of state.rawRows) {
-			const text = formatValue(row[column]);
-			measurer.textContent = text;
-			maxWidth = Math.max(maxWidth, Math.ceil(measurer.getBoundingClientRect().width));
-		}
-
-		maxWidth += 10;
-
-		if (column === 'mde') maxWidth = Math.min(Math.max(maxWidth, 180), 320);
-		else if (column === 'solver') maxWidth = Math.min(Math.max(maxWidth, 140), 240);
-		else if (column === 'dataset') maxWidth = Math.min(Math.max(maxWidth, 120), 180);
-		else maxWidth = Math.min(Math.max(maxWidth, 100), 220);
-
-		widths[column] = maxWidth;
-	}
-
-	document.body.removeChild(measurer);
-	state.columnWidths = widths;
 }
 
 

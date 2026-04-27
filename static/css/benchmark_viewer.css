@@ -90,16 +90,17 @@ body {
 	padding-bottom: 0.75rem;
 }
 
-.controls-stack, .card-content-stack {
+.controls-stack {
 	overflow: hidden;
 	transition: max-height 0.25s ease, opacity 0.2s ease;
 	max-height: 3000px;
 	opacity: 1;
 }
 
-.controls-stack {
-	display: grid;
-	gap: 1.25rem;
+.card-content-stack {
+	transition: max-height 0.25s ease, opacity 0.2s ease;
+	max-height: 3000px;
+	opacity: 1;
 }
 
 .controls-card.is-collapsed .controls-stack,
