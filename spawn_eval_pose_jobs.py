@@ -83,7 +83,7 @@ def main(args):
 
     jobs = executor.map_array(run_for_depth, array_job_arguments)
 
-    print(f"\nSubmitted {len(jobs)} job(s):")
+    print(f"\nSubmitted {len(jobs)} job(s) with log dir {log_dir}:")
     for depth_name, job in zip(depths_to_run, jobs):
         print(f"Depth: {depth_name} job_id={job.job_id}")
 
