@@ -131,8 +131,8 @@ function populateControls() {
 
 	els.solverVariantSelect.innerHTML = '';
 	[
-		{ value: 'non_ro', label: 'Standard solvers' },
-		{ value: 'ro', label: 'Rotation-only solvers' }
+		{ value: 'non_ro', label: 'Standard RANSAC' },
+		{ value: 'ro', label: 'Reprojection-only RANSAC (_ro)' }
 	].forEach(({ value, label }) => {
 		const option = document.createElement('option');
 
@@ -310,7 +310,14 @@ function render() {
 /* Filter rows based on the selected mode, which determines which solvers to include. */
 function applyMode(rows) {
 	const cfg = MODE_CONFIG[state.mode];
-	return rows.filter((row) => cfg.solvers.has(baseSolverName(row.solver)));
+
+	return rows.filter((row) => {
+		const solverOk = cfg.solvers.has(baseSolverName(row.solver));
+		if (!solverOk) return false;
+		if (state.mode === 'uncalibrated' && isCalibMde(row.mde)) return false;
+
+		return true;
+	});
 }
 
 /* Filter rows based on the selected 'ro' variant, either including only 'ro' solvers or excluding them. */
@@ -385,7 +392,7 @@ function applyBestMdeOnly(rows) {
 	const bestRows = new Map();
 
 	for (const row of rows) {
-		const key = String(row.mde ?? '');
+		const key = getMdeFamilyKey(row.mde);
 		const previous = bestRows.get(key);
 
 		if (!previous || isBetterBestMdeCandidate(row, previous)) {
@@ -422,9 +429,20 @@ function baseSolverName(solver) {
 	return String(solver ?? '').replace(/_ro$/, '');
 }
 
+/* Extract the MDE family key by taking the prefix before any '-' character and removing 'Calib', used for grouping related MDEs together. */
+function getMdeFamilyKey(mde) {
+	const prefix = String(mde ?? '').split('-')[0];
+	return prefix.replaceAll('Calib', '');
+}
+
 /* Check if a solver name indicates that it is a 'ro' variant, based on the presence of the '_ro' suffix. */
 function isRoSolver(solver) {
 	return String(solver ?? '').endsWith('_ro');
+}
+
+/* Check if an MDE name indicates that it is a calibrated method, based on the presence of 'Calib' in the name. */
+function isCalibMde(mde) {
+	return String(mde ?? '').includes('Calib');
 }
 
 /* Determine if a candidate row is a better choice for the best MDE than the current row, based on pose_mAA_10, mean_inliers, and mean_mde_runtime. */
