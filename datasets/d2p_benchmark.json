@@ -94,10 +94,6 @@
               "max_pairs": 250,
               "cameras": "shared"
             },
-            "kyoto_nakagawahigashiyama_statue": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
             "monkey_toy_2": {
                 "max_pairs": 250,
                 "cameras": "shared"
