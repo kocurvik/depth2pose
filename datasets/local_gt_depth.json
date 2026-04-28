@@ -1,47 +1,45 @@
 {
-    "sintel": {
-        "path": "/mnt/d/Research/data/sintel",
-        "work_path": "/mnt/d/Research/data/mdrpbench/sintel",
-        "width": 1024,
-        "height": 436,
-        "depth_unit": 1,
-        "contains_gt_depth": true,
-        "requires_direct_read": false,
-        "max_pairs": 250,
-        "min_area_overlap": 0.0,
-        "min_keypoint_overlap": 0,
-        "cameras": "shared"
-    },
-    "eth3d": {
-        "path": "/mnt/d/Research/data/ETH3D_depth",
-        "work_path": "/mnt/d/Research/data/mdrpbench/eth3d",
-        "width": 2048,
-        "height": 1365,
-        "depth_unit": 1,
-        "contains_gt_depth": true,
-        "min_area_overlap": 0.025,
-        "cameras": "shared"
-    },
-    "scannetpp": {
-        "path": "/mnt/d/Research/data/scannetpp",
-        "work_path": "/mnt/d/Research/data/mdrpbench/scannetpp",
-        "width": 1920,
-        "height": 1440,
-        "depth_unit": 1,
-        "contains_gt_depth": true,
-        "requires_direct_read": true,
-        "max_pairs": 500,
-        "cameras": "shared"
-    },
-    "lamar": {
-        "path": "/mnt/d/Research/data/lamar",
-        "work_path": "/mnt/d/Research/data/mdrpbench/lamar",
-        "width": 1280,
-        "height": 1920,
-        "depth_unit": 1,
-        "contains_gt_depth": true,
-        "requires_direct_read": true,
-        "max_pairs": 2500,
-        "cameras": "shared"
+    "standard_benchmark": {
+        "path": "/mnt/d/Research/data/",
+        "work_path": "/mnt/d/Research/data/mdrpbench/",
+        "subsets": {
+        "sintel": {
+            "width": 1024,
+            "height": 436,
+            "depth_unit": 1,
+            "contains_gt_depth": true,
+            "requires_direct_read": false,
+            "max_pairs": 250,
+            "min_area_overlap": 0.0,
+            "min_keypoint_overlap": 0,
+            "cameras": "shared"
+        },
+        "eth3d": {
+            "width": 2048,
+            "height": 1365,
+            "depth_unit": 1,
+            "contains_gt_depth": true,
+            "min_area_overlap": 0.025,
+            "cameras": "shared"
+        },
+        "scannetpp": {
+            "width": 1920,
+            "height": 1440,
+            "depth_unit": 1,
+            "contains_gt_depth": true,
+            "requires_direct_read": true,
+            "max_pairs": 500,
+            "cameras": "shared"
+        },
+        "lamar": {
+            "width": 1280,
+            "height": 1920,
+            "depth_unit": 1,
+            "contains_gt_depth": true,
+            "requires_direct_read": true,
+            "max_pairs": 2500,
+            "cameras": "shared"
+        },
+            }
     }
 }
