@@ -155,7 +155,23 @@ def infer_depth(model, args):
         else:
             out_dict = model.infer(img_path, K=K)
 
-        f_depth.create_dataset(f'{image_name}_depth', data=out_dict['depth'].astype(np.float16), compression='gzip', chunks=True)
+        depth_f32 = out_dict['depth']
+        save_as_f32 = False
+        finite_mask = np.isfinite(depth_f32)
+        if finite_mask.any():
+            finite_vals = depth_f32[finite_mask]
+            extremes_f32 = np.array([finite_vals.min(), finite_vals.max()], dtype=np.float32)
+            extremes_f16 = extremes_f32.astype(np.float16)
+            if not np.all(np.isfinite(extremes_f16)):
+                print(f"WARNING: {image_name} depth float32->float16 overflow: min={extremes_f32[0]:.4f}, max={extremes_f32[1]:.4f}. Saving as float32.")
+                save_as_f32 = True
+            else:
+                rel_err = np.max(np.abs(extremes_f32.astype(np.float64) - extremes_f16.astype(np.float64)) / np.abs(extremes_f32.astype(np.float64)))
+                if rel_err > 1e-3:
+                    print(f"WARNING: {image_name} depth float32->float16 max relative error at extremes: {rel_err:.2e} (min={extremes_f32[0]:.4f}, max={extremes_f32[1]:.4f}). Saving as float32.")
+                    save_as_f32 = True
+        depth_save = depth_f32 if save_as_f32 else depth_f32.astype(np.float16)
+        f_depth.create_dataset(f'{image_name}_depth', data=depth_save, compression='gzip', chunks=True)
         f_depth.create_dataset(f'{image_name}_runtime', data=out_dict['runtime'])
 
         if 'inference_K' in out_dict.keys():
