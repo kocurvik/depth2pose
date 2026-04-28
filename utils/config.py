@@ -11,4 +11,7 @@ def config_iterator(config_path):
             config['work_path'] = os.path.join(super_config["work_path"], name)
             config['path'] = os.path.join(super_config["path"], name)
 
+            if "single_scene_subsets" in super_config:
+                config["single_scene_subsets"] = super_config["single_scene_subsets"]
+
             yield name, config

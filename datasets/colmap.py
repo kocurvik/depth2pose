@@ -13,6 +13,7 @@ import numpy as np
 from scipy.cluster.hierarchy import single
 
 from scipy.spatial.transform import Rotation
+from torch.nn.init import dirac_
 from tqdm import tqdm
 
 from datasets.colmap_utils import cam_to_K, read_model
@@ -32,6 +33,7 @@ def parse_args():
     parser.add_argument('--check_images', action='store_true', default=False, help='Keep only images that are actually available on disk')
     parser.add_argument('--config_path', type=str, default=None, help='specify path to config to run for multiple datasets at the same time')
     parser.add_argument('--recalc', action='store_true', default=False)
+    parser.add_argument('--single_scene_dataset', action='store_true', default=False)
     parser.add_argument('--out_path', type=str, default=None)
     parser.add_argument('--dataset_path', type=str, default=None)
 
@@ -64,24 +66,12 @@ def get_dataset_paths(basename, dataset_path, subset):
     if basename.lower() == 'phototourism' or 'pt' == basename.lower():
         model_path = os.path.join('dense', 'sparse')
         img_path = os.path.join('dense', 'images')
-    elif 'd2p' in basename.lower():
-        model_path = os.path.join('sparse')
-        img_path = os.path.join('images')
-    elif basename.lower() == 'eth3d_depth' or basename.lower() == 'scannetpp' or basename.lower() == 'lamar':
-        model_path = os.path.join('colmap_gt')
-        img_path = os.path.join('images')
-    elif basename.lower() == 'urban':
-        model_path = os.path.join('sfm')
-        img_path = os.path.join('images_full_set')
-    elif 'aachen' in basename.lower():
-        model_path = os.path.join('3D-models/aachen_v_1_1')
-        img_path = os.path.join('images_upright')
-    elif 'multiview_undistorted' in basename.lower() or 'eth3d' in basename.lower():
-        model_path = os.path.join('dslr_calibration_undistorted')
-        img_path = os.path.join('images')
+    elif basename.lower() == 'eth3d' or basename.lower() == 'scannetpp' or basename.lower() == 'lamar' or basename.lower() == 'sintel':
+        model_path = 'colmap_gt'
+        img_path = 'images'
     else:
-        model_path = os.path.join('colmap_gt')
-        img_path = os.path.join('images')
+        model_path = 'sparse'
+        img_path = 'images'
     return img_path, model_path, subset_path
 
 
@@ -301,13 +291,20 @@ def process_colmap_dataset(args):
     if args.name is None:
         args.name = os.path.basename(args.dataset_path)
 
+    print("Name: ", args.name)
+
 
     out_dir = os.path.join(args.out_path)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
-    dataset_path = Path(args.dataset_path)
-    dir_list = [x for x in os.listdir(dataset_path) if os.path.isdir(os.path.join(dataset_path, x))]
+    if not args.single_scene_subsets:
+        dataset_path = Path(args.dataset_path)
+        dir_list = [x for x in os.listdir(dataset_path) if os.path.isdir(os.path.join(dataset_path, x))]
+        print("Found subsets: ", dir_list)
+    else:
+        print("Not using subsets single scene only")
+        dir_list = ['']
 
     print("Found subsets: ", dir_list)
     process_subsets(args, dir_list)
@@ -344,6 +341,9 @@ if __name__ == '__main__':
 
             if "min_keypoint_overlap" in config:
                 single_args.min_keypoint_overlap = config["min_keypoint_overlap"]
+
+            if "single_scene_subsets" in config:
+                single_args.single_scene_subsets = config["single_scene_subsets"]
 
             process_colmap_dataset(single_args)
     else:
