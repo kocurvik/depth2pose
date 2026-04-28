@@ -1,0 +1,123 @@
+{
+    "vegetation": {
+        "single_scene_subsets": true,
+        "path": "/projects/p1358-25-2/data/d2p/vegetation",
+        "work_path": "/projects/p1358-25-2/mdrpbench/vegetation",
+        "subsets": {
+            "dresden_1": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "klamovka_sign1": {
+              "max_pairs": 250,
+              "cameras": "shared"
+            },
+            "stromovka_2": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "stromovka_2b": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "stromovka_3": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "stromovka_7": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "tree_orbit_normal1": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            }
+        }
+    },
+    "illusion": {
+        "single_scene_subsets": true,
+        "path": "/projects/p1358-25-2/data/d2p/illusion",
+        "work_path": "/projects/p1358-25-2/mdrpbench/illusion",
+        "subsets": {
+            "babies_cerny": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "bottles_pet_1": {
+              "max_pairs": 250,
+              "cameras": "shared"
+            },
+            "franz_kafka": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "giant_chair_vltava": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "kyoto_nakagawahigashiyama_tree": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "memorial_victims_of_communism": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "monkey_toy_1": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "niemand": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "prague_castle_statue": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "yvr_huge_chair": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            }
+        }
+    },
+    "objects": {
+        "single_scene_subsets": true,
+        "path": "/projects/p1358-25-2/data/d2p/objects",
+        "work_path": "/projects/p1358-25-2/mdrpbench/objects",
+        "subsets": {
+            "cups_1": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "gothenburg_statue": {
+              "max_pairs": 250,
+              "cameras": "shared"
+            },
+            "kyoto_nakagawahigashiyama_statue": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "monkey_toy_2": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "overgrown_statue_pot": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "r2d2_folimanka": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "spejbl_hurvinek": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "zlata_kasna_chrt": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            }
+        }
+    }
+}
