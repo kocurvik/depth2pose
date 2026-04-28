@@ -4,6 +4,7 @@ import os
 
 import pandas as pd
 
+from utils.config import config_iterator
 from utils.results import merge_summary_results, print_results_all, merge_summary_depth_results, \
     flatten_pose_metrics, flatten_depth_metrics
 
@@ -64,12 +65,11 @@ def process_single_dataset(args):
 if __name__ == '__main__':
     args = parse_args()
     if args.config_path is not None:
-        with open(args.config_path) as f:
-            dataset_config = json.load(f)
-
         pose_dfs = []
         depth_dfs = []
-        for name, config in dataset_config.items():
+
+        for name, config in config_iterator(args.config_path):
+
             single_args = copy.copy(args)
             single_args.name = name
             single_args.eval_depth = args.eval_depth and "contains_gt_depth" in config and config["contains_gt_depth"]

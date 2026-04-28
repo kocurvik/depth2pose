@@ -13,6 +13,7 @@ from torch.backends.cudnn import benchmark
 from tqdm import tqdm
 from collections import defaultdict
 
+from utils.config import config_iterator
 from utils.results import get_mde_list
 
 sys.path.insert(0, "./")
@@ -132,24 +133,24 @@ def main():
     device = torch.device(args.device)
 
     first_dataset_name = list(dataset_config.keys())[0]
-    depth_models = get_mde_list(first_dataset_name, dataset_config[first_dataset_name]['work_path'])
+    first_subset_name = list(dataset_config[first_dataset_name]['subsets'].keys())[0]
+    depth_models = get_mde_list(first_dataset_name, os.path.join(dataset_config['work_path'], first_subset_name))
 
-    for benchmark_name, benchmark_config in dataset_config.items():
+    for name, config in config_iterator(config_path):
         job_args = []
-
-        if 'contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth']:
+        if 'contains_gt_depth' not in config or not config['contains_gt_depth']:
             continue
 
         for mde_model in depth_models:
-            single_results_path = Path(benchmark_config['work_path']) / 'depth_results' / f'{mde_model}.json'
+            single_results_path = Path(config['work_path']) / 'depth_results' / f'{mde_model}.json'
 
             if os.path.exists(single_results_path) and not args.recalc:
-                print(f"Skipping: {benchmark_name} - {mde_model} since the results already exists in {single_results_path}")
+                print(f"Skipping: {name} - {mde_model} since the results already exists in {single_results_path}")
                 continue
 
-            job_args.append((mde_model, benchmark_name, benchmark_config, device, args.work_dir, args.recalc))
+            job_args.append((mde_model, name, config, device, args.work_dir, args.recalc))
 
-        log_dir = os.path.join(benchmark_config['work_path'], 'slurm_logs')
+        log_dir = os.path.join(config['work_path'], 'slurm_logs')
         os.makedirs(log_dir, exist_ok=True)
 
         executor = submitit.AutoExecutor(folder=log_dir)

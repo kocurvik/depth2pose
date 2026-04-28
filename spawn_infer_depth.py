@@ -7,6 +7,7 @@ import h5py
 import submitit
 
 from depth_estimators.infer_depth import ALL_MDEs, get_mde_model, infer_depth
+from utils.config import config_iterator
 
 
 def parse_args():
@@ -116,10 +117,7 @@ def main(args):
 if __name__ == '__main__':
     args = parse_args()
     if args.config_path is not None:
-        with open(args.config_path) as f:
-            dataset_config = json.load(f)
-
-        for name, config in dataset_config.items():
+        for name, config in config_iterator(args.config_path):
             single_args = copy.copy(args)
             single_args.name = name
             single_args.out_path = config["work_path"]

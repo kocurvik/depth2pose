@@ -13,6 +13,7 @@ from lightglue import LightGlue, SuperPoint
 from lightglue.utils import load_image, rbd
 from tqdm import tqdm
 
+from utils.config import config_iterator
 from utils.system_info import save_metadata
 
 
@@ -144,12 +145,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     if args.config_path is not None:
-        with open(args.config_path) as f:
-            dataset_config = json.load(f)
-
-        job_args = []
-
-        for name, config in dataset_config.items():
+        for name, config in config_iterator(args.config_path):
             single_args = copy.copy(args)
             single_args.name = name
             single_args.out_path = config["work_path"]

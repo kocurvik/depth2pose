@@ -5,6 +5,7 @@ import os
 import submitit
 
 from eval_pose import eval_single_mde
+from utils.config import config_iterator
 from utils.results import get_basename, get_mde_list
 from utils.storage import get_full_results_h5_path
 
@@ -90,10 +91,7 @@ def main(args):
 if __name__ == '__main__':
     args = parse_args()
     if args.config_path is not None:
-        with open(args.config_path) as f:
-            dataset_config = json.load(f)
-
-        for name, config in dataset_config.items():
+        for name, config in config_iterator(args.config_path):
             single_args = copy.copy(args)
             single_args.name = name
             single_args.work_path = config["work_path"]

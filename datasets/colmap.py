@@ -16,6 +16,7 @@ from scipy.spatial.transform import Rotation
 from tqdm import tqdm
 
 from datasets.colmap_utils import cam_to_K, read_model
+from utils.config import config_iterator
 from utils.system_info import save_metadata
 
 
@@ -315,11 +316,9 @@ def process_colmap_dataset(args):
 if __name__ == '__main__':
     args = parse_args()
     if args.config_path is not None:
-        with open(args.config_path) as f:
-            dataset_config = json.load(f)
-
-        for name, config in dataset_config.items():
-            out_path = os.path.join(config["work_path"], name)
+        for name, config in config_iterator(args.config_path):
+            out_path = config["work_path"]
+            data_path = config["path"]
             h5_path = f'{out_path}.h5'
 
             if os.path.exists(h5_path) and not args.recalc:
@@ -328,8 +327,8 @@ if __name__ == '__main__':
 
             single_args = copy.copy(args)
             single_args.name = name
-            single_args.out_path = config["work_path"]
-            single_args.dataset_path = config["path"]
+            single_args.out_path = out_path
+            single_args.dataset_path = data_path
             if "max_pairs" in config:
                 single_args.max_pairs = config["max_pairs"]
             else:
