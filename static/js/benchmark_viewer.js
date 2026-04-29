@@ -119,6 +119,7 @@ function populateControls() {
 
 	els.evaluationCaseSelect.innerHTML = '';
 	[
+		{ value: 'all', label: 'All' },
 		{ value: 'calibrated', label: 'With calibration' },
 		{ value: 'uncalibrated', label: 'Without calibration' }
 	].forEach(({ value, label }) => {
@@ -131,6 +132,7 @@ function populateControls() {
 
 	els.solverVariantSelect.innerHTML = '';
 	[
+		{ value: 'all', label: 'All' },
 		{ value: 'non_ro', label: 'Standard RANSAC' },
 		{ value: 'ro', label: 'Reprojection-only RANSAC (_ro)' }
 	].forEach(({ value, label }) => {
@@ -226,7 +228,8 @@ function bindControls() {
 				currentDataset: state.currentDataset,
 				currentIters: state.currentIters,
 				mode: state.mode,
-				roVariant: state.roVariant
+				roVariant: state.roVariant,
+				availableDatasets: [...state.datasets]
 			}
 		}));
 	});
@@ -311,6 +314,7 @@ function render() {
 function applyMode(rows) {
 	const cfg = MODE_CONFIG[state.mode];
 
+	if (state.mode === 'all') return rows;
 	return rows.filter((row) => {
 		const solverOk = cfg.solvers.has(baseSolverName(row.solver));
 		if (!solverOk) return false;
@@ -322,6 +326,7 @@ function applyMode(rows) {
 
 /* Filter rows based on the selected 'ro' variant, either including only 'ro' solvers or excluding them. */
 function applyRoVariant(rows) {
+	if (state.roVariant === 'all') return rows;
 	return rows.filter((row) => {
 		if (state.roVariant === 'ro') return isRoSolver(row.solver);
 		return !isRoSolver(row.solver);
