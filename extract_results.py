@@ -30,10 +30,18 @@ def parse_args():
     return args
 
 
-def save_csv(df, path, key_cols, append=False, overwrite=False, keep_slim_cols=None):
+def save_csv(df, path, key_cols, append=False, overwrite=False, keep_slim_cols=None, mean_over_groups=False):
     if keep_slim_cols is not None:
         cols = [c for c in key_cols + keep_slim_cols if c in df.columns]
         df = df[cols].round(2)
+
+    if mean_over_groups:
+        group_cols = [c for c in key_cols if c != 'dataset']
+        df = df.groupby(group_cols)[keep_slim_cols].mean().reset_index()
+        df.insert(df.columns.get_loc('group') + 1, 'dataset', df['group'])
+        df = df.round(2)
+        df.drop("group", axis=1, inplace=True)
+
     if append and os.path.exists(path):
         existing = pd.read_csv(path)
         if overwrite:
@@ -81,7 +89,7 @@ if __name__ == '__main__':
             single_args.work_path = config["work_path"]
             flat_pose_results, flat_depth_results = process_single_dataset(single_args)
             flat_pose_results.insert(0, 'dataset', name)
-            flat_pose_results.insert(1, 'group', scene_group)
+            flat_pose_results.insert(0, 'group', scene_group)
             pose_dfs.append(flat_pose_results)
             if flat_depth_results is not None:
                 flat_depth_results.insert(0, 'dataset', name)
@@ -103,6 +111,9 @@ if __name__ == '__main__':
     save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}_slim_pose_results.csv'),
              ['group', 'dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite,
              keep_slim_cols=['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers'])
+    save_csv(all_pose_df, os.path.join(args.out_dir, f'per_group_{args.prefix}_slim_pose_results.csv'),
+             ['group', 'dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite,
+             keep_slim_cols=['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers'], mean_over_groups=True)
     if all_depth_df is not None:
         save_csv(all_depth_df, os.path.join(args.out_dir, f'{args.prefix}_depth_results.csv'), ['group', 'dataset', 'mde'], args.append, args.overwrite)
 
