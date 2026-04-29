@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument('--config_path', default=None, type=str)
     parser.add_argument('-st', '--sampson_threshold', type=float, default=2.0)
     parser.add_argument('-rt', '--reprojection_threshold', type=float, default=16.0)
-    parser.add_argument('--prefix', type=str, default='')
+    parser.add_argument('--prefix', type=str, default=None)
     parser.add_argument('-ed', '--eval_depth', action='store_true', default=False)
     parser.add_argument('--matches', type=str, default='splg_2048_noresize')
     parser.add_argument('--out_dir', type=str, default='csv_results')
@@ -33,7 +33,7 @@ def parse_args():
 def save_csv(df, path, key_cols, append=False, overwrite=False, keep_slim_cols=None):
     if keep_slim_cols is not None:
         cols = [c for c in key_cols + keep_slim_cols if c in df.columns]
-        df = df[cols].round(6)
+        df = df[cols].round(2)
     if append and os.path.exists(path):
         existing = pd.read_csv(path)
         if overwrite:
@@ -52,6 +52,8 @@ def save_csv(df, path, key_cols, append=False, overwrite=False, keep_slim_cols=N
 def process_single_dataset(args):
     all_metrics = merge_summary_results(args)
     flat_pose_metrics = flatten_pose_metrics(all_metrics)
+    if 'mean_inliers' in flat_pose_metrics.columns:
+        flat_pose_metrics['mean_inliers'] *= 100
 
     if args.eval_depth:
         depth_metrics = merge_summary_depth_results(args)
@@ -68,7 +70,10 @@ if __name__ == '__main__':
         pose_dfs = []
         depth_dfs = []
 
-        for name, config in config_iterator(args.config_path):
+        if args.prefix is None:
+            args.prefix = os.path.basename(args.config_path).split('_')[0]
+
+        for name, config, scene_group in config_iterator(args.config_path, return_dataset_type=True):
 
             single_args = copy.copy(args)
             single_args.name = name
@@ -76,6 +81,7 @@ if __name__ == '__main__':
             single_args.work_path = config["work_path"]
             flat_pose_results, flat_depth_results = process_single_dataset(single_args)
             flat_pose_results.insert(0, 'dataset', name)
+            flat_pose_results.insert(1, 'group', scene_group)
             pose_dfs.append(flat_pose_results)
             if flat_depth_results is not None:
                 flat_depth_results.insert(0, 'dataset', name)
@@ -90,13 +96,13 @@ if __name__ == '__main__':
             all_depth_df.insert(0, 'dataset', args.name)
 
     os.makedirs(args.out_dir, exist_ok=True)
-    save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}pose_results.csv'),
+    save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}_pose_results.csv'),
              ['dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite)
-    save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}slim_pose_results.csv'),
+    save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}_slim_pose_results.csv'),
              ['dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite,
              keep_slim_cols=['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers'])
     if all_depth_df is not None:
-        save_csv(all_depth_df, os.path.join(args.out_dir, f'{args.prefix}depth_results.csv'), ['dataset', 'mde'], args.append, args.overwrite)
+        save_csv(all_depth_df, os.path.join(args.out_dir, f'{args.prefix}_depth_results.csv'), ['dataset', 'mde'], args.append, args.overwrite)
 
 
 
