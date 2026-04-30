@@ -6,6 +6,9 @@ pip install --no-deps git+https://github.com/lpiccinelli-eth/UniDepth
 # this will reinstall torch to 2.4.1 so UniDepth works
 pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 xformers==0.0.28 --index-url https://download.pytorch.org/whl/cu124
 
+# loma
+pip install --no-deps git+https://github.com/davnords/LoMa.git
+
 # for Metric3D
 mamba install mmengine mmcv --no-deps
 pip install --no-deps git+https://github.com/kocurvik/UniK3D
