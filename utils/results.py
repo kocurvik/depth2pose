@@ -184,6 +184,10 @@ def get_basename(args, depth: str) -> str:
             f'_{args.sampson_threshold}t_{args.reprojection_threshold}r')
 
 
+def get_mde_basename(mde_name):
+    return mde_name.split('-')[0].split('Calib')[0]
+
+
 def get_best_result(all_metrics, variants, uncal=False, ro=False):
     if uncal:
         solvers = ['mdecalib', 'mdecalib_shift', 'sf', 'sf_shift', 'vf', 'vf_shift']
@@ -212,7 +216,7 @@ def print_best_only(all_metrics):
     variant_dict = {}
 
     for mde_name in mde_names:
-        base_name = mde_name.split('-')[0].split('Calib')[0]
+        base_name = get_mde_basename(mde_name)
         if base_name in variant_dict:
             variant_dict[base_name].append(mde_name)
         else:

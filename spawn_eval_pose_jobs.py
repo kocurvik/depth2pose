@@ -47,7 +47,7 @@ def parse_args():
     return parser.parse_args()
 
 def run_for_depth(args):
-    if args.depth == 'gt':
+    if args.depth == 'no_depth':
         args.include_baseline_solver = True
     eval_single_mde(args)
 
@@ -67,7 +67,7 @@ def main(args):
 
     mde_list = get_mde_list(args.name, args.work_path)
 
-    depths_to_run = ['gt'] + mde_list
+    depths_to_run = ['no_depth', 'gt'] + mde_list
 
     array_job_arguments = []
 

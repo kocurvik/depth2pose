@@ -292,7 +292,7 @@ def eval_single_mde(args):
                 f_matches[f"{image_name_1}-{image_name_2}"] = np.array(f_matches_h5[f"{image_name_1}-{image_name_2}"])
 
         
-        if args.depth != 'gt':
+        if args.depth != 'gt' and args.depth != 'no_depth':
             if args.direct_read:
                 try:
                     job_id = os.environ.get('SLURM_JOB_ID', 'local')
@@ -362,7 +362,12 @@ def eval_single_mde(args):
                 kp1 = kps[:, :2]
                 kp2 = kps[:, 2:4]
 
-                if args.depth != 'gt':
+                if args.depth == 'gt':
+                        d1, d2 = get_gt_depth(kp1, kp2, R_gt, t_gt / np.linalg.norm(t_gt), K1_gt, K2_gt)
+                        # d1, d2 = get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt)
+                elif args.depth == 'no_depth':
+                    d1, d2 = None, None
+                else:
                     depth_map1 = np.array(f_depth[f'{img_name_1}_depth'])
                     depth_map2 = np.array(f_depth[f'{img_name_2}_depth'])
 
@@ -376,8 +381,9 @@ def eval_single_mde(args):
                     kp2 = kp2[l]
                     d1 = d1[l]
                     d2 = d2[l]
-                else:
-                    d1, d2 = get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt)
+
+                # if d1 is not None:
+
 
                 gt_inlier_mask = get_gt_inlier_mask(kp1, kp2, K1_gt, K2_gt, R_gt, t_gt, args.sampson_threshold)
 
@@ -423,31 +429,34 @@ def eval_single_mde(args):
 
 
 def get_solvers(args):
+    experiments = []
+
     if args.explicit_solvers is not None:
         experiments = args.explicit_solvers.split(',')
         return experiments
 
-    experiments = ['calib']
-    if not args.no_mde_K:
-        if 'Calib' in args.depth:
-            print("Solver using MDE inferred camera params requested, but MDE used GT calibration. Skipping.")
-        else:
-            experiments.append('mdecalib')
-    if args.include_shared_focal:
-        if 'Calib' in args.depth:
-            print("Shared focal solver requested, but MDE used GT calibration. Skipping.")
-        else:
-            experiments.append('sf')
-    if args.include_varying_focal:
-        if 'Calib' in args.depth:
-            print("Varying focal solver requested, but MDE used GT calibration. Skipping.")
-        else:
-            experiments.append('vf')
-    if not args.no_shift_solvers:
-        experiments.extend([f'{x}_shift' for x in experiments])
+    if args.depth != 'no_depth':
+        experiments = ['calib']
+        if not args.no_mde_K:
+            if 'Calib' in args.depth:
+                print("Solver using MDE inferred camera params requested, but MDE used GT calibration. Skipping.")
+            else:
+                experiments.append('mdecalib')
+        if args.include_shared_focal:
+            if 'Calib' in args.depth:
+                print("Shared focal solver requested, but MDE used GT calibration. Skipping.")
+            else:
+                experiments.append('sf')
+        if args.include_varying_focal:
+            if 'Calib' in args.depth:
+                print("Varying focal solver requested, but MDE used GT calibration. Skipping.")
+            else:
+                experiments.append('vf')
+        if not args.no_shift_solvers:
+            experiments.extend([f'{x}_shift' for x in experiments])
 
-    if not args.no_reproj_only_ransac:
-        experiments.extend([f'{x}_ro' for x in experiments])
+        if not args.no_reproj_only_ransac:
+            experiments.extend([f'{x}_ro' for x in experiments])
 
 
     if args.include_baseline_solver:
@@ -487,6 +496,10 @@ if __name__ == '__main__':
 
         print("Running for GT depth")
         args.depth = 'gt'
+        eval_single_mde(args)
+
+        print("Running baselin without depth")
+        args.depth = 'no_depth'
         args.include_baseline_solver = True
         eval_single_mde(args)
 

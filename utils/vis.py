@@ -7,6 +7,8 @@ from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 
 from depth_estimators.infer_depth import ALL_MDEs
+from utils.results import get_mde_basename
+
 
 def get_n_colors(n):
     if n <= 10:
@@ -36,7 +38,7 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, remove_outliers=False, o
             mde_list = [x for x in mde_list if 'DepthPro' not in x]
 
     depth_df = depth_df[depth_df['mde'].isin(mde_list)]
-    base_names = list(set(x.split('-')[0].split('Calib')[0] for x in mde_list))
+    base_names = list(set(get_mde_basename(x) for x in mde_list))
     color_dict = get_mde_basename_color_dict()
 
     depth_evals = ['A.Rel_si', 'd1_si', 'A.Rel_ssi', 'd1_ssi']
@@ -58,7 +60,7 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, remove_outliers=False, o
         for idx, metric in enumerate(depth_evals):
             ax = axes[idx]
             for mde in mde_list:
-                base_name = mde.split('-')[0].split('Calib')[0]
+                base_name = get_mde_basename(mde)
                 if 'Calib' in mde and any(s in solver for s in ('vf', 'sf', 'mdecalib')):
                     continue
                 depth_row = depth_df[depth_df['mde'] == mde]
