@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument('--check_images', action='store_true', default=False, help='Keep only images that are actually available on disk')
     parser.add_argument('--config_path', type=str, default=None, help='specify path to config to run for multiple datasets at the same time')
     parser.add_argument('--recalc', action='store_true', default=False)
-    parser.add_argument('--single_scene_dataset', action='store_true', default=False)
+    parser.add_argument('--single_scene_subsets', action='store_true', default=False)
     parser.add_argument('--out_path', type=str, default=None)
     parser.add_argument('--dataset_path', type=str, default=None)
 
