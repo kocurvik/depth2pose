@@ -21,6 +21,8 @@
 	--border-radius: 12px;
 	--border-radius-lg: 16px;
 	--transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+	--benchmark-blue: #1849c6;
 }
 
 /* Smooth scrolling for better UX */
@@ -38,6 +40,19 @@ body {
 	-moz-osx-font-smoothing: grayscale;
 }
 
+/* Global for benchmark */
+.flex-row {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-start;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.muted-note {
+	color: #5b6574;
+	font-size: 0.98rem;
+}
 
 /* Modern Button Styles */
 .button {

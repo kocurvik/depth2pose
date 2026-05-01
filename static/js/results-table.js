@@ -1,4 +1,6 @@
-const CSV_URL = 'https://raw.githubusercontent.com/lbujnak/depth2pose_webdata/main/benchmark/new/slim_pose_results.csv';
+import { TABLE_CSV_URL } from "./api-config.js";
+import { tableDict } from "./dictionary/table.js";
+import { attachCardToggle, isGtMde, isCalibMde, getMdeFamilyKey, isRoSolver, baseSolverName, escapeHtml, normalizeForSearch, sortByName, isNumericValue } from "./global.js";
 
 const MODE_CONFIG = {
 	calibrated: {
@@ -7,12 +9,7 @@ const MODE_CONFIG = {
 	},
 	uncalibrated: {
 		label: 'Without calibration',
-		solvers: new Set([
-			'sf', 'sf_shift',
-			'vf', 'vf_shift',
-			'mdecalib', 'mdecalib_shift',
-			'baseline_sf', 'baseline_vf'
-		])
+		solvers: new Set(['sf', 'sf_shift','vf', 'vf_shift','mdecalib', 'mdecalib_shift','baseline_sf', 'baseline_vf'])
 	}
 };
 
@@ -56,27 +53,13 @@ const els = {
 };
 
 
-/* Attach toggle functionality to a card, allowing it to collapse/expand when the button is clicked. */
-function attachCardToggle(cardId, buttonId, contentId, showText, hideText) {
-	const card = document.getElementById(cardId);
-	const button = document.getElementById(buttonId);
-	const content = document.getElementById(contentId);
-	if (!card || !button || !content) return;
-
-	button.addEventListener('click', () => {
-		const collapsed = card.classList.toggle('is-collapsed');
-		button.textContent = collapsed ? showText : hideText;
-		button.setAttribute('aria-expanded', String(!collapsed));
-	});
-}
-
 /* Load CSV data from the specified URL, parse it, and populate the state with columns, rows, and options for controls. */
 async function loadData() {
 	let csvText;
 
 	try {
-		const response = await fetch(CSV_URL);
-		if (!response.ok) throw new Error(`Failed to load CSV from ${CSV_URL}: ${response.status}`);
+		const response = await fetch(TABLE_CSV_URL);
+		if (!response.ok) throw new Error(`Failed to load CSV from ${TABLE_CSV_URL}: ${response.status}`);
 		
 		csvText = await response.text();
 	}
@@ -89,9 +72,58 @@ async function loadData() {
 	state.columns = columns;
 	state.rawRows = rows;
 	state.numericColumns = new Set(columns.filter((column) => rows.every((row) => typeof row[column] === 'number' || row[column] === '')));
-	state.datasets = [...new Set(rows.map((row) => String(row.dataset)))].sort((a, b) => a.localeCompare(b));
+	state.datasets = [...new Set(rows.map((row) => String(row.dataset)))].sort(sortByName);
 	state.itersOptions = [...new Set(rows.map((row) => String(row.iters)))].sort((a, b) => Number(a) - Number(b));
 }
+
+/* Parses a CSV string into columns and rows. */
+function parseCsv(text) {
+	const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(line => line.trim().length);
+	if (!lines.length) return { columns: [], rows: [] };
+
+	const columns = parseCsvLine(lines[0]).map(col => col.trim());
+	const rows = lines.slice(1).map((line) => {
+		const values = parseCsvLine(line);
+		const row = {};
+
+		columns.forEach((column, index) => {
+			const raw = (values[index] ?? '').trim();
+			row[column] = isNumericValue(raw) ? Number(raw) : raw;
+		});
+		return row;
+	});
+
+	return { columns, rows };
+}
+
+/* Parses a single line of CSV, handling quoted values and commas. */
+function parseCsvLine(line) {
+	const out = [];
+	let current = '';
+	let inQuotes = false;
+
+	for (let i = 0; i < line.length; i += 1) {
+		const char = line[i];
+		const next = line[i + 1];
+
+		if (char === '"') {
+			if (inQuotes && next === '"') {
+				current += '"';
+				i += 1;
+			}
+			else inQuotes = !inQuotes;
+		}
+		else if (char === ',' && !inQuotes) {
+			out.push(current);
+			current = '';
+		}
+		else current += char;
+	}
+
+	out.push(current);
+	return out;
+}
+
 
 /* Populate the dataset and iters dropdowns based on the loaded data, and set initial values for all controls. */
 function populateControls() {
@@ -213,77 +245,7 @@ function bindControls() {
 		state.page += 1;
 		render();
 	});
-
-	els.resultsBody.addEventListener('click', (event) => {
-		const rowEl = event.target.closest('tr[data-row-index]');
-		if (!rowEl) return;
-
-		const rowIndex = Number(rowEl.dataset.rowIndex);
-		const row = state.visibleRows[rowIndex];
-		if (!row) return;
-
-		document.dispatchEvent(new CustomEvent('benchmark:row-click', {
-			detail: {
-				row: { ...row },
-				currentDataset: state.currentDataset,
-				currentIters: state.currentIters,
-				mode: state.mode,
-				roVariant: state.roVariant,
-				availableDatasets: [...state.datasets]
-			}
-		}));
-	});
 }
-
-
-/* Parses a CSV string into columns and rows. */
-function parseCsv(text) {
-	const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(line => line.trim().length);
-	if (!lines.length) return { columns: [], rows: [] };
-
-	const columns = parseCsvLine(lines[0]).map(col => col.trim());
-	const rows = lines.slice(1).map((line) => {
-		const values = parseCsvLine(line);
-		const row = {};
-		
-		columns.forEach((column, index) => {
-			const raw = (values[index] ?? '').trim();
-			row[column] = isNumericValue(raw) ? Number(raw) : raw;
-		});
-		return row;
-	});
-
-	return { columns, rows };
-}
-
-/* Parses a single line of CSV, handling quoted values and commas. */
-function parseCsvLine(line) {
-	const out = [];
-	let current = '';
-	let inQuotes = false;
-
-	for (let i = 0; i < line.length; i += 1) {
-		const char = line[i];
-		const next = line[i + 1];
-
-		if (char === '"') {
-			if (inQuotes && next === '"') {
-				current += '"';
-				i += 1;
-			}
-			else inQuotes = !inQuotes;
-		}
-		else if (char === ',' && !inQuotes) {
-			out.push(current);
-			current = '';
-		}
-		else current += char;
-	}
-
-	out.push(current);
-	return out;
-}
-
 
 
 /* Main render function that processes the rows based on current state, renders the table head, body, and summary. */
@@ -295,7 +257,7 @@ function render() {
 		rows = applyIters(rows);
 		rows = applyDatasetOrMean(rows);
 
-		if (state.hideGtOnly) rows = rows.filter((row) => !isGtRow(row));
+		if (state.hideGtOnly) rows = rows.filter((row) => !isGtMde(row.mde));
 
 		rows = applySearch(rows);
 		rows = applyBestMdeOnly(rows);
@@ -307,7 +269,6 @@ function render() {
 	renderTable(tableRows());
 	renderSummary(tableRows());
 }
-
 
 
 /* Filter rows based on the selected mode, which determines which solvers to include. */
@@ -429,27 +390,6 @@ function sortRows(rows) {
 }
 
 
-/* Extract the base solver name by removing any '_ro' suffix, used for grouping related solvers together. */
-function baseSolverName(solver) {
-	return String(solver ?? '').replace(/_ro$/, '');
-}
-
-/* Extract the MDE family key by taking the prefix before any '-' character and removing 'Calib', used for grouping related MDEs together. */
-function getMdeFamilyKey(mde) {
-	const prefix = String(mde ?? '').split('-')[0];
-	return prefix.replaceAll('Calib', '');
-}
-
-/* Check if a solver name indicates that it is a 'ro' variant, based on the presence of the '_ro' suffix. */
-function isRoSolver(solver) {
-	return String(solver ?? '').endsWith('_ro');
-}
-
-/* Check if an MDE name indicates that it is a calibrated method, based on the presence of 'Calib' in the name. */
-function isCalibMde(mde) {
-	return String(mde ?? '').includes('Calib');
-}
-
 /* Determine if a candidate row is a better choice for the best MDE than the current row, based on pose_mAA_10, mean_inliers, and mean_mde_runtime. */
 function isBetterBestMdeCandidate(candidate, current) {
 	const candidateScore = Number(candidate.pose_mAA_10 ?? Number.NEGATIVE_INFINITY);
@@ -473,7 +413,6 @@ function isBetterBestMdeCandidate(candidate, current) {
 }
 
 
-
 /* Render the table head with sortable column headers, indicating the current sort column and direction. */
 function renderTableHead() {
 	els.resultsHead.innerHTML = `
@@ -485,7 +424,7 @@ function renderTableHead() {
 				return `
 					<th>
 						<button class="sort-button ${isActive ? 'is-active' : ''}" type="button" data-column="${column}">
-							<span>${column}</span>
+							<span>${escapeHtml(tableDict.find((col) => col.key === column)?.label || column)}</span>
 							<i class="pi ${icon}"></i>
 						</button>
 					</th>
@@ -547,12 +486,13 @@ function renderTable(rows) {
 		const topRank = topRanks.get(rowId);
 		
 		return `
-			<tr class="benchmark-row is-clickable" data-row-index="${rowIndex}">
+			<tr class="benchmark-row">
 				${state.columns.map((column) => {
 					const classes = [];
 					if (column === 'pose_mAA_10' && topRank) classes.push(`pose-top-${topRank}`);
-					const value = formatValue(row[column]);
-					return `<td class="${classes.join(' ')}" title="${String(value).replace(/"/g, '&quot;')}">${value}</td>`;
+					const value = tableDict.find((col) => col.key === column)?.formatValue(row[column]) ?? row[column];
+					const safeValue = escapeHtml(value);
+					return `<td class="${classes.join(' ')}" title="${safeValue}">${safeValue}</td>`;
 				}).join('')}
 			</tr>
 		`;
@@ -573,12 +513,11 @@ function renderSummary(rows) {
 
 	els.summaryGrid.innerHTML = stats.map(([label, value]) => `
 		<div class="summary-box">
-			<div class="label-title">${label}</div>
-			<div class="value">${value}</div>
+			<div class="label-title">${escapeHtml(label)}</div>
+			<div class="value">${escapeHtml(value)}</div>
 		</div>
 	`).join('');
 }
-
 
 
 /* Generate a unique ID for a row based on the values of all columns, used for ranking purposes. */
@@ -599,38 +538,8 @@ function getTopPoseRanks(rows) {
 }
 
 
-
-/* Utility function to check if a value is numeric. */
-function isNumericValue(value) {
-	if (value === '' || value === null || value === undefined) return false;
-	return !Number.isNaN(Number(value));
-}
-
-/* Formats a value for display, handling null, undefined, and numeric values. */
-function formatValue(value) {
-	if (value === null || value === undefined || value === '') return '—';
-	if (typeof value === 'number') {
-		if (Number.isInteger(value)) return String(value);
-		return value.toFixed(6).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
-	}
-	return String(value);
-}
-
-/* Normalize a value for search by converting it to a lowercase string, treating null and undefined as empty strings. */
-function normalizeForSearch(value) {
-	return String(value ?? '').toLowerCase();
-}
-
-/* Check if a row corresponds to a ground truth entry based on the 'mde' column value. */
-function isGtRow(row) {
-	const mdeValue = normalizeForSearch(row.mde);
-	return mdeValue === 'gt' || mdeValue === 'ground-truth' || mdeValue === 'ground_truth';
-}
-
-
-
 /* Initialize the benchmark viewer */
-export async function init() {
+export async function initResultsTable() {
 	attachCardToggle('controlsCard', 'controlsToggle', 'controlsContent', 'Show controls', 'Hide controls');
 	attachCardToggle('tableCard', 'tableToggle', 'tableContent', 'Show table', 'Hide table');
 	attachCardToggle('resultsCard', 'resultsToggle', 'resultsContent', 'Show results', 'Hide results');
