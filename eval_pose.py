@@ -374,6 +374,7 @@ def eval_single_mde(args):
                     d1 = get_kp_depth(kp1, depth_map1, interpolation='nearest')
                     d2 = get_kp_depth(kp2, depth_map2, interpolation='nearest')
 
+                if d1 is not None:
                     l = np.logical_and(np.isfinite(d1), np.isfinite(d2))
                     l = np.logical_and(d1 > 0, l)
                     l = np.logical_and(d2 > 0, l)
@@ -381,9 +382,6 @@ def eval_single_mde(args):
                     kp2 = kp2[l]
                     d1 = d1[l]
                     d2 = d2[l]
-
-                # if d1 is not None:
-
 
                 gt_inlier_mask = get_gt_inlier_mask(kp1, kp2, K1_gt, K2_gt, R_gt, t_gt, args.sampson_threshold)
 
