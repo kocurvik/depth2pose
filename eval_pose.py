@@ -292,7 +292,7 @@ def eval_single_mde(args):
                 f_matches[f"{image_name_1}-{image_name_2}"] = np.array(f_matches_h5[f"{image_name_1}-{image_name_2}"])
 
         
-        if args.depth != 'gt' and args.depth != 'no_depth':
+        if args.depth != 'gt' and args.depth != 'none':
             if args.direct_read:
                 try:
                     job_id = os.environ.get('SLURM_JOB_ID', 'local')
@@ -365,7 +365,7 @@ def eval_single_mde(args):
                 if args.depth == 'gt':
                         d1, d2 = get_gt_depth(kp1, kp2, R_gt, t_gt / np.linalg.norm(t_gt), K1_gt, K2_gt)
                         # d1, d2 = get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt)
-                elif args.depth == 'no_depth':
+                elif args.depth == 'none':
                     d1, d2 = None, None
                 else:
                     depth_map1 = np.array(f_depth[f'{img_name_1}_depth'])
@@ -435,7 +435,7 @@ def get_solvers(args):
         experiments = args.explicit_solvers.split(',')
         return experiments
 
-    if args.depth != 'no_depth':
+    if args.depth != 'none':
         experiments = ['calib']
         if not args.no_mde_K:
             if 'Calib' in args.depth:
@@ -499,7 +499,7 @@ if __name__ == '__main__':
         eval_single_mde(args)
 
         print("Running baselin without depth")
-        args.depth = 'no_depth'
+        args.depth = 'none'
         args.include_baseline_solver = True
         eval_single_mde(args)
 

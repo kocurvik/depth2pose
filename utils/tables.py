@@ -126,9 +126,9 @@ def print_best_only_table(results_df, sort_rows=False, use_ro=False):
             uncal_variants = [v for v in variants if 'Calib' not in v]
             uncal_rows.append(find_best(df_1000, df_all_iters, uncal_variants, uncal_solvers))
 
-        calib_rows.append(get_baseline_row('no_depth', 'baseline_calib', df_1000, df_all_iters))
-        uncal_rows.append(get_baseline_row('no_depth', 'baseline_sf', df_1000, df_all_iters))
-        uncal_rows.append(get_baseline_row('no_depth', 'baseline_vf', df_1000, df_all_iters))
+        calib_rows.append(get_baseline_row('none', 'baseline_calib', df_1000, df_all_iters))
+        uncal_rows.append(get_baseline_row('none', 'baseline_sf', df_1000, df_all_iters))
+        uncal_rows.append(get_baseline_row('none', 'baseline_vf', df_1000, df_all_iters))
 
         if sort_rows:
             calib_rows = sorted([r for r in calib_rows if r is not None],
@@ -165,5 +165,5 @@ def print_best_only_table(results_df, sort_rows=False, use_ro=False):
 
 if __name__ == '__main__':
     # results_df = pd.read_csv('csv_results/d2p_slim_pose_results.csv')
-    results_df = pd.read_csv('csv_results/d2p_slim_pose_results.csv')
+    results_df = pd.read_csv('csv_results/standard_slim_pose_results.csv')
     print_best_only_table(results_df, sort_rows=True, use_ro=False)
