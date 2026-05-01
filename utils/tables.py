@@ -13,7 +13,7 @@ def estimator_name(estimator):
     except KeyError:
         return estimator
 
-def backbone_name(backbone):
+def get_backbone_name(backbone):
     if 'vitl' in backbone or 'vit-l' in backbone or 'large' in backbone.lower():
         return 'ViT-L'
     if 'vits' in backbone or 'vit-s' in backbone or 'small' in backbone:
@@ -22,7 +22,7 @@ def backbone_name(backbone):
         return 'ViT-B'
     if 'giant' in backbone.lower():
         return 'ViT-G'
-    if 'cvn' in backbone.lower():
+    if 'cnv' in backbone.lower():
         return 'ConvNext'
     if '' == backbone:
         return '-'
@@ -39,7 +39,7 @@ def print_tex_table(rows):
     for row in rows:
         basename = get_mde_basename(row[0])
         K_used = '\\checkmark' if 'Calib' in row[0] else ''
-        backbone = backbone_name('-'.join(row[0].split('-')[1:]))
+        backbone = get_backbone_name('-'.join(row[0].split('-')[1:]))
         estimator = estimator_name(row[1])
         mAAs_10 = row[2]['10']
         mAAs_100 = row[2]['100']
@@ -164,6 +164,6 @@ def print_best_only_table(results_df, sort_rows=False, use_ro=False):
 
 
 if __name__ == '__main__':
-    # results_df = pd.read_csv('csv_results/d2p_slim_pose_results.csv')
-    results_df = pd.read_csv('csv_results/standard_slim_pose_results.csv')
+    results_df = pd.read_csv('csv_results/d2p_slim_pose_results.csv')
+    # results_df = pd.read_csv('csv_results/standard_slim_pose_results.csv')
     print_best_only_table(results_df, sort_rows=True, use_ro=False)
