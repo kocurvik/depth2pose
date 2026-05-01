@@ -110,7 +110,7 @@ def match_pairs(feature_dict, args):
         job_id = os.environ.get('SLURM_JOB_ID', 'local')
         tmp_out_path = f'/work/{job_id}/'
         os.makedirs(tmp_out_path, exist_ok=True)
-        h5_path = os.path.join(tmp_out_path, f'{args.name}_splg_{args.max_features}_{args.resize if args.resize is not None else "noresize"}.h5')
+        h5_path = os.path.join(tmp_out_path, f'{args.name}_loma_{args.max_features}_{args.resize if args.resize is not None else "noresize"}.h5')
     else:
         h5_path = main_h5_path
 
@@ -165,7 +165,7 @@ if __name__ == '__main__':
             single_args.dataset_path = config["path"]
 
             name_path = os.path.join(single_args.out_path, single_args.name)
-            h5_path = f'{name_path}_splg_{single_args.max_features}_{single_args.resize if args.resize is not None else "noresize"}.h5'
+            h5_path = f'{name_path}_loma_{single_args.max_features}_{single_args.resize if args.resize is not None else "noresize"}.h5'
             if os.path.exists(h5_path):
                 with h5py.File(h5_path,'r') as f:
                     if 'completed' in f.keys():
