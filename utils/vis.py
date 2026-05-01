@@ -8,6 +8,7 @@ from matplotlib.lines import Line2D
 
 from depth_estimators.infer_depth import ALL_MDEs
 from utils.results import get_mde_basename
+from utils.tables import get_backbone_name
 
 
 def get_n_colors(n):
@@ -26,20 +27,95 @@ def get_mde_basename_color_dict():
     return {base_name: colors[i] for i, base_name in enumerate(basenames)}
 
 
-def plot_scatter_pose_depth(pose_df, depth_df, dataset, remove_outliers=False, out_dir='vis'):
-    pose_df = pose_df[pose_df['dataset'] == dataset].copy()
-    depth_df = depth_df[depth_df['dataset'] == dataset].copy()
+def get_mde_marker(mde):
+    basename = get_mde_basename(mde)
+    backbone = get_backbone_name(mde)
+    calib = 'Calib' in mde
+
+    style = {}
+    if calib:
+        style['markeredgecolor'] = 'black'
+
+    if backbone == 'ViT-S':
+        style['marker'] = 'o'
+    elif backbone == 'ViT-B':
+        style['marker'] = 's'
+    elif backbone == 'ViT-G':
+        style['marker'] = 'h'
+    elif backbone == 'ConvNext':
+        style['marker'] = 'D'
+    else:
+        style['marker'] = 'p'
+
+    if 'MoGe' in basename:
+        style['markerfacecolor'] = 'darkgreen'
+        if '1' in basename:
+            style['markerfacecoloralt'] = 'limegreen'
+
+    if 'UniDepth' in basename or 'UniK3D' in basename:
+        style['markerfacecolor'] = 'darkblue'
+        if '1' in basename:
+            style['markerfacecoloralt'] = 'lightsteelblue'
+        if '3' in basename:
+            style['markerfacecoloralt'] = 'royalblue'
+
+    if 'Metric3D' in basename:
+        style['markerfacecolor'] = 'turquoise'
+
+    if 'DepthAnything' in basename:
+        style['markerfacecolor'] = 'firebrick'
+        if '2' in basename:
+            style['markerfacecoloralt'] = 'lightsalmon'
+
+    if 'VGGT' == basename:
+        style['markerfacecolor'] = 'indigo'
+
+    if 'Pi3' == basename:
+        style['markerfacecolor'] = 'darkorange'
+
+    if 'MapAnything' in basename:
+        style['markerfacecolor'] = 'gold'
+
+    if 'DepthPro' == basename:
+        style['markerfacecolor'] = 'black'
+
+    if 'InfiniDepth' == basename:
+        style['markerfacecolor'] = 'slategray'
+
+    if 'markerfacecoloralt' in style:
+        style['fillstyle'] = 'left'
+    else:
+        style['fillstyle'] = 'full'
+
+    style['color'] = style['markerfacecolor']
+    style['markersize'] = 10
+
+    return style
+
+
+def plot_scatter_pose_depth(pose_df, depth_df, dataset, remove_outliers=False, iters=None, out_dir='vis'):
+    if iters is not None:
+        pose_df = pose_df[pose_df['iters'] == iters].copy()
+
+
+    if dataset == 'mean':
+        pose_df = pose_df.groupby(['mde', 'solver', 'iters'], as_index=False).mean(numeric_only=True)
+        # pose_df = pose_df.groupby(['mde', 'solver', 'iters'])['pose_mAA_10'].mean().reset_index()
+        depth_df = depth_df.groupby(['mde'], as_index=False).mean(numeric_only=True)
+        pose_df['dataset'] = 'mean'
+        depth_df['dataset'] = 'mean'
+    else:
+        pose_df = pose_df[pose_df['dataset'] == dataset].copy()
+        depth_df = depth_df[depth_df['dataset'] == dataset].copy()
 
     mde_list = depth_df['mde'].unique().tolist()
 
     if remove_outliers:
         mde_list = [x for x in mde_list if 'Infini' not in x and 'AnythingV2' not in x]
-        if dataset == 'lamar':
+        if dataset == 'lamar' or dataset == 'mean':
             mde_list = [x for x in mde_list if 'DepthPro' not in x]
 
     depth_df = depth_df[depth_df['mde'].isin(mde_list)]
-    base_names = list(set(get_mde_basename(x) for x in mde_list))
-    color_dict = get_mde_basename_color_dict()
 
     depth_evals = ['A.Rel_si', 'd1_si', 'A.Rel_ssi', 'd1_ssi']
 
@@ -73,9 +149,10 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, remove_outliers=False, o
                 if pose_rows.empty:
                     continue
                 pose_vals = pose_rows['pose_mAA_10'].tolist()
-                marker = 'o' if 'Calib' in mde else '*'
+                style = get_mde_marker(mde)
+
                 ax.plot([depth_val] * len(pose_vals), pose_vals,
-                        color=color_dict.get(base_name, 'black'), marker=marker, linestyle='dotted')
+                        linestyle='dotted', **style)
             ax.set_xlabel(f"Depth {metric}")
             ax.set_ylabel("Pose mAA(10)")
 
@@ -88,21 +165,22 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, remove_outliers=False, o
         for idx in range(n, len(axes)):
             axes[idx].set_visible(False)
 
-        color_handles = [Line2D([0], [0], color=c, marker='s', linestyle='None', label=lbl)
-                         for lbl, c in color_dict.items() if lbl in base_names]
-        marker_handles = [Line2D([0], [0], color='gray', marker='*', linestyle='None', label='Normal'),
-                          Line2D([0], [0], color='gray', marker='o', linestyle='None', label='Calib')]
-        fig.legend(handles=color_handles + marker_handles, loc='center right')
+        # color_handles = [Line2D([0], [0], color=c, marker='s', linestyle='None', label=lbl)
+        #                  for lbl, c in color_dict.items() if lbl in base_names]
+        # marker_handles = [Line2D([0], [0], color='gray', marker='*', linestyle='None', label='Normal'),
+        #                   Line2D([0], [0], color='gray', marker='o', linestyle='None', label='Calib')]
+        # fig.legend(handles=color_handles + marker_handles, loc='center right')
         plt.tight_layout(rect=[0, 0, 0.82, 1])
         suffix = '_no_outliers' if remove_outliers else '_all'
+        suffix += f'_{iters}' if iters is not None else ''
         plt.savefig(os.path.join(out_dir, f'scatter_pose_depth_{dataset}_{solver}{suffix}.png'))
         plt.close(fig)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pose_csv', type=str, default='csv_results/pose_results.csv')
-    parser.add_argument('--depth_csv', type=str, default='csv_results/depth_results.csv')
+    parser.add_argument('--pose_csv', type=str, default='csv_results/standard_pose_results.csv')
+    parser.add_argument('--depth_csv', type=str, default='csv_results/standard_depth_results.csv')
     parser.add_argument('--out_dir', type=str, default='vis')
     parser.add_argument('--dataset', type=str, default=None,
                         help='Dataset to plot (default: all datasets in the CSV)')
@@ -114,10 +192,10 @@ def main():
 
     datasets = [args.dataset] if args.dataset else pose_df['dataset'].unique().tolist()
 
-    for dataset in datasets:
-        plot_scatter_pose_depth(pose_df, depth_df, dataset,
-                                remove_outliers=args.remove_outliers,
-                                out_dir=args.out_dir)
+
+    plot_scatter_pose_depth(pose_df, depth_df, 'mean',
+                            remove_outliers=args.remove_outliers,
+                            out_dir=args.out_dir, iters=1000)
 
 
 if __name__ == '__main__':
