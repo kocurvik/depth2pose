@@ -105,17 +105,19 @@ if __name__ == '__main__':
         # if all_depth_df is not None:
         #     all_depth_df.insert(0, 'dataset', args.name)
 
+    matches = args.matches.split('_')[0]
+
     os.makedirs(args.out_dir, exist_ok=True)
-    save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}_pose_results.csv'),
+    save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}_{matches}_pose_results.csv'),
              ['group', 'dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite)
-    save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}_slim_pose_results.csv'),
+    save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}_{matches}_slim_pose_results.csv'),
              ['group', 'dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite,
              keep_slim_cols=['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers'])
-    save_csv(all_pose_df, os.path.join(args.out_dir, f'per_group_{args.prefix}_slim_pose_results.csv'),
+    save_csv(all_pose_df, os.path.join(args.out_dir, f'per_group_{args.prefix}_{matches}_slim_pose_results.csv'),
              ['group', 'dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite,
              keep_slim_cols=['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers'], mean_over_groups=True)
     if all_depth_df is not None:
-        save_csv(all_depth_df, os.path.join(args.out_dir, f'{args.prefix}_depth_results.csv'), ['group', 'dataset', 'mde'], args.append, args.overwrite)
+        save_csv(all_depth_df, os.path.join(args.out_dir, f'{args.prefix}_{matches}_depth_results.csv'), ['group', 'dataset', 'mde'], args.append, args.overwrite)
 
 
 
