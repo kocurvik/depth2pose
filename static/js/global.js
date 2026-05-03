@@ -25,7 +25,7 @@ export function attachCardToggle(cardId, buttonId, contentId, showText, hideText
 /* Check if an MDE name represents a ground-truth/oracle result. */
 export function isGtMde(value) {
 	const normalized = normalizeForSearch(value);
-	return normalized === 'gt' || normalized === 'ground-truth' || normalized === 'ground_truth';
+	return normalized === 'gt' || normalized === 'ground-truth' || normalized === 'ground_truth' || normalized === 'none';
 }
 
 /* Check if an MDE name indicates that it is a calibrated method, based on the presence of 'Calib' in the name. */

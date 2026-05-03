@@ -1,6 +1,21 @@
-import { TABLE_CSV_URL } from "./api-config.js";
-import { tableDict } from "./dictionary/table.js";
+import { STANDARD_TABLE_CSV_URL, GROUP_TABLE_CSV_URL } from "./api-config.js";
+import { tableDictByKey } from "./dictionary/table.js";
 import { attachCardToggle, isGtMde, isCalibMde, getMdeFamilyKey, isRoSolver, baseSolverName, escapeHtml, normalizeForSearch, sortByName, isNumericValue } from "./global.js";
+
+const BENCHMARK_CONFIG = {
+	standard: {
+		label: 'Standard benchmark',
+		url: STANDARD_TABLE_CSV_URL,
+		meanLabel: 'Mean over datasets',
+		datasetLabel: 'Dataset'
+	},
+	group: {
+		label: 'Group-based benchmark',
+		url: GROUP_TABLE_CSV_URL,
+		meanLabel: 'Mean over all scenes',
+		datasetLabel: 'Group / scene'
+	}
+};
 
 const MODE_CONFIG = {
 	calibrated: {
@@ -14,10 +29,12 @@ const MODE_CONFIG = {
 };
 
 const state = {
+	benchmarkMode: 'standard',
 	rawRows: [],
 	columns: [],
 	numericColumns: new Set(),
 	datasets: [],
+	groups: [],
 	itersOptions: [],
 	currentDataset: 'mean',
 	currentIters: 'all',
@@ -34,6 +51,8 @@ const state = {
 };
 
 const els = {
+	benchmarkModeSelect: document.getElementById('benchmarkModeSelect'),
+	datasetLabel: document.getElementById('datasetLabel'),
 	datasetSelect: document.getElementById('datasetSelect'),
 	itersSelect: document.getElementById('itersSelect'),
 	evaluationCaseSelect: document.getElementById('evaluationCaseSelect'),
@@ -53,13 +72,33 @@ const els = {
 };
 
 
+/* Initialize the benchmark viewer */
+export async function initResultsTable() {
+	attachCardToggle('controlsCard', 'controlsToggle', 'controlsContent', 'Show controls', 'Hide controls');
+	attachCardToggle('tableCard', 'tableToggle', 'tableContent', 'Show table', 'Hide table');
+	attachCardToggle('resultsCard', 'resultsToggle', 'resultsContent', 'Show results', 'Hide results');
+
+	try {
+		await loadData();
+		populateControls();
+		bindControls();
+		render();
+	}
+	catch (error) {
+		console.error(error);
+		setTableErrorState('Failed to load CSV results.');
+	}
+}
+
+
 /* Load CSV data from the specified URL, parse it, and populate the state with columns, rows, and options for controls. */
 async function loadData() {
 	let csvText;
 
 	try {
-		const response = await fetch(TABLE_CSV_URL);
-		if (!response.ok) throw new Error(`Failed to load CSV from ${TABLE_CSV_URL}: ${response.status}`);
+		const url = BENCHMARK_CONFIG[state.benchmarkMode].url;
+		const response = await fetch(url);
+		if (!response.ok) throw new Error(`Failed to load CSV from ${url}: ${response.status}`);
 		
 		csvText = await response.text();
 	}
@@ -72,7 +111,10 @@ async function loadData() {
 	state.columns = columns;
 	state.rawRows = rows;
 	state.numericColumns = new Set(columns.filter((column) => rows.every((row) => typeof row[column] === 'number' || row[column] === '')));
-	state.datasets = [...new Set(rows.map((row) => String(row.dataset)))].sort(sortByName);
+	state.datasets = [...new Set(rows.map((row) => String(row.dataset)).filter(Boolean))].sort(sortByName);
+	state.groups = columns.includes('group')
+		? [...new Set(rows.map((row) => String(row.group)).filter(Boolean))].sort(sortByName)
+		: [];
 	state.itersOptions = [...new Set(rows.map((row) => String(row.iters)))].sort((a, b) => Number(a) - Number(b));
 }
 
@@ -127,16 +169,21 @@ function parseCsvLine(line) {
 
 /* Populate the dataset and iters dropdowns based on the loaded data, and set initial values for all controls. */
 function populateControls() {
-	els.datasetSelect.innerHTML = '';
-	[
-		{ value: 'mean', label: 'Mean over datasets' }, ...state.datasets.map((dataset) => ({ value: dataset, label: dataset }))
-	].forEach(({ value, label }) => {
-		const option = document.createElement('option');
+	if (els.datasetLabel) els.datasetLabel.textContent = BENCHMARK_CONFIG[state.benchmarkMode].datasetLabel;
+	
+	if (els.benchmarkModeSelect) {
+		els.benchmarkModeSelect.innerHTML = '';
+		Object.entries(BENCHMARK_CONFIG).forEach(([value, config]) => {
+			const option = document.createElement('option');
 
-		option.value = value;
-		option.textContent = label;
-		els.datasetSelect.appendChild(option);
-	});
+			option.value = value;
+			option.textContent = config.label;
+			els.benchmarkModeSelect.appendChild(option);
+		});
+		els.benchmarkModeSelect.value = state.benchmarkMode;
+	}
+
+	populateDatasetSelect();
 
 	els.itersSelect.innerHTML = '';
 	[
@@ -184,8 +231,62 @@ function populateControls() {
 	els.bestMdeOnly.checked = state.bestMdeOnly;
 }
 
+/* Populate the dataset/group/scene dropdown for the selected benchmark source. */
+function populateDatasetSelect() {
+	els.datasetSelect.innerHTML = '';
+
+	appendDatasetOption('mean', BENCHMARK_CONFIG[state.benchmarkMode].meanLabel);
+
+	if (state.benchmarkMode !== 'group') {
+		state.datasets.forEach((dataset) => appendDatasetOption(dataset, dataset));
+		return;
+	}
+
+	appendDatasetOptGroup(
+		'Mean over group',
+		state.groups.map((group) => ({
+			value: `group:${group}`,
+			label: `Mean over ${group}`
+		}))
+	);
+
+	appendDatasetOptGroup(
+		'Scenes',
+		state.datasets.map((dataset) => ({
+			value: `scene:${dataset}`,
+			label: dataset
+		}))
+	);
+}
+
+/* Append one option to the dataset selector. */
+function appendDatasetOption(value, label, parent = els.datasetSelect) {
+	const option = document.createElement('option');
+
+	option.value = value;
+	option.textContent = label;
+	parent.appendChild(option);
+}
+
+/* Append a labelled option group when it has at least one option. */
+function appendDatasetOptGroup(label, options) {
+	if (!options.length) return;
+
+	const group = document.createElement('optgroup');
+	group.label = label;
+
+	options.forEach(({ value, label: optionLabel }) => appendDatasetOption(value, optionLabel, group));
+	els.datasetSelect.appendChild(group);
+}
+
 /* Bind event listeners to all controls, updating the state and re-rendering the table whenever a control value changes. */
 function bindControls() {
+	if (els.benchmarkModeSelect) {
+		els.benchmarkModeSelect.addEventListener("change", async (event) => {
+			await switchBenchmarkMode(event.target.value);
+		});
+	}
+
 	els.datasetSelect.addEventListener('change', (event) => {
 		state.currentDataset = event.target.value;
 		state.page = 1;
@@ -248,6 +349,29 @@ function bindControls() {
 }
 
 
+/* Switch between standard and group-based CSV sources. */
+async function switchBenchmarkMode(mode) {
+	if (!BENCHMARK_CONFIG[mode] || mode === state.benchmarkMode) return;
+
+	state.benchmarkMode = mode;
+	state.currentDataset = 'mean';
+	state.currentIters = 'all';
+	state.page = 1;
+
+	setTableLoadingState(`Loading ${BENCHMARK_CONFIG[mode].label}…`);
+
+	try {
+		await loadData();
+		populateControls();
+		render();
+	}
+	catch (error) {
+		console.error(error);
+		setTableErrorState('Failed to load CSV results.');
+	}
+}
+
+
 /* Main render function that processes the rows based on current state, renders the table head, body, and summary. */
 function render() {
 	const tableRows = () => {
@@ -300,14 +424,44 @@ function applyIters(rows) {
 	return rows.filter((row) => String(row.iters) === String(state.currentIters));
 }
 
-/* Either filter rows by the selected dataset or compute the mean across datasets for each unique combination of other parameters. */
+/* Apply the selected dataset/group/scene scope, aggregating when a mean option is selected. */
 function applyDatasetOrMean(rows) {
-	if (state.currentDataset !== 'mean') {
-		return rows.filter((row) => String(row.dataset) === state.currentDataset);
+	if (state.benchmarkMode !== 'group') {
+		if (state.currentDataset !== 'mean') {
+			return rows.filter((row) => String(row.dataset) === state.currentDataset);
+		}
+
+		return aggregateMeanRows(rows, ['dataset'], { dataset: 'Mean' });
 	}
 
+	if (state.currentDataset === 'mean') {
+		return aggregateMeanRows(rows, ['dataset', 'group'], { dataset: 'Mean', group: 'Mean' });
+	}
+
+	if (state.currentDataset.startsWith('group:')) {
+		const groupName = state.currentDataset.slice('group:'.length);
+		const groupRows = rows.filter((row) => String(row.group) === groupName);
+
+		return aggregateMeanRows(groupRows, ['dataset', 'group'], {
+			dataset: `Mean over ${groupName}`,
+			group: groupName
+		});
+	}
+
+	if (state.currentDataset.startsWith('scene:')) {
+		const sceneName = state.currentDataset.slice('scene:'.length);
+		return rows.filter((row) => String(row.dataset) === sceneName);
+	}
+
+	return rows.filter((row) => String(row.dataset) === state.currentDataset);
+}
+
+/* Aggregate numeric metrics over a selected scope while preserving experiment identity columns. */
+function aggregateMeanRows(rows, excludedGroupColumns, baseOverrides = {}) {
 	const numericColumns = state.columns.filter((column) => state.numericColumns.has(column) && column !== 'iters');
-	const groupColumns = state.columns.filter((column) => !numericColumns.includes(column) && column !== 'dataset');
+	const groupColumns = state.columns.filter((column) => (
+		!numericColumns.includes(column) && !excludedGroupColumns.includes(column)
+	));
 	const groups = new Map();
 
 	for (const row of rows) {
@@ -333,7 +487,7 @@ function applyDatasetOrMean(rows) {
 	const aggregated = [];
 
 	for (const group of groups.values()) {
-		const row = { dataset: 'Mean', ...group.base };
+		const row = { ...baseOverrides, ...group.base };
 
 		numericColumns.forEach((column) => {
 			row[column] = group.count ? group.sums[column] / group.count : null;
@@ -341,6 +495,7 @@ function applyDatasetOrMean(rows) {
 
 		aggregated.push(row);
 	}
+
 	return aggregated;
 }
 
@@ -415,16 +570,18 @@ function isBetterBestMdeCandidate(candidate, current) {
 
 /* Render the table head with sortable column headers, indicating the current sort column and direction. */
 function renderTableHead() {
+	const visibleColumns = state.columns.filter((column) => getTableDict(column)?.visible);
+
 	els.resultsHead.innerHTML = `
 		<tr>
-			${state.columns.map((column) => {
+			${visibleColumns.map((column) => {
 				const isActive = state.sortKey === column;
 				const icon = isActive ? (state.sortDir === 'asc' ? 'pi-sort-up' : 'pi-sort-down') : 'pi-sort-alt';
 
 				return `
 					<th>
 						<button class="sort-button ${isActive ? 'is-active' : ''}" type="button" data-column="${column}">
-							<span>${escapeHtml(tableDict.find((col) => col.key === column)?.label || column)}</span>
+							<span>${escapeHtml(getTableDict(column)?.label || column)}</span>
 							<i class="pi ${icon}"></i>
 						</button>
 					</th>
@@ -484,13 +641,14 @@ function renderTable(rows) {
 	els.resultsBody.innerHTML = pageRows.map((row, rowIndex) => {
 		const rowId = getRowId(row);
 		const topRank = topRanks.get(rowId);
+		const visibleColumns = state.columns.filter((column) => getTableDict(column)?.visible);
 		
 		return `
 			<tr class="benchmark-row">
-				${state.columns.map((column) => {
+				${visibleColumns.map((column) => {
 					const classes = [];
 					if (column === 'pose_mAA_10' && topRank) classes.push(`pose-top-${topRank}`);
-					const value = tableDict.find((col) => col.key === column)?.formatValue(row[column]) ?? row[column];
+					const value = getTableDict(column)?.formatValue(row[column]) ?? row[column];
 					const safeValue = escapeHtml(value);
 					return `<td class="${classes.join(' ')}" title="${safeValue}">${safeValue}</td>`;
 				}).join('')}
@@ -502,11 +660,12 @@ function renderTable(rows) {
 /* Render the summary section with statistics about the current view, including the best pose_mAA_10 value and counts of datasets, estimators, and solvers. */
 function renderSummary(rows) {
 	const datasetsShown = new Set(rows.map((row) => String(row.dataset))).size;
+	const datasetSummaryLabel = state.benchmarkMode === 'group' ? 'Scopes in view' : 'Datasets in view';
 	const estimators = new Set(rows.map((row) => String(row.mde))).size;
 	const solvers = new Set(rows.map((row) => String(row.solver))).size;
 	const stats = [
 		['Visible rows', rows.length],
-		['Datasets in view', datasetsShown],
+		[datasetSummaryLabel, datasetsShown],
 		['Estimators', estimators],
 		['Solvers', solvers]
 	];
@@ -519,6 +678,11 @@ function renderSummary(rows) {
 	`).join('');
 }
 
+
+/* Get the current table dictionary based on the selected benchmark mode, used for accessing column definitions. */
+function getTableDict(columnKey) {
+	return tableDictByKey(els.benchmarkModeSelect.value).get(columnKey);
+}
 
 /* Generate a unique ID for a row based on the values of all columns, used for ranking purposes. */
 function getRowId(row) {
@@ -537,23 +701,18 @@ function getTopPoseRanks(rows) {
 	return rankMap;
 }
 
+/* Render a compact loading message while switching table CSV sources. */
+function setTableLoadingState(message) {
+	els.resultsHead.innerHTML = '';
+	els.resultsBody.innerHTML = '';
+	els.emptyState.hidden = false;
+	els.emptyState.textContent = message;
+	els.paginationBar.hidden = true;
+}
 
-/* Initialize the benchmark viewer */
-export async function initResultsTable() {
-	attachCardToggle('controlsCard', 'controlsToggle', 'controlsContent', 'Show controls', 'Hide controls');
-	attachCardToggle('tableCard', 'tableToggle', 'tableContent', 'Show table', 'Hide table');
-	attachCardToggle('resultsCard', 'resultsToggle', 'resultsContent', 'Show results', 'Hide results');
-
-	try {
-		await loadData();
-		populateControls();
-		bindControls();
-		render();
-	}
-	catch (error) {
-		console.error(error);
-		els.emptyState.hidden = false;
-		els.emptyState.textContent = 'Failed to load CSV results.';
-		els.paginationBar.hidden = true;
-	}
+/* Render a compact error message for CSV load failures. */
+function setTableErrorState(message) {
+	els.emptyState.hidden = false;
+	els.emptyState.textContent = message;
+	els.paginationBar.hidden = true;
 }

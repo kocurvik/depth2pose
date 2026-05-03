@@ -1,5 +1,8 @@
-/* URL to the CSV file containing the benchmark results. */
-export const TABLE_CSV_URL = 'https://raw.githubusercontent.com/lbujnak/depth2pose_webdata/main/benchmark/new/slim_pose_results.csv';
+/* URL to the standard benchmark CSV file containing benchmark results. */
+export const STANDARD_TABLE_CSV_URL = 'https://raw.githubusercontent.com/kocurvik/depth2pose/main/csv_results/standard_slim_pose_results.csv';
+
+/* URL to the group-based benchmark CSV file with scene-level rows and group labels. */
+export const GROUP_TABLE_CSV_URL = 'https://raw.githubusercontent.com/kocurvik/depth2pose/main/csv_results/d2p_slim_pose_results.csv';
 
 /* BASE URL to the folder containing image examples. */
 export const IMG_EXAMPLES_BASE_URL = 'https://raw.githubusercontent.com/lbujnak/depth2pose_webdata/main/benchmark/d2p_examples';
