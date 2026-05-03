@@ -207,6 +207,12 @@ def create_gt_pairs(model, pairs, subset, f_pairs):
 def process_subsets(args, subsets):
     out_path = os.path.join(args.out_path, args.name)
     h5_path = f'{out_path}.h5'
+
+    with h5_path.File(h5_path, 'r') as f:
+        if 'completed' in f and not args.recalc:
+            print(f"Data extraction for {h5_path} completed. Skipping.")
+            return
+
     f = h5py.File(h5_path, 'w')
     print(f"Writing GT info to {h5_path}")
     save_metadata(f)
@@ -214,12 +220,6 @@ def process_subsets(args, subsets):
     txt_path = f'{out_path}_image_list.txt'
     f_txt = open(txt_path, 'w')
     print(f"Writing list of images info to {txt_path}")
-
-    # splg_h5_path = f'{out_path}_pairs_splg.h5'
-    # f_splg = open(splg_h5_path, 'w')
-    #
-    # roma_h5_path = f'{out_path}_pairs_roma.h5'
-    # f_roma= open(roma_h5_path, 'w')
 
     pairs_path = f'{out_path}_image_pairs.txt'
     f_pairs = open(pairs_path, 'w')
@@ -238,12 +238,10 @@ def process_subsets(args, subsets):
         create_gt_pairs(model, pairs, subset, f_pairs)
         del model
 
-    f.close()
     f_txt.close()
     f_pairs.close()
-    # f_roma.close()
-    # f_splg.close()
-
+    f.create_group("completed")
+    f.close()
 
 
 def get_model(args, subset):
