@@ -208,10 +208,11 @@ def process_subsets(args, subsets):
     out_path = os.path.join(args.out_path, args.name)
     h5_path = f'{out_path}.h5'
 
-    with h5py.File(h5_path, 'r') as f:
-        if 'completed' in f and not args.recalc:
-            print(f"Data extraction for {h5_path} completed. Skipping.")
-            return
+    if os.path.exists(h5_path):
+        with h5py.File(h5_path, 'r') as f:
+            if 'completed' in f and not args.recalc:
+                print(f"Data extraction for {h5_path} completed. Skipping.")
+                return
 
     f = h5py.File(h5_path, 'w')
     print(f"Writing GT info to {h5_path}")
