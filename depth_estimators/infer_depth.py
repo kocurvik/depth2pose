@@ -14,7 +14,7 @@ torch.backends.cudnn.benchmark = True
 from utils.system_info import save_metadata
 
 ALL_MDEs = {
-    'InfiniDepth': ['vitl'],
+    # 'InfiniDepth': ['vitl'],
     'UniK3D': ['vitl'],
     'UniK3DCalib': ['vitl'],
     'Metric3DV2': ['vit_small', 'vit_large', 'vit_giant2'],
@@ -58,9 +58,9 @@ def parse_args():
     return parser.parse_args()
 
 def get_mde_model(model_name, weights):
-    if model_name == 'InfiniDepth':
-        from depth_estimators.InfiniDepthWrapper import InfiniDepth
-        return InfiniDepth(weights, requires_intrinsics=False)
+    # if model_name == 'InfiniDepth':
+    #     from depth_estimators.InfiniDepthWrapper import InfiniDepth
+    #     return InfiniDepth(weights, requires_intrinsics=False)
 
     if model_name in ('MoGeV1', 'MoGeV2', 'MoGeV1Calib', 'MoGeV2Calib'):
         from depth_estimators.MoGe import MoGe

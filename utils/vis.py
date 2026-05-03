@@ -132,6 +132,7 @@ def get_mde_marker(mde, basename=None, backbone=None):
     if 'DepthPro' == basename:
         style['markerfacecolor'] = '#8c564b'   # tab brown
 
+    # Unused
     if 'InfiniDepth' == basename:
         style['markerfacecolor'] = '#7f7f7f'   # tab gray
 
