@@ -46,10 +46,10 @@
             }
         }
     },
-    "illusion": {
+    "statues": {
         "single_scene_subsets": true,
-        "path": "/projects/p1358-25-2/data/d2p/illusion",
-        "work_path": "/projects/p1358-25-2/mdrpbench/illusion",
+        "path": "/projects/p1358-25-2/data/d2p/statues",
+        "work_path": "/projects/p1358-25-2/mdrpbench/statues",
         "subsets": {
             "babies_cerny": {
                 "max_pairs": 250,

@@ -48,8 +48,8 @@
     },
     "illusion": {
         "single_scene_subsets": true,
-        "path": "/mnt/d/Research/data/d2p/illusion",
-        "work_path": "/mnt/d/Research/data/mdrpbench/illusion",
+        "path": "/mnt/d/Research/data/d2p/statues",
+        "work_path": "/mnt/d/Research/data/mdrpbench/statues",
         "subsets": {
             "babies_cerny": {
                 "max_pairs": 250,
