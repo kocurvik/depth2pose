@@ -1,17 +1,17 @@
-import { STANDARD_TABLE_CSV_URL, GROUP_TABLE_CSV_URL } from "./api-config.js";
+import { STANDARD_TABLE_SOURCES, GROUP_TABLE_SOURCES } from "./api-config.js";
 import { tableDictByKey } from "./dictionary/table.js";
 import { attachCardToggle, isGtMde, isCalibMde, getMdeFamilyKey, isRoSolver, baseSolverName, escapeHtml, normalizeForSearch, sortByName, isNumericValue } from "./global.js";
 
 const BENCHMARK_CONFIG = {
 	standard: {
 		label: 'Standard benchmark',
-		url: STANDARD_TABLE_CSV_URL,
+		sources: STANDARD_TABLE_SOURCES,
 		meanLabel: 'Mean over datasets',
 		datasetLabel: 'Dataset'
 	},
 	group: {
 		label: 'Group-based benchmark',
-		url: GROUP_TABLE_CSV_URL,
+		sources: GROUP_TABLE_SOURCES,
 		meanLabel: 'Mean over all scenes',
 		datasetLabel: 'Group / scene'
 	}
@@ -30,6 +30,7 @@ const MODE_CONFIG = {
 
 const state = {
 	benchmarkMode: 'standard',
+	currentSource: Object.keys(STANDARD_TABLE_SOURCES)[0],
 	rawRows: [],
 	columns: [],
 	numericColumns: new Set(),
@@ -52,6 +53,7 @@ const state = {
 
 const els = {
 	benchmarkModeSelect: document.getElementById('benchmarkModeSelect'),
+	sourceSelect: document.getElementById('sourceSelect'),
 	datasetLabel: document.getElementById('datasetLabel'),
 	datasetSelect: document.getElementById('datasetSelect'),
 	itersSelect: document.getElementById('itersSelect'),
@@ -96,7 +98,9 @@ async function loadData() {
 	let csvText;
 
 	try {
-		const url = BENCHMARK_CONFIG[state.benchmarkMode].url;
+		const sources = BENCHMARK_CONFIG[state.benchmarkMode].sources;
+		const url = sources[state.currentSource]?.url;
+		if (!url) throw new Error(`Unknown source: ${state.currentSource}`);
 		const response = await fetch(url);
 		if (!response.ok) throw new Error(`Failed to load CSV from ${url}: ${response.status}`);
 		
@@ -183,6 +187,7 @@ function populateControls() {
 		els.benchmarkModeSelect.value = state.benchmarkMode;
 	}
 
+	populateSourceSelect();
 	populateDatasetSelect();
 
 	els.itersSelect.innerHTML = '';
@@ -229,6 +234,24 @@ function populateControls() {
 	els.pageSizeSelect.value = String(state.pageSize);
 	els.hideGtOnly.checked = state.hideGtOnly;
 	els.bestMdeOnly.checked = state.bestMdeOnly;
+}
+
+/* Populate the source dropdown based on the available sources for the current benchmark mode. */
+function populateSourceSelect() {
+	if (!els.sourceSelect) return;
+
+	const sources = BENCHMARK_CONFIG[state.benchmarkMode].sources;
+	const sourceEntries = Object.entries(sources);
+
+	els.sourceSelect.innerHTML = '';
+	sourceEntries.forEach(([value, config]) => {
+		const option = document.createElement('option');
+
+		option.value = value;
+		option.textContent = config.label;
+		els.sourceSelect.appendChild(option);
+	});
+	els.sourceSelect.value = state.currentSource;
 }
 
 /* Populate the dataset/group/scene dropdown for the selected benchmark source. */
@@ -284,6 +307,12 @@ function bindControls() {
 	if (els.benchmarkModeSelect) {
 		els.benchmarkModeSelect.addEventListener("change", async (event) => {
 			await switchBenchmarkMode(event.target.value);
+		});
+	}
+
+	if (els.sourceSelect) {
+		els.sourceSelect.addEventListener('change', async (event) => {
+			await switchSource(event.target.value);
 		});
 	}
 
@@ -354,11 +383,35 @@ async function switchBenchmarkMode(mode) {
 	if (!BENCHMARK_CONFIG[mode] || mode === state.benchmarkMode) return;
 
 	state.benchmarkMode = mode;
+	state.currentSource = Object.keys(BENCHMARK_CONFIG[mode].sources)[0];
 	state.currentDataset = 'mean';
 	state.currentIters = 'all';
 	state.page = 1;
 
 	setTableLoadingState(`Loading ${BENCHMARK_CONFIG[mode].label}…`);
+
+	try {
+		await loadData();
+		populateControls();
+		render();
+	}
+	catch (error) {
+		console.error(error);
+		setTableErrorState('Failed to load CSV results.');
+	}
+}
+
+/* Switch the CSV source within the current benchmark mode. */
+async function switchSource(sourceKey) {
+	const sources = BENCHMARK_CONFIG[state.benchmarkMode].sources;
+	if (!sources[sourceKey] || sourceKey === state.currentSource) return;
+
+	state.currentSource = sourceKey;
+	state.currentDataset = 'mean';
+	state.currentIters = 'all';
+	state.page = 1;
+
+	setTableLoadingState(`Loading ${sources[sourceKey].label}…`);
 
 	try {
 		await loadData();
