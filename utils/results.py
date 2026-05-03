@@ -185,6 +185,11 @@ def get_basename(args, depth: str) -> str:
 
 
 def get_mde_basename(mde_name):
+    if 'DepthAnythingV3' in mde_name:
+        if 'METRIC' in mde_name:
+            return 'DAv3-Metric'
+        else:
+            return 'DAv3-Mono'
     return mde_name.split('-')[0].split('Calib')[0]
 
 
@@ -273,3 +278,19 @@ def flatten_pose_metrics(all_metrics):
                 row.update(metrics)
                 rows.append(row)
     return pd.DataFrame(rows)
+
+
+def get_backbone_name(backbone):
+    if 'vitl' in backbone or 'vit-l' in backbone or 'large' in backbone.lower() or 'vggt' in backbone.lower() or 'pi3x' in backbone.lower():
+        return 'ViT-L'
+    if 'vits' in backbone or 'vit-s' in backbone or 'small' in backbone:
+        return 'ViT-S'
+    if 'vitb' in backbone or 'vit-b' in backbone or 'base' in backbone:
+        return 'ViT-B'
+    if 'giant' in backbone.lower() or 'map' in backbone.lower():
+        return 'ViT-G'
+    if 'cnv' in backbone.lower():
+        return 'ConvNext'
+    if '' == backbone:
+        return '-'
+    return 'Default'

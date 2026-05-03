@@ -1,34 +1,14 @@
 import pandas as pd
 from prettytable import PrettyTable
 
-from utils.results import get_mde_basename
+from utils.results import get_mde_basename, get_backbone_name
 
 
 def estimator_name(estimator):
-    estimator_dict = {'calib': 'D', 'calib_shift': 'D$_{s}$',
-                      'baseline_calib': 'B', 'baseline_sf': 'B$_{f}$',
-                      'sf': 'D$_{f}$', 'sf_shift': 'D$_{s,f}$'}
-    try:
-        return estimator_dict[estimator]
-    except KeyError:
-        return estimator
-
-def get_backbone_name(backbone):
-    if 'vitl' in backbone or 'vit-l' in backbone or 'large' in backbone.lower():
-        return 'ViT-L'
-    if 'vits' in backbone or 'vit-s' in backbone or 'small' in backbone:
-        return 'ViT-S'
-    if 'vitb' in backbone or 'vit-b' in backbone or 'base' in backbone:
-        return 'ViT-B'
-    if 'giant' in backbone.lower():
-        return 'ViT-G'
-    if 'cnv' in backbone.lower():
-        return 'ConvNext'
-    if '' == backbone:
-        return '-'
-    return 'Default'
-
-
+    if estimator == 'sf':
+        return '\\mysf'
+    no_underscore = ''.join(estimator.split('_'))
+    return f'\\{no_underscore}'
 
 def print_tex_table(rows):
     print('\\begin{tabular}{cccccccc} \\')
@@ -162,8 +142,30 @@ def print_best_only_table(results_df, sort_rows=False, use_ro=False):
     print_tex_table(uncal_rows)
 
 
+def print_best_only_depth_table(depth_results_df, sort_rows=True):
+    metric_cols = ['A.Rel_si', 'd1_si', 'A.Rel_ssi', 'd1_ssi']
+
+    summary_df = depth_results_df.groupby(['mde'])[metric_cols].mean().reset_index()
+    summary_df['basename'] = summary_df['mde'].apply(get_mde_basename)
+
+    best_rows = summary_df.loc[summary_df.groupby('basename')['A.Rel_ssi'].idxmin()]
+    best_rows = best_rows.drop(columns=['basename'])
+
+    if sort_rows:
+        best_rows = best_rows.sort_values(by='A.Rel_ssi', ascending=True)
+
+    tab = PrettyTable(["MDE"] + metric_cols)
+
+    tab.float_format = ".4"
+
+    tab.add_rows(best_rows.values.tolist())
+
+    print(tab)
 
 if __name__ == '__main__':
-    results_df = pd.read_csv('csv_results/d2p_slim_pose_results.csv')
-    # results_df = pd.read_csv('csv_results/standard_slim_pose_results.csv')
+    # results_df = pd.read_csv('csv_results/d2p_slim_pose_results.csv')
+    results_df = pd.read_csv('csv_results/standard_splg_slim_pose_results.csv')
     print_best_only_table(results_df, sort_rows=True, use_ro=False)
+
+    depth_results_df = pd.read_csv('csv_results/standard_depth_results.csv')
+    print_best_only_depth_table(depth_results_df, sort_rows=True)
