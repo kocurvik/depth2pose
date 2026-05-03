@@ -612,7 +612,7 @@ def cam_to_K(cam):
         cx = cam.params[1]
         cy = cam.params[2]
 
-    elif cam.model in ["SIMPLE_RADIAL"] and cam.model.params[3] == 0.0:
+    elif cam.model in ["SIMPLE_RADIAL"] and cam.params[3] == 0.0:
         fx = cam.params[0]
         fy = cam.params[0]
         cx = cam.params[1]
