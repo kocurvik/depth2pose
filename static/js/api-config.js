@@ -1,5 +1,5 @@
 /* URL to the standard benchmark CSV file containing benchmark results. */
-export const STANDARD_TABLE_CSV_URL = 'https://raw.githubusercontent.com/kocurvik/depth2pose/main/csv_results/standard_slim_pose_results.csv';
+export const STANDARD_TABLE_CSV_URL = 'https://raw.githubusercontent.com/kocurvik/depth2pose/main/csv_results/standard_splg_slim_pose_results.csv';
 
 /* URL to the group-based benchmark CSV file with scene-level rows and group labels. */
 export const GROUP_TABLE_CSV_URL = 'https://raw.githubusercontent.com/kocurvik/depth2pose/main/csv_results/d2p_slim_pose_results.csv';
