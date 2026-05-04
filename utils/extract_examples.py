@@ -51,7 +51,7 @@ def get_worst_pairs(args):
 
     pairs = list(baseline_by_pair.keys())
     pair_ids = {pair: index for index, pair in enumerate(pairs)}
-    mde_list = get_mde_list(name, work_path)[::10]
+    mde_list = get_mde_list(name, work_path)
 
     p_errs = np.full([len(pairs), len(mde_list) + 1], np.nan)
     inliers = np.empty([len(pairs), len(mde_list) + 1], dtype=object)
