@@ -37,7 +37,7 @@ def get_worst_pairs(args):
     name = args.name
 
     gt_args = copy.copy(args)
-    gt_args.depth = 'gt'
+    gt_args.depth = 'none'
     gt_results = load_full_results(gt_args)
 
     baseline_by_pair = {}
