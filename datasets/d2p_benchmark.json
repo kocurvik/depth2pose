@@ -122,11 +122,11 @@
                 "max_pairs": 250,
                 "cameras": "shared"
             },
-            "babushka_three": {
+            "babushkas_three": {
                 "max_pairs": 250,
                 "cameras": "shared"
             },
-            "babushka_two": {
+            "babushkas_two": {
                 "max_pairs": 250,
                 "cameras": "shared"
             },
