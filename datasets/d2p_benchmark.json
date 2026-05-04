@@ -16,6 +16,10 @@
               "max_pairs": 250,
               "cameras": "shared"
             },
+            "nadina_domestica": {
+              "max_pairs": 250,
+              "cameras": "shared"
+            },
             "overgrown_statue_couple": {
               "max_pairs": 250,
               "cameras": "shared"
@@ -33,6 +37,10 @@
                 "cameras": "shared"
             },
             "stromovka_3": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "stromovka_5": {
                 "max_pairs": 250,
                 "cameras": "shared"
             },
@@ -59,7 +67,11 @@
               "max_pairs": 250,
               "cameras": "shared"
             },
-            "gothenburg_statue": {
+            "giant_chair_vltava": {
+              "max_pairs": 250,
+              "cameras": "shared"
+            },
+            "hanging_girl": {
                 "max_pairs": 250,
                 "cameras": "shared"
             },
@@ -84,6 +96,10 @@
                 "cameras": "shared"
             },
             "spejbl_hurvinek": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "yvr_huge_chair": {
                 "max_pairs": 250,
                 "cameras": "shared"
             },
@@ -114,27 +130,11 @@
                 "max_pairs": 250,
                 "cameras": "shared"
             },
-            "giant_chair_vltava": {
-              "max_pairs": 250,
-              "cameras": "shared"
-            },
-            "hanging_girl": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
             "monkey_toy_1": {
                 "max_pairs": 250,
                 "cameras": "shared"
             },
             "monkey_toy_2": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
-            "pohang_homigot": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
-            "yvr_huge_chair": {
                 "max_pairs": 250,
                 "cameras": "shared"
             }
