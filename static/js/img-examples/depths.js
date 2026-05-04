@@ -1,6 +1,8 @@
-import { escapeHtml } from '../global.js';
 import { buildInlierSet, datasetAssetUrl, decoratePairCards, formatMetric, formatSignedMetric,
 	getComparableResults, renderPairOverviewCard, shortPairName } from './shared.js';
+import { tLabel, csvValueLabel, getTitleAttr } from '../dictionary/index.js';
+import { t } from '../dictionary/dict.js';
+
 
 /* Open the depth comparison workflow for one selected image pair. */
 export function openPairDepths(pairKey, state, controller) {
@@ -8,15 +10,16 @@ export function openPairDepths(pairKey, state, controller) {
 
 	state.view = 'depths';
 	state.currentPairKey = pairKey;
+	const datasetLang = csvValueLabel('dataset', state.currentDatasetName);
 
 	if (!example) {
-		controller.renderPanelShell(
-			'Image Examples',
-			`Dataset: ${state.currentDatasetName}`,
-			'<div class="example-empty-state">Selected image pair is no longer available.</div>',
+		controller.renderPanelShell({ key: 'examples.title' }, { key: 'examples.subtitle.dataset', params: { datasetName: datasetLang } },
+			`<div class="example-empty-state" ${getTitleAttr('examples.depth.not-available')}>
+				${tLabel('examples.depth.not-available')}
+			</div>`,
 			{
 				showBackButton: true,
-				backLabel: 'Back to pairs',
+				backLabel: { key: 'examples.back-to-pairs' },
 				onBack: () => {
 					controller.renderPairListView();
 					controller.focusExamplesViewer();
@@ -34,14 +37,15 @@ export function openPairDepths(pairKey, state, controller) {
 function renderDepthDetailView(example, state, controller) {
 	const preferredResults = getComparableResults(example);
 	const overviewResult = example.selectedResult || preferredResults[0]?.result || null;
+	const datasetLang = csvValueLabel('dataset', state.currentDatasetName);
 
-	controller.renderPanelShell(
-		'Image Examples',
-		`Dataset: ${state.currentDatasetName}`,
+	controller.renderPanelShell({ key: 'examples.title' }, { key: 'examples.subtitle.dataset', params: { datasetName: datasetLang } },
 		`
 			<div class="pair-detail-header">
 				<div>
-					<p class="muted-note mb-0">Depth results are ordered by ascending <code>p_err</code>, from best to worst for this pair.</p>
+					<p class="muted-note mb-0" ${getTitleAttr('examples.depth.detail')}>
+						${tLabel('examples.depth.detail')}
+					</p>
 				</div>
 			</div>
 
@@ -55,7 +59,7 @@ function renderDepthDetailView(example, state, controller) {
 		`,
 		{
 			showBackButton: true,
-			backLabel: 'Back to pairs',
+			backLabel: { key: 'examples.back-to-pairs' },
 			onBack: () => {
 				controller.renderPairListView();
 				controller.focusExamplesViewer();
@@ -78,29 +82,42 @@ function renderDepthResultCard(item, index, dataset, example) {
 	const inlierCount = buildInlierSet(totalCount, result?.inliers).size;
 	const outlierCount = Math.max(totalCount - inlierCount - unusedCount, 0);
 
+	const solverLabel = t('table.value.solver.' + String(result?.solver ?? '—'))?.label || String(result?.solver ?? '—');
+	const mdeLabel = t('table.value.mde.' + String(mdeName ?? '—'))?.label || String(mdeName ?? '—');
+
 	return `
 		<article class="depth-result-card">
 			<div class="depth-result-meta">
 				<div class="depth-result-rank">#${index + 1}</div>
 				<div class="depth-result-text">
-					<h4 class="title is-6 mb-1">${escapeHtml(mdeName)}</h4>
+					<h4 class="title is-6 mb-1">${mdeLabel}</h4>
 					<p class="depth-result-line mb-0">
-						<span><strong>solver:</strong> ${escapeHtml(String(result?.solver ?? '—'))}</span>
-						<span><strong>p_err:</strong> ${formatMetric(result?.p_err)}</span>
+						<span ${getTitleAttr('examples.depth.card.solver', { solverName: solverLabel })}>
+							${tLabel('examples.depth.card.solver', { solverName: solverLabel })}
+						</span>
+						<span ${getTitleAttr('examples.depth.card.perr', { pErr: formatMetric(result?.p_err) })}>
+							${tLabel('examples.depth.card.perr', { pErr: formatMetric(result?.p_err) })}
+						</span>
 						${renderBaselineComparison(example, result)}
 					</p>
 				</div>
 			</div>
 
 			<div class="example-stat-pills example-stat-pills-overview">
-				<span class="example-stat-pill is-inlier">${inlierCount} inliers</span>
-				<span class="example-stat-pill is-outlier">${outlierCount} outliers</span>
-				<span class="example-stat-pill is-unused">${unusedCount} unused</span>
+				<span class="example-stat-pill is-inlier" ${getTitleAttr('examples.pairs.card.inliers', { inliers: inlierCount })}>
+					${tLabel('examples.pairs.card.inliers', { inliers: inlierCount })}
+				</span>
+				<span class="example-stat-pill is-outlier" ${getTitleAttr('examples.pairs.card.outliers', { outliers: outlierCount })}>
+					${tLabel('examples.pairs.card.outliers', { outliers: outlierCount })}
+				</span>
+				<span class="example-stat-pill is-unused" ${getTitleAttr('examples.pairs.card.unused', { unused: unusedCount })}>
+					${tLabel('examples.pairs.card.unused', { unused: unusedCount })}
+				</span>
 			</div>
 
 			<div class="example-depth-grid">
-				${depth1 ? `<figure class="example-depth-panel"><img src="${depth1}" alt="Depth map 1 for ${escapeHtml(mdeName)}"><figcaption>Depth 1 · ${escapeHtml(mdeName)}</figcaption></figure>` : '<div class="example-depth-panel example-depth-empty">Depth 1 not available</div>'}
-				${depth2 ? `<figure class="example-depth-panel"><img src="${depth2}" alt="Depth map 2 for ${escapeHtml(mdeName)}"><figcaption>Depth 2 · ${escapeHtml(mdeName)}</figcaption></figure>` : '<div class="example-depth-panel example-depth-empty">Depth 2 not available</div>'}
+				${depth1 ? `<figure class="example-depth-panel"><img src="${depth1}" alt="Depth map 1 for ${mdeLabel}"><figcaption>Depth 1 · ${mdeLabel}</figcaption></figure>` : '<div class="example-depth-panel example-depth-empty">Depth 1 not available</div>'}
+				${depth2 ? `<figure class="example-depth-panel"><img src="${depth2}" alt="Depth map 2 for ${mdeLabel}"><figcaption>Depth 2 · ${mdeLabel}</figcaption></figure>` : '<div class="example-depth-panel example-depth-empty">Depth 2 not available</div>'}
 			</div>
 		</article>
 	`;
@@ -114,8 +131,12 @@ function renderBaselineComparison(example, result) {
 	if (!Number.isFinite(baselineErr)) return '';
 
 	const comparison = Number.isFinite(pErr)
-		? ` · Δ ${formatSignedMetric(pErr - baselineErr)}`
+		? `· Δ ${formatSignedMetric(pErr - baselineErr)}`
 		: '';
 
-	return `<span><strong>baseline:</strong> ${formatMetric(baselineErr)}${comparison}</span>`;
+	return `
+		<span ${getTitleAttr('examples.depth.card.baseline', { baselineErr: formatMetric(baselineErr), comparison })}>
+			${tLabel('examples.depth.card.baseline', { baselineErr: formatMetric(baselineErr), comparison })}
+		</span>
+	`;
 }

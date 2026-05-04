@@ -1,13 +1,14 @@
+import { isGtMde } from '../global.js';
 import { IMG_EXAMPLES_BASE_URL } from '../api-config.js';
-import { escapeHtml, isGtMde } from '../global.js';
+import { tLabel, getTitleAttr } from '../dictionary/index.js';
 
-/* Build an absolute URL for one asset inside a dataset example folder. */
+/** Build an absolute URL for one asset inside a dataset example folder. */
 export function datasetAssetUrl(dataset, relativePath) {
 	return `${IMG_EXAMPLES_BASE_URL}/${dataset}/${relativePath}`;
 }
 
 
-/* Return all comparable depth results for one pair, ordered best to worst. */
+/** Return all comparable depth results for one pair, ordered best to worst. */
 export function getComparableResults(example) {
 	return Object.entries(example.details?.results || {})
 		.map(([mdeName, result]) => ({ mdeName, result }))
@@ -19,25 +20,25 @@ export function getComparableResults(example) {
 		});
 }
 
-/* Pick the best comparable depth result for one example details object. */
+/** Pick the best comparable depth result for one example details object. */
 export function getBestResult(details) {
 	return getComparableResults({ details })[0]?.result || null;
 }
 
-/* Extract a numeric pose error from a result-like object and return Infinity when missing. */
+/** Extract a numeric pose error from a result-like object and return Infinity when missing. */
 export function getPoseError(resultLike) {
 	return Number(resultLike?.p_err ?? resultLike?.best_mde_p_err ?? Number.POSITIVE_INFINITY);
 }
 
 
-/* Format a numeric metric for compact display in image example cards. */
+/** Format a numeric metric for compact display in image example cards. */
 export function formatMetric(value) {
 	const numeric = Number(value);
 	if (!Number.isFinite(numeric)) return '—';
 	return numeric.toFixed(3).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
 }
 
-/* Format a signed numeric delta for compact comparison against baseline. */
+/** Format a signed numeric delta for compact comparison against baseline. */
 export function formatSignedMetric(value) {
 	if (!Number.isFinite(value)) return '—';
 	const formatted = formatMetric(Math.abs(value));
@@ -47,23 +48,23 @@ export function formatSignedMetric(value) {
 }
 
 
-/* Normalize a pair key so it can be reused as a stable file name fragment. */
+/** Normalize a pair key so it can be reused as a stable file name fragment. */
 export function normalizePairKey(pairKey) {
 	return String(pairKey ?? '').replaceAll('\\', '_').replaceAll("'", '_');
 }
 
-/* Convert a raw pair key into a shorter human-readable display name. */
+/** Convert a raw pair key into a shorter human-readable display name. */
 export function shortPairName(pairKey) {
 	return String(pairKey || '').replaceAll('\\', ' / ').replaceAll("'", ' / ');
 }
 
 
-/* Render the selected pair overview in the same format as pair cards from the list. */
+/** Render the selected pair overview in the same format as pair cards from the list. */
 export function renderPairOverviewCard(example, overviewResult) {
 	return renderPairCard(example, { selectedResult: overviewResult, includeAction: false, extraCardClass: 'pair-detail-example-card', largeVisual: true });
 }
 
-/* Render one RGB pair card with summary statistics and correspondence overlay. */
+/** Render one RGB pair card with summary statistics and correspondence overlay. */
 export function renderPairCard(example, options = {}) {
 	const { selectedResult = example.selectedResult, includeAction = true, extraCardClass = '', largeVisual = false } = options;
 
@@ -85,25 +86,33 @@ export function renderPairCard(example, options = {}) {
 		<article class="example-card ${extraCardClass}">
 			<div class="example-card-header">
 				<div>
-					<h4 class="title is-6 mb-1">${escapeHtml(shortPairName(example.pairKey))}</h4>
-					<p class="example-meta mb-0">best p_err ${formatMetric(pErr)} · baseline ${formatMetric(baselineErr)}</p>
+					<h4 class="title is-6 mb-1">${shortPairName(example.pairKey)}</h4>
+					<p class="example-meta mb-0" ${getTitleAttr('examples.pairs.card.detail', { bestPerr: formatMetric(pErr), baseline: formatMetric(baselineErr) })}>
+						${tLabel('examples.pairs.card.detail', { bestPerr: formatMetric(pErr), baseline: formatMetric(baselineErr) })}
+					</p>
 				</div>
 			</div>
 
 			<div class="example-stat-pills">
-				<span class="example-stat-pill is-inlier">${inlierCount} inliers</span>
-				<span class="example-stat-pill is-outlier">${outlierCount} outliers</span>
-				<span class="example-stat-pill is-unused">${unusedCount} unused</span>
+				<span class="example-stat-pill is-inlier" ${getTitleAttr('examples.pairs.card.inliers', { inliers: inlierCount })}>
+					${tLabel('examples.pairs.card.inliers', { inliers: inlierCount })}
+				</span>
+				<span class="example-stat-pill is-outlier" ${getTitleAttr('examples.pairs.card.outliers', { outliers: outlierCount })}>
+					${tLabel('examples.pairs.card.outliers', { outliers: outlierCount })}
+				</span>
+				<span class="example-stat-pill is-unused" ${getTitleAttr('examples.pairs.card.unused', { unused: unusedCount })}>
+					${tLabel('examples.pairs.card.unused', { unused: unusedCount })}
+				</span>
 			</div>
 
 			<div class="example-visual-pair ${largeVisual ? 'example-visual-pair-large' : ''}" data-example='${safeExample}'>
 				<div class="example-image-panel">
-					<img class="example-rgb-image" src="${example.rgb1Url}" alt="RGB image 1 for ${escapeHtml(example.pairKey)}">
+					<img class="example-rgb-image" src="${example.rgb1Url}" alt="RGB image 1 for ${example.pairKey}">
 					<div class="example-image-label">Image 1</div>
 				</div>
 
 				<div class="example-image-panel">
-					<img class="example-rgb-image" src="${example.rgb2Url}" alt="RGB image 2 for ${escapeHtml(example.pairKey)}">
+					<img class="example-rgb-image" src="${example.rgb2Url}" alt="RGB image 2 for ${example.pairKey}">
 					<div class="example-image-label">Image 2</div>
 				</div>
 
@@ -115,19 +124,19 @@ export function renderPairCard(example, options = {}) {
 	`;
 }
 
-/* Render action buttons for one pair card. */
+/** Render action buttons for one pair card. */
 function renderPairCardActions(example) {
 	return `
 		<div class="example-card-actions">
-			<button class="button is-link is-light is-small" type="button" data-open-pair="${escapeHtml(example.pairKey)}">
-				Show depth details
+			<button class="button is-link is-light is-small" type="button" data-open-pair="${example.pairKey}" ${getTitleAttr('examples.pairs.card.showdepth')}>
+				${tLabel('examples.pairs.card.showdepth')}
 			</button>
 		</div>
 	`;
 }
 
 
-/* Decorate every currently visible RGB pair panel with correspondence overlays after images load. */
+/** Decorate every currently visible RGB pair panel with correspondence overlays after images load. */
 export function decoratePairCards(scope = document) {
 	const cards = scope.querySelectorAll('.example-visual-pair[data-example]');
 
@@ -160,7 +169,7 @@ export function decoratePairCards(scope = document) {
 	});
 }
 
-/* Draw inlier, outlier, and unused correspondence overlays for one RGB pair card. */
+/** Draw inlier, outlier, and unused correspondence overlays for one RGB pair card. */
 function drawCorrespondences(container, img1, img2, svg, data) {
 	const containerRect = container.getBoundingClientRect();
 	const rect1 = img1.getBoundingClientRect();
@@ -190,7 +199,7 @@ function drawCorrespondences(container, img1, img2, svg, data) {
 	drawKeypointGroup(svg, evenlySample(unusedIdx, 24), 'unused', data, img1, img2, rect1, rect2, containerRect, false);
 }
 
-/* Draw a sampled group of keypoints, optionally including correspondence lines. */
+/** Draw a sampled group of keypoints, optionally including correspondence lines. */
 function drawKeypointGroup(svg, indices, kind, data, img1, img2, rect1, rect2, containerRect, includeLine) {
 	indices.forEach((index) => {
 		const [x1, y1] = projectPoint(data.kp1[index], rect1, containerRect, img1);
@@ -202,7 +211,7 @@ function drawKeypointGroup(svg, indices, kind, data, img1, img2, rect1, rect2, c
 	});
 }
 
-/* Add one SVG correspondence line. */
+/** Add one SVG correspondence line. */
 function appendLine(svg, x1, y1, x2, y2, kind) {
 	const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
 	line.setAttribute('x1', x1);
@@ -213,7 +222,7 @@ function appendLine(svg, x1, y1, x2, y2, kind) {
 	svg.appendChild(line);
 }
 
-/* Add one SVG keypoint circle. */
+/** Add one SVG keypoint circle. */
 function appendCircle(svg, x, y, kind) {
 	const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
 	circle.setAttribute('cx', x);
@@ -223,7 +232,7 @@ function appendCircle(svg, x, y, kind) {
 	svg.appendChild(circle);
 }
 
-/* Project one keypoint from image coordinates into the overlay coordinate system. */
+/** Project one keypoint from image coordinates into the overlay coordinate system. */
 function projectPoint(point, imageRect, containerRect, imageEl) {
 	const [xRaw, yRaw] = point || [0, 0];
 	const x = imageRect.left - containerRect.left + (Number(xRaw) / imageEl.naturalWidth) * imageRect.width;
@@ -231,7 +240,7 @@ function projectPoint(point, imageRect, containerRect, imageEl) {
 	return [x.toFixed(2), y.toFixed(2)];
 }
 
-/* Evenly sample a long list of indices to keep overlays readable. */
+/** Evenly sample a long list of indices to keep overlays readable. */
 function evenlySample(items, maxCount) {
 	if (items.length <= maxCount) return items;
 
@@ -246,7 +255,7 @@ function evenlySample(items, maxCount) {
 }
 
 
-/* Normalize inlier representation into a set of active keypoint indices. */
+/** Normalize inlier representation into a set of active keypoint indices. */
 export function buildInlierSet(total, inliers) {
 	if (!Array.isArray(inliers)) return new Set();
 

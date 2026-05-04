@@ -1,29 +1,22 @@
+import { attachCardToggle, isGtMde, isCalibMde, getMdeFamilyKey, isRoSolver, baseSolverName, normalizeForSearch, sortByName, isNumericValue } from "./global.js";
 import { STANDARD_TABLE_SOURCES, GROUP_TABLE_SOURCES } from "./api-config.js";
-import { tableDictByKey } from "./dictionary/table.js";
-import { attachCardToggle, isGtMde, isCalibMde, getMdeFamilyKey, isRoSolver, baseSolverName, escapeHtml, normalizeForSearch, sortByName, isNumericValue } from "./global.js";
+import { tLabel, tDesc, csvValueLabel, csvValueDesc, setOptionTitle, getTitleAttr } from "./dictionary/index.js";
+import { t } from "./dictionary/dict.js";
 
 const BENCHMARK_CONFIG = {
 	standard: {
-		label: 'Standard benchmark',
 		sources: STANDARD_TABLE_SOURCES,
-		meanLabel: 'Mean over datasets',
-		datasetLabel: 'Dataset'
 	},
 	group: {
-		label: 'Group-based benchmark',
 		sources: GROUP_TABLE_SOURCES,
-		meanLabel: 'Mean over all scenes',
-		datasetLabel: 'Group / scene'
 	}
 };
 
 const MODE_CONFIG = {
 	calibrated: {
-		label: 'With calibration',
 		solvers: new Set(['calib', 'calib_shift', 'baseline_calib'])
 	},
 	uncalibrated: {
-		label: 'Without calibration',
 		solvers: new Set(['sf', 'sf_shift','vf', 'vf_shift','mdecalib', 'mdecalib_shift','baseline_sf', 'baseline_vf'])
 	}
 };
@@ -34,21 +27,18 @@ const state = {
 	rawRows: [],
 	columns: [],
 	numericColumns: new Set(),
+	itersOptions: [],
 	datasets: [],
 	groups: [],
-	itersOptions: [],
 	currentDataset: 'mean',
 	currentIters: 'all',
-	search: '',
 	mode: 'calibrated',
 	roVariant: 'non_ro',
 	hideGtOnly: true,
 	bestMdeOnly: false,
 	sortKey: 'pose_mAA_10',
 	sortDir: 'desc',
-	page: 1,
-	pageSize: 25,
-	visibleRows: []
+	search: '', page: 1, pageSize: 25, visibleRows: []
 };
 
 const els = {
@@ -74,11 +64,11 @@ const els = {
 };
 
 
-/* Initialize the benchmark viewer */
+/** Initialize the benchmark viewer */
 export async function initResultsTable() {
-	attachCardToggle('controlsCard', 'controlsToggle', 'controlsContent', 'Show controls', 'Hide controls');
-	attachCardToggle('tableCard', 'tableToggle', 'tableContent', 'Show table', 'Hide table');
-	attachCardToggle('resultsCard', 'resultsToggle', 'resultsContent', 'Show results', 'Hide results');
+	attachCardToggle('controlsCard', 'controlsToggle', 'controlsContent', { key: 'controls.toggle.show' }, { key: 'controls.toggle.hide' });
+	attachCardToggle('tableCard', 'tableToggle', 'tableContent', { key: 'table.toggle.show' }, { key: 'table.toggle.hide' });
+	attachCardToggle('resultsCard', 'resultsToggle', 'resultsContent', { key: 'results.toggle.show' }, { key: 'results.toggle.hide' });
 
 	try {
 		await loadData();
@@ -88,12 +78,12 @@ export async function initResultsTable() {
 	}
 	catch (error) {
 		console.error(error);
-		setTableErrorState('Failed to load CSV results.');
+		setTableErrorState({ key: 'table.loadFail' });
 	}
 }
 
 
-/* Load CSV data from the specified URL, parse it, and populate the state with columns, rows, and options for controls. */
+/** Load CSV data from the specified URL, parse it, and populate the state with columns, rows, and options for controls. */
 async function loadData() {
 	let csvText;
 
@@ -101,6 +91,7 @@ async function loadData() {
 		const sources = BENCHMARK_CONFIG[state.benchmarkMode].sources;
 		const url = sources[state.currentSource]?.url;
 		if (!url) throw new Error(`Unknown source: ${state.currentSource}`);
+		
 		const response = await fetch(url);
 		if (!response.ok) throw new Error(`Failed to load CSV from ${url}: ${response.status}`);
 		
@@ -116,13 +107,11 @@ async function loadData() {
 	state.rawRows = rows;
 	state.numericColumns = new Set(columns.filter((column) => rows.every((row) => typeof row[column] === 'number' || row[column] === '')));
 	state.datasets = [...new Set(rows.map((row) => String(row.dataset)).filter(Boolean))].sort(sortByName);
-	state.groups = columns.includes('group')
-		? [...new Set(rows.map((row) => String(row.group)).filter(Boolean))].sort(sortByName)
-		: [];
+	state.groups = columns.includes('group') ? [...new Set(rows.map((row) => String(row.group)).filter(Boolean))].sort(sortByName) : [];
 	state.itersOptions = [...new Set(rows.map((row) => String(row.iters)))].sort((a, b) => Number(a) - Number(b));
 }
 
-/* Parses a CSV string into columns and rows. */
+/** Parses a CSV string into columns and rows. */
 function parseCsv(text) {
 	const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(line => line.trim().length);
 	if (!lines.length) return { columns: [], rows: [] };
@@ -142,7 +131,7 @@ function parseCsv(text) {
 	return { columns, rows };
 }
 
-/* Parses a single line of CSV, handling quoted values and commas. */
+/** Parses a single line of CSV, handling quoted values and commas. */
 function parseCsvLine(line) {
 	const out = [];
 	let current = '';
@@ -171,62 +160,77 @@ function parseCsvLine(line) {
 }
 
 
-/* Populate the dataset and iters dropdowns based on the loaded data, and set initial values for all controls. */
+/** Populate the dataset and iters dropdowns based on the loaded data, and set initial values for all controls. */
 function populateControls() {
-	if (els.datasetLabel) els.datasetLabel.textContent = BENCHMARK_CONFIG[state.benchmarkMode].datasetLabel;
-	
+	const bm = state.benchmarkMode;
+
+	// Dataset label
+	if (els.datasetLabel) {
+		const key = 'controls.label.dataset.' + bm;
+		els.datasetLabel.innerHTML = tLabel(key);
+		setOptionTitle(els.datasetLabel, tDesc(key));
+	}
+
+	// Benchmark mode select
 	if (els.benchmarkModeSelect) {
 		els.benchmarkModeSelect.innerHTML = '';
-		Object.entries(BENCHMARK_CONFIG).forEach(([value, config]) => {
+		for (const mode of Object.keys(BENCHMARK_CONFIG)) {
+			const key = `controls.select.benchmark.${mode}`;
 			const option = document.createElement('option');
-
-			option.value = value;
-			option.textContent = config.label;
+			
+			option.value = mode;
+			option.textContent = tLabel(key);
+			setOptionTitle(option, tDesc(key));
 			els.benchmarkModeSelect.appendChild(option);
-		});
+		}
 		els.benchmarkModeSelect.value = state.benchmarkMode;
 	}
 
 	populateSourceSelect();
 	populateDatasetSelect();
 
-	els.itersSelect.innerHTML = '';
-	[
-		{ value: 'all', label: 'All' }, ...state.itersOptions.map((iters) => ({ value: iters, label: iters }))
-	].forEach(({ value, label }) => {
-		const option = document.createElement('option');
+	// Iters select
+	const allKey = 'controls.select.iters.all';
+	const allOpt = document.createElement('option');
+	allOpt.value = 'all';
+	allOpt.textContent = tLabel(allKey);
+	setOptionTitle(allOpt, tDesc(allKey));
 
-		option.value = value;
-		option.textContent = label;
+	els.itersSelect.innerHTML = '';
+	els.itersSelect.appendChild(allOpt);
+	
+	state.itersOptions.forEach((iters) => {
+		const option = document.createElement('option');
+		option.value = iters;
+		option.textContent = iters;
 		els.itersSelect.appendChild(option);
 	});
 
+	// Evaluation case select
 	els.evaluationCaseSelect.innerHTML = '';
-	[
-		{ value: 'all', label: 'All' },
-		{ value: 'calibrated', label: 'With calibration' },
-		{ value: 'uncalibrated', label: 'Without calibration' }
-	].forEach(({ value, label }) => {
+	for (const val of ['all', 'calibrated', 'uncalibrated']) {
+		const key = `controls.select.evaluationCase.${val}`;
 		const option = document.createElement('option');
-
-		option.value = value;
-		option.textContent = label;
+		
+		option.value = val;
+		option.textContent = tLabel(key);
+		setOptionTitle(option, tDesc(key));
 		els.evaluationCaseSelect.appendChild(option);
-	});
+	}
 
+	// Solver variant select
 	els.solverVariantSelect.innerHTML = '';
-	[
-		{ value: 'all', label: 'All' },
-		{ value: 'non_ro', label: 'Standard RANSAC' },
-		{ value: 'ro', label: 'Reprojection-only RANSAC (_ro)' }
-	].forEach(({ value, label }) => {
+	for (const val of ['all', 'non_ro', 'ro']) {
+		const key = `controls.select.solverVariant.${val}`;
 		const option = document.createElement('option');
-
-		option.value = value;
-		option.textContent = label;
+		
+		option.value = val;
+		option.textContent = tLabel(key);
+		setOptionTitle(option, tDesc(key));
 		els.solverVariantSelect.appendChild(option);
-	});
+	}
 
+	// Set current values
 	els.datasetSelect.value = state.currentDataset;
 	els.itersSelect.value = state.currentIters;
 	els.evaluationCaseSelect.value = state.mode;
@@ -236,73 +240,84 @@ function populateControls() {
 	els.bestMdeOnly.checked = state.bestMdeOnly;
 }
 
-/* Populate the source dropdown based on the available sources for the current benchmark mode. */
+/** Populate the source dropdown based on the available sources for the current benchmark mode. */
 function populateSourceSelect() {
 	if (!els.sourceSelect) return;
 
 	const sources = BENCHMARK_CONFIG[state.benchmarkMode].sources;
 	const sourceEntries = Object.entries(sources);
-
 	els.sourceSelect.innerHTML = '';
+
 	sourceEntries.forEach(([value, config]) => {
 		const option = document.createElement('option');
-
+		
 		option.value = value;
-		option.textContent = config.label;
+		option.textContent = tLabel(config.key);
+		setOptionTitle(option, tDesc(config.key));
 		els.sourceSelect.appendChild(option);
 	});
+
 	els.sourceSelect.value = state.currentSource;
 }
 
-/* Populate the dataset/group/scene dropdown for the selected benchmark source. */
+/** Populate the dataset/group/scene dropdown for the selected benchmark source. */
 function populateDatasetSelect() {
+	const bm = state.benchmarkMode;
 	els.datasetSelect.innerHTML = '';
 
-	appendDatasetOption('mean', BENCHMARK_CONFIG[state.benchmarkMode].meanLabel);
+	// Mean option
+	const meanKey = `controls.select.dataset.mean.${bm}`;
+	appendDatasetOption('mean', tLabel(meanKey), els.datasetSelect, tDesc(meanKey));
 
-	if (state.benchmarkMode !== 'group') {
-		state.datasets.forEach((dataset) => appendDatasetOption(dataset, dataset));
+	if (bm !== 'group') {
+		state.datasets.forEach((ds) => {
+			appendDatasetOption(ds, csvValueLabel('dataset', ds), els.datasetSelect, csvValueDesc('dataset', ds));
+		});
 		return;
 	}
 
+	const prefix = tLabel('controls.select.dataset.meanOverGroupPrefix');
 	appendDatasetOptGroup(
-		'Mean over group',
+		`${prefix}…`,
 		state.groups.map((group) => ({
 			value: `group:${group}`,
-			label: `Mean over ${group}`
+			label: `${prefix} ${csvValueLabel('group', group)}`,
+			description: csvValueDesc('group', group)
 		}))
 	);
 
 	appendDatasetOptGroup(
 		'Scenes',
-		state.datasets.map((dataset) => ({
-			value: `scene:${dataset}`,
-			label: dataset
+		state.datasets.map((ds) => ({
+			value: `scene:${ds}`,
+			label: csvValueLabel('scene', ds),
+			description: csvValueDesc('scene', ds)
 		}))
 	);
 }
 
-/* Append one option to the dataset selector. */
-function appendDatasetOption(value, label, parent = els.datasetSelect) {
+/** Append one option to the dataset selector. */
+function appendDatasetOption(value, label, parent = els.datasetSelect, description = null) {
 	const option = document.createElement('option');
-
 	option.value = value;
 	option.textContent = label;
+	
+	setOptionTitle(option, description);
 	parent.appendChild(option);
 }
 
-/* Append a labelled option group when it has at least one option. */
+/** Append a labelled option group when it has at least one option. */
 function appendDatasetOptGroup(label, options) {
 	if (!options.length) return;
 
 	const group = document.createElement('optgroup');
 	group.label = label;
 
-	options.forEach(({ value, label: optionLabel }) => appendDatasetOption(value, optionLabel, group));
+	options.forEach(({ value, label: optionLabel, description }) => appendDatasetOption(value, optionLabel, group, description));
 	els.datasetSelect.appendChild(group);
 }
 
-/* Bind event listeners to all controls, updating the state and re-rendering the table whenever a control value changes. */
+/** Bind event listeners to all controls, updating the state and re-rendering the table whenever a control value changes. */
 function bindControls() {
 	if (els.benchmarkModeSelect) {
 		els.benchmarkModeSelect.addEventListener("change", async (event) => {
@@ -378,7 +393,7 @@ function bindControls() {
 }
 
 
-/* Switch between standard and group-based CSV sources. */
+/** Switch between standard and group-based CSV sources. */
 async function switchBenchmarkMode(mode) {
 	if (!BENCHMARK_CONFIG[mode] || mode === state.benchmarkMode) return;
 
@@ -388,7 +403,8 @@ async function switchBenchmarkMode(mode) {
 	state.currentIters = 'all';
 	state.page = 1;
 
-	setTableLoadingState(`Loading ${BENCHMARK_CONFIG[mode].label}…`);
+	const bmLabel = tLabel(`controls.select.benchmark.${mode}`);
+	setTableLoadingState({ key: 'table.loading', params: { option: bmLabel } });
 
 	try {
 		await loadData();
@@ -397,11 +413,11 @@ async function switchBenchmarkMode(mode) {
 	}
 	catch (error) {
 		console.error(error);
-		setTableErrorState('Failed to load CSV results.');
+		setTableErrorState({ key: 'table.loadFail' });
 	}
 }
 
-/* Switch the CSV source within the current benchmark mode. */
+/** Switch the CSV source within the current benchmark mode. */
 async function switchSource(sourceKey) {
 	const sources = BENCHMARK_CONFIG[state.benchmarkMode].sources;
 	if (!sources[sourceKey] || sourceKey === state.currentSource) return;
@@ -411,7 +427,7 @@ async function switchSource(sourceKey) {
 	state.currentIters = 'all';
 	state.page = 1;
 
-	setTableLoadingState(`Loading ${sources[sourceKey].label}…`);
+	setTableLoadingState({ key: 'table.loading', params: { option: sources[sourceKey].label } });
 
 	try {
 		await loadData();
@@ -420,12 +436,12 @@ async function switchSource(sourceKey) {
 	}
 	catch (error) {
 		console.error(error);
-		setTableErrorState('Failed to load CSV results.');
+		setTableErrorState({ key: 'table.loadFail' });
 	}
 }
 
 
-/* Main render function that processes the rows based on current state, renders the table head, body, and summary. */
+/** Main render function that processes the rows based on current state, renders the table head, body, and summary. */
 function render() {
 	const tableRows = () => {
 		let rows = [...state.rawRows];
@@ -448,7 +464,7 @@ function render() {
 }
 
 
-/* Filter rows based on the selected mode, which determines which solvers to include. */
+/** Filter rows based on the selected mode, which determines which solvers to include. */
 function applyMode(rows) {
 	const cfg = MODE_CONFIG[state.mode];
 
@@ -462,7 +478,7 @@ function applyMode(rows) {
 	});
 }
 
-/* Filter rows based on the selected 'ro' variant, either including only 'ro' solvers or excluding them. */
+/** Filter rows based on the selected 'ro' variant, either including only 'ro' solvers or excluding them. */
 function applyRoVariant(rows) {
 	if (state.roVariant === 'all') return rows;
 	return rows.filter((row) => {
@@ -471,14 +487,16 @@ function applyRoVariant(rows) {
 	});
 }
 
-/* Filter rows based on the selected number of iterations, or return all rows if 'all' is selected. */
+/** Filter rows based on the selected number of iterations, or return all rows if 'all' is selected. */
 function applyIters(rows) {
 	if (state.currentIters === 'all') return rows;
 	return rows.filter((row) => String(row.iters) === String(state.currentIters));
 }
 
-/* Apply the selected dataset/group/scene scope, aggregating when a mean option is selected. */
+/** Apply the selected dataset/group/scene scope, aggregating when a mean option is selected. */
 function applyDatasetOrMean(rows) {
+	const prefix = tLabel('controls.select.dataset.meanOverGroupPrefix');
+
 	if (state.benchmarkMode !== 'group') {
 		if (state.currentDataset !== 'mean') {
 			return rows.filter((row) => String(row.dataset) === state.currentDataset);
@@ -496,8 +514,7 @@ function applyDatasetOrMean(rows) {
 		const groupRows = rows.filter((row) => String(row.group) === groupName);
 
 		return aggregateMeanRows(groupRows, ['dataset', 'group'], {
-			dataset: `Mean over ${groupName}`,
-			group: groupName
+			dataset: `${prefix} ${csvValueLabel('group', groupName)}`, group: groupName
 		});
 	}
 
@@ -509,12 +526,10 @@ function applyDatasetOrMean(rows) {
 	return rows.filter((row) => String(row.dataset) === state.currentDataset);
 }
 
-/* Aggregate numeric metrics over a selected scope while preserving experiment identity columns. */
+/** Aggregate numeric metrics over a selected scope while preserving experiment identity columns. */
 function aggregateMeanRows(rows, excludedGroupColumns, baseOverrides = {}) {
 	const numericColumns = state.columns.filter((column) => state.numericColumns.has(column) && column !== 'iters');
-	const groupColumns = state.columns.filter((column) => (
-		!numericColumns.includes(column) && !excludedGroupColumns.includes(column)
-	));
+	const groupColumns = state.columns.filter((column) => (!numericColumns.includes(column) && !excludedGroupColumns.includes(column)));
 	const groups = new Map();
 
 	for (const row of rows) {
@@ -552,14 +567,14 @@ function aggregateMeanRows(rows, excludedGroupColumns, baseOverrides = {}) {
 	return aggregated;
 }
 
-/* Filter rows based on the search query, checking if any of the specified columns contain the query string. */
+/** Filter rows based on the search query, checking if any of the specified columns contain the query string. */
 function applySearch(rows) {
 	const query = state.search.trim().toLowerCase();
 	if (!query) return rows;
 	return rows.filter((row) => state.columns.some((column) => normalizeForSearch(row[column]).includes(query)));
 }
 
-/* Filter rows to include only the best MDE for each MDE family, based on pose_mAA_10, mean_inliers, and mean_mde_runtime metrics. */
+/** Filter rows to include only the best MDE for each MDE family, based on pose_mAA_10, mean_inliers, and mean_mde_runtime metrics. */
 function applyBestMdeOnly(rows) {
 	if (!state.bestMdeOnly) return rows;
 
@@ -577,7 +592,7 @@ function applyBestMdeOnly(rows) {
 	return [...bestRows.values()];
 }
 
-/* Sort rows based on the current sort key and direction, handling both numeric and string values appropriately. */
+/** Sort rows based on the current sort key and direction, handling both numeric and string values appropriately. */
 function sortRows(rows) {
 	const direction = state.sortDir === 'asc' ? 1 : (state.sortDir === 'desc' ? -1 : 0);
 
@@ -598,7 +613,7 @@ function sortRows(rows) {
 }
 
 
-/* Determine if a candidate row is a better choice for the best MDE than the current row, based on pose_mAA_10, mean_inliers, and mean_mde_runtime. */
+/** Determine if a candidate row is a better choice for the best MDE than the current row, based on pose_mAA_10, mean_inliers, and mean_mde_runtime. */
 function isBetterBestMdeCandidate(candidate, current) {
 	const candidateScore = Number(candidate.pose_mAA_10 ?? Number.NEGATIVE_INFINITY);
 	const currentScore = Number(current.pose_mAA_10 ?? Number.NEGATIVE_INFINITY);
@@ -621,20 +636,22 @@ function isBetterBestMdeCandidate(candidate, current) {
 }
 
 
-/* Render the table head with sortable column headers, indicating the current sort column and direction. */
+/** Render the table head with sortable column headers, indicating the current sort column and direction. */
 function renderTableHead() {
-	const visibleColumns = state.columns.filter((column) => getTableDict(column)?.visible);
+	const visibleColumns = state.columns.filter((column) => isColumnVisible(column));
 
 	els.resultsHead.innerHTML = `
 		<tr>
 			${visibleColumns.map((column) => {
 				const isActive = state.sortKey === column;
 				const icon = isActive ? (state.sortDir === 'asc' ? 'pi-sort-up' : 'pi-sort-down') : 'pi-sort-alt';
-
+				const dict = t(`table.column.${column}`);
+				const titleAttr = getTitleAttr(`table.column.${column}`);
+				
 				return `
 					<th>
-						<button class="sort-button ${isActive ? 'is-active' : ''}" type="button" data-column="${column}">
-							<span>${escapeHtml(getTableDict(column)?.label || column)}</span>
+						<button class="sort-button ${isActive ? 'is-active' : ''}" type="button" data-column="${column}" ${titleAttr}>
+							<span>${dict?.label || column}</span>
 							<i class="pi ${icon}"></i>
 						</button>
 					</th>
@@ -665,7 +682,7 @@ function renderTableHead() {
 	});
 }
 
-/* Render the table body with the current page of rows, applying special styling for top-ranked pose_mAA_10 values. */
+/** Render the table body with the current page of rows, applying special styling for top-ranked pose_mAA_10 values. */
 function renderTable(rows) {
 	const totalRows = rows.length;
 	const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
@@ -675,7 +692,8 @@ function renderTable(rows) {
 		state.visibleRows = [];
 		els.resultsBody.innerHTML = '';
 		els.emptyState.hidden = false;
-		els.emptyState.textContent = 'No rows match the current filters.';
+		els.emptyState.textContent = tLabel('table.empty');
+		setOptionTitle(els.emptyState, tDesc('table.empty'));
 		els.paginationBar.hidden = true;
 		return;
 	}
@@ -687,66 +705,69 @@ function renderTable(rows) {
 
 	els.emptyState.hidden = true;
 	els.paginationBar.hidden = false;
-	els.paginationInfo.textContent = `Showing ${start + 1}–${Math.min(start + state.pageSize, totalRows)} of ${totalRows} rows · page ${state.page} / ${totalPages}`;
+	els.paginationInfo.textContent = tLabel('pagination.info', {
+		from: start + 1, to: Math.min(start + state.pageSize, totalRows), total: totalRows, page: state.page, totalPages: totalPages
+	});
+	setOptionTitle(els.paginationInfo, tDesc('pagination.info'));
 	els.prevPageBtn.disabled = state.page <= 1;
 	els.nextPageBtn.disabled = state.page >= totalPages;
 
-	els.resultsBody.innerHTML = pageRows.map((row, rowIndex) => {
+	els.resultsBody.innerHTML = pageRows.map((row) => {
 		const rowId = getRowId(row);
 		const topRank = topRanks.get(rowId);
-		const visibleColumns = state.columns.filter((column) => getTableDict(column)?.visible);
+		const visibleColumns = state.columns.filter((column) => isColumnVisible(column));
 		
 		return `
 			<tr class="benchmark-row">
 				${visibleColumns.map((column) => {
-					const classes = [];
-					if (column === 'pose_mAA_10' && topRank) classes.push(`pose-top-${topRank}`);
-					const value = getTableDict(column)?.formatValue(row[column]) ?? row[column];
-					const safeValue = escapeHtml(value);
-					return `<td class="${classes.join(' ')}" title="${safeValue}">${safeValue}</td>`;
+					const classes = ((column === 'pose_mAA_10' && topRank) ? [`pose-top-${topRank}`] : []);
+					const dict = csvValueLabel(column, row[column]);
+					const titleAttr = getTitleAttr(csvValueDesc(column, row[column]));
+					
+					return `<td class="${classes.join(' ')}" ${titleAttr}>${dict}</td>`;
 				}).join('')}
 			</tr>
 		`;
 	}).join('');
 }
 
-/* Render the summary section with statistics about the current view, including the best pose_mAA_10 value and counts of datasets, estimators, and solvers. */
+
+/** Render the summary section with statistics about the current view, including the best pose_mAA_10 value and counts of datasets, estimators, and solvers. */
 function renderSummary(rows) {
+	const bm = state.benchmarkMode;
 	const datasetsShown = new Set(rows.map((row) => String(row.dataset))).size;
-	const datasetSummaryLabel = state.benchmarkMode === 'group' ? 'Scopes in view' : 'Datasets in view';
 	const estimators = new Set(rows.map((row) => String(row.mde))).size;
 	const solvers = new Set(rows.map((row) => String(row.solver))).size;
+
 	const stats = [
-		['Visible rows', rows.length],
-		[datasetSummaryLabel, datasetsShown],
-		['Estimators', estimators],
-		['Solvers', solvers]
+		['summary.visibleRows', rows.length],
+		...(bm === "standard" ? [['summary.datasetsInView', datasetsShown]] : []),
+		['summary.estimators', estimators],
+		['summary.solvers', solvers]
 	];
 
-	els.summaryGrid.innerHTML = stats.map(([label, value]) => `
-		<div class="summary-box">
-			<div class="label-title">${escapeHtml(label)}</div>
-			<div class="value">${escapeHtml(value)}</div>
-		</div>
-	`).join('');
+	els.summaryGrid.innerHTML = stats.map(([key, value]) => {
+		return `
+			<div class="summary-box" ${getTitleAttr(key)}>
+				<div class="label-title">${tLabel(key)}</div>
+				<div class="value">${value}</div>
+			</div>
+		`;
+	}).join('');
 }
 
 
-/* Get the current table dictionary based on the selected benchmark mode, used for accessing column definitions. */
-function getTableDict(columnKey) {
-	return tableDictByKey(els.benchmarkModeSelect.value).get(columnKey);
-}
-
-/* Generate a unique ID for a row based on the values of all columns, used for ranking purposes. */
+/** Generate a unique ID for a row based on the values of all columns, used for ranking purposes. */
 function getRowId(row) {
 	return state.columns.map((column) => `${column}:${String(row[column] ?? '')}`).join('|');
 }
 
-/* Determine the top 3 rows based on the 'pose_mAA_10' metric and return a map of row IDs to their rank (1, 2, or 3). */
+/** Determine the top 3 rows based on the 'pose_mAA_10' metric and return a map of row IDs to their rank (1, 2, or 3). */
 function getTopPoseRanks(rows) {
 	if (!state.columns.includes('pose_mAA_10')) return new Map();
 	const ranked = [...rows].sort((a, b) => (b.pose_mAA_10 ?? -Infinity) - (a.pose_mAA_10 ?? -Infinity));
 	const rankMap = new Map();
+	
 	[1, 2, 3].forEach((rank, index) => {
 		const row = ranked[index];
 		if (row) rankMap.set(getRowId(row), rank);
@@ -754,18 +775,26 @@ function getTopPoseRanks(rows) {
 	return rankMap;
 }
 
-/* Render a compact loading message while switching table CSV sources. */
-function setTableLoadingState(message) {
+/** Check if a column is visible based on the current benchmark mode. */
+function isColumnVisible(column) {
+	return state.benchmarkMode === 'standard' && column === 'group' ? false : true;
+}
+
+/** Render a compact loading message while switching table CSV sources. */
+function setTableLoadingState(lang) {
 	els.resultsHead.innerHTML = '';
 	els.resultsBody.innerHTML = '';
 	els.emptyState.hidden = false;
-	els.emptyState.textContent = message;
 	els.paginationBar.hidden = true;
+	els.emptyState.textContent = tLabel(lang.key, lang.params);
+	setOptionTitle(els.emptyState, tDesc(lang.key, lang.params));
+	
 }
 
-/* Render a compact error message for CSV load failures. */
-function setTableErrorState(message) {
+/** Render a compact error message for CSV load failures. */
+function setTableErrorState(lang) {
 	els.emptyState.hidden = false;
-	els.emptyState.textContent = message;
 	els.paginationBar.hidden = true;
+	els.emptyState.textContent = tLabel(lang.key, lang.params);
+	setOptionTitle(els.emptyState, tDesc(lang.key, lang.params));
 }

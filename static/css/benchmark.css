@@ -624,6 +624,23 @@
 }
 
 
+/* Dictionary tooltip */
+
+.dict-tooltip {
+	display: inline;
+	cursor: help;
+	color: #9ca3af;
+	font-weight: 400;
+	font-size: 0.85em;
+	margin-left: 0.15em;
+	vertical-align: baseline;
+}
+
+.dict-tooltip:hover {
+	color: #6b7280;
+}
+
+
 /* Responsive styles */
 
 @media (min-width: 1101px) {

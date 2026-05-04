@@ -1,20 +1,20 @@
 import { IMG_EXAMPLES_CONTENTS_URL } from '../api-config.js';
-import { fetchJson, sortByName, escapeHtml } from '../global.js';
-
+import { fetchJson, sortByName } from '../global.js';
 import { datasetAssetUrl, getBestResult, normalizePairKey } from './shared.js';
+import { tLabel, csvValue, csvValueLabel, getTitleAttr } from '../dictionary/index.js';
 
 const DATASET_MANIFEST_CACHE = new Map();
 const DATASET_EXAMPLES_CACHE = new Map();
 
 
-/* List dataset folders directly from benchmark/d2p_examples and render the chooser. */
+/** List dataset folders directly from benchmark/d2p_examples and render the chooser. */
 export async function loadAvailableDatasets(state, controller) {
 	resetDatasetState(state);
 
-	controller.renderPanelShell(
-		'Image Examples',
-		'Choose a dataset to browse its all example image pairs.',
-		'<div class="example-loading">Loading example datasets…</div>'
+	controller.renderPanelShell({ key: 'examples.title' }, { key: 'examples.subtitle.choose-dataset' },
+		`<div class="example-loading" ${getTitleAttr('examples.loading.datasets')}>
+			${tLabel('examples.loading.datasets')}
+		</div>`
 	);
 
 	try {
@@ -22,10 +22,10 @@ export async function loadAvailableDatasets(state, controller) {
 		state.availableDatasets = datasets;
 
 		if (!datasets.length) {
-			controller.renderPanelShell(
-				'Image Examples',
-				'No dataset folders were found in d2p_examples.',
-				'<div class="example-empty-state">No example datasets are currently available.</div>'
+			controller.renderPanelShell({ key: 'examples.title' }, { key: 'examples.subtitle.choose-dataset' },
+				`<div class="example-empty-state" ${getTitleAttr('examples.empty.datasets')}>
+					${tLabel('examples.empty.datasets')}
+				</div>`
 			);
 			return;
 		}
@@ -35,15 +35,15 @@ export async function loadAvailableDatasets(state, controller) {
 	}
 	catch (error) {
 		console.error(error);
-		controller.renderPanelShell(
-			'Image Examples',
-			'Example datasets are loaded independently from the benchmark table.',
-			'<div class="example-empty-state">Failed to list dataset folders from d2p_examples.</div>'
+		controller.renderPanelShell({ key: 'examples.title' }, { key: 'examples.subtitle.choose-dataset' },
+			`<div class="example-empty-state" ${getTitleAttr('examples.failed.datasets')}>
+				${tLabel('examples.failed.datasets')}
+			</div>`
 		);
 	}
 }
 
-/* Load all detailed examples for one dataset and cache the parsed example objects. */
+/** Load all detailed examples for one dataset and cache the parsed example objects. */
 export async function loadDetailedExamples(dataset) {
 	if (DATASET_EXAMPLES_CACHE.has(dataset)) return DATASET_EXAMPLES_CACHE.get(dataset);
 
@@ -68,7 +68,7 @@ export async function loadDetailedExamples(dataset) {
 	return promise;
 }
 
-/* Return folder names from the d2p_examples directory. */
+/** Return folder names from the d2p_examples directory. */
 async function listExampleDatasets() {
 	const entries = await fetchJson(IMG_EXAMPLES_CONTENTS_URL);
 	
@@ -79,7 +79,7 @@ async function listExampleDatasets() {
 		.sort(sortByName);
 }
 
-/* Load lightweight manifest summaries for every listed dataset folder. */
+/** Load lightweight manifest summaries for every listed dataset folder. */
 async function loadAllDatasetSummaries(datasets) {
 	const summaries = await Promise.all(datasets.map(async (datasetName) => {
 		try {
@@ -96,7 +96,7 @@ async function loadAllDatasetSummaries(datasets) {
 	return summaries.sort((a, b) => sortByName(a.dataset, b.dataset));
 }
 
-/* Load the dataset manifest for one dataset and cache the result. */
+/** Load the dataset manifest for one dataset and cache the result. */
 async function loadDatasetManifest(dataset) {
 	if (DATASET_MANIFEST_CACHE.has(dataset)) return DATASET_MANIFEST_CACHE.get(dataset);
 
@@ -106,18 +106,20 @@ async function loadDatasetManifest(dataset) {
 }
 
 
-/* Open the pair-list workflow for one concrete dataset. */
+/** Open the pair-list workflow for one concrete dataset. */
 export async function openDatasetPairList(datasetName, state, controller) {
 	state.currentDatasetName = datasetName;
 	state.view = 'pairs';
 
-	controller.renderPanelShell(
-		'Image Examples',
-		`Dataset: ${datasetName}`,
-		`<div class="example-loading">Loading image pairs for ${escapeHtml(datasetName)}…</div>`,
+	const datasetLang = csvValueLabel('dataset', datasetName);
+
+	controller.renderPanelShell({ key: 'examples.title' }, { key: 'examples.subtitle.dataset', params: { datasetName: datasetLang } },
+		`<div class="example-loading" ${getTitleAttr('examples.loading.pairs', { datasetName: datasetLang })}>
+			${tLabel('examples.loading.pairs', { datasetName: datasetLang })}
+		</div>`,
 		{
 			showBackButton: true,
-			backLabel: 'Back to datasets',
+			backLabel: { key: 'examples.back-to-datasets' },
 			onBack: () => {
 				renderDatasetChooserView(state, controller);
 				controller.focusExamplesViewer();
@@ -131,13 +133,13 @@ export async function openDatasetPairList(datasetName, state, controller) {
 		state.currentExamples = examples;
 
 		if (!examples.length) {
-			controller.renderPanelShell(
-				'Image Examples',
-				`Dataset: ${datasetName}`,
-				`<div class="example-empty-state">No image pairs are currently available for dataset ${escapeHtml(datasetName)}.</div>`,
+			controller.renderPanelShell({ key: 'examples.title' }, { key: 'examples.subtitle.dataset', params: { datasetName: datasetLang } },
+				`<div class="example-empty-state" ${getTitleAttr('examples.empty.pairs', { datasetName: datasetLang })}>
+					${tLabel('examples.empty.pairs', { datasetName: datasetLang })}
+				</div>`,
 				{
 					showBackButton: true,
-					backLabel: 'Back to datasets',
+					backLabel: { key: 'examples.back-to-datasets' },
 					onBack: () => {
 						renderDatasetChooserView(state, controller);
 						controller.focusExamplesViewer();
@@ -151,13 +153,13 @@ export async function openDatasetPairList(datasetName, state, controller) {
 	}
 	catch (error) {
 		console.error(error);
-		controller.renderPanelShell(
-			'Image Examples',
-			`Dataset: ${datasetName}`,
-			`<div class="example-empty-state">Failed to load image pairs for dataset ${escapeHtml(datasetName)}.</div>`,
+		controller.renderPanelShell({ key: 'examples.title' }, { key: 'examples.subtitle.dataset', params: { datasetName: datasetLang } },
+			`<div class="example-empty-state" ${getTitleAttr('examples.failed.pairs', { datasetName: datasetLang })}>
+				${tLabel('examples.failed.pairs', { datasetName: datasetLang })}
+			</div>`,
 			{
 				showBackButton: true,
-				backLabel: 'Back to datasets',
+				backLabel: { key: 'examples.back-to-datasets' },
 				onBack: () => {
 					renderDatasetChooserView(state, controller);
 					controller.focusExamplesViewer();
@@ -167,16 +169,16 @@ export async function openDatasetPairList(datasetName, state, controller) {
 	}
 }
 
-/* Render the dataset chooser. */
+/** Render the dataset chooser. */
 export function renderDatasetChooserView(state, controller) {
 	state.view = 'datasets';
 	const summaries = state.datasetSummaries.filter((item) => item.count > 0);
 
-	controller.renderPanelShell(
-		'Image Examples',
-		'Choose a dataset to browse its all example image pairs.',
+	controller.renderPanelShell({ key: 'examples.title' }, { key: 'examples.subtitle.choose-dataset' },
 		`
-			<p class="muted-note mb-4">Select a dataset first, then click any pair to inspect its depth results.</p>
+			<p class="muted-note mb-4" ${getTitleAttr('examples.dataset.detail')}>
+				${tLabel('examples.dataset.detail')}
+			</p>
 			<div class="dataset-summary-grid">
 				${summaries.map((summary) => renderDatasetSummaryCard(summary)).join('')}
 			</div>
@@ -185,18 +187,22 @@ export function renderDatasetChooserView(state, controller) {
 	);
 }
 
-/* Render one dataset summary card. */
+/** Render one dataset summary card. */
 function renderDatasetSummaryCard(summary) {
 	return `
 		<article class="dataset-summary-card">
 			<div>
-				<h4 class="title is-5 mb-1">${escapeHtml(summary.dataset)}</h4>
-				<p class="dataset-summary-subtitle mb-0">${summary.count} image pairs available</p>
+				<h4 class="title is-5 mb-1" ${getTitleAttr(csvValue('dataset', summary.dataset))}>
+					${csvValueLabel('dataset', summary.dataset)}
+				</h4>
+				<p class="dataset-summary-subtitle mb-0" ${getTitleAttr('examples.dataset.detail.count', { count: summary.count })}>
+					${tLabel('examples.dataset.detail.count', { count: summary.count })}
+				</p>
 			</div>
 
 			<div class="dataset-summary-actions">
-				<button class="button is-link is-light" type="button" data-open-dataset="${escapeHtml(summary.dataset)}">
-					Open pairs
+				<button class="button is-link is-light" type="button" ${getTitleAttr('examples.dataset.detail.open')} data-open-dataset="${summary.dataset}">
+					${tLabel('examples.dataset.detail.open')}
 				</button>
 			</div>
 		</article>
@@ -204,7 +210,7 @@ function renderDatasetSummaryCard(summary) {
 }
 
 
-/* Reset all dataset-dependent state before a fresh load. */
+/** Reset all dataset-dependent state before a fresh load. */
 function resetDatasetState(state) {
 	state.availableDatasets = [];
 	state.datasetSummaries = [];
