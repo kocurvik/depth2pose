@@ -1,5 +1,5 @@
 import { attachCardToggle } from '../global.js';
-import { tLabel, setOptionTitle } from '../dictionary/index.js';
+import { tLabel, tDesc, setOptionTitle } from '../dictionary/index.js';
 
 import { openPairDepths } from './depths.js';
 import { renderPairListView } from './imagepairs.js';
@@ -94,11 +94,11 @@ function renderPanelShell(title, subtitle, bodyHtml, options = {}) {
 
 	if (els.title) {
 		els.title.textContent = tLabel(title.key, title.params);
-		setOptionTitle(els.title, title.key, title.params);
+		setOptionTitle(els.title, tDesc(title.key, title.params));
 	}
 	if (els.subtitle) {
 		els.subtitle.textContent = tLabel(subtitle.key, subtitle.params);
-		setOptionTitle(els.subtitle, subtitle.key, subtitle.params);
+		setOptionTitle(els.subtitle, tDesc(subtitle.key, subtitle.params));
 	}
 	if (els.body) els.body.innerHTML = bodyHtml;
 
@@ -110,7 +110,7 @@ function renderPanelShell(title, subtitle, bodyHtml, options = {}) {
 		
 		const label = els.back.querySelector('span:last-child');
 		if (label) label.textContent = tLabel(backLabel.key, backLabel.params);
-		setOptionTitle(els.back, backLabel.key, backLabel.params);
+		setOptionTitle(els.back, tDesc(backLabel.key, backLabel.params));
 	}
 }
 

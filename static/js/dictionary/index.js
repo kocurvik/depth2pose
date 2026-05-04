@@ -72,7 +72,7 @@ export function getTitleAttr(key, params = {}) {
 	return desc ? ` title="${desc}"` : '';
 }
 
-/** Set `title` on an <option> if description is truthy. */
+/** Set `title` on an `<option>` if description is truthy. */
 export function setOptionTitle(optionEl, description) {
 	if (description) optionEl.setAttribute('title', description);
 }
