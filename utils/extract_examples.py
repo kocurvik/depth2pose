@@ -10,6 +10,7 @@ import h5py
 import numpy as np
 import matplotlib
 
+from utils.config import config_iterator
 from utils.geometry import get_kp_depth
 from utils.results import get_mde_list, compute_auc
 from utils.storage import load_full_results
@@ -23,9 +24,10 @@ def parse_args():
     parser.add_argument('--depth', type=str, default=None)
     parser.add_argument('--matches', type=str, default='splg_2048_noresize')
     parser.add_argument('-n', '--n_pairs', type=int, default=20)
-    parser.add_argument('--work_path')
-    parser.add_argument('--data_path')
-    parser.add_argument('--name')
+    parser.add_argument('--work_path', type=str, default=None)
+    parser.add_argument('--data_path', type=str, default=None)
+    parser.add_argument('--name', type=str, default=None)
+    parser.add_argument('--config_path', type=str, default=None)
 
     return parser.parse_args()
 
@@ -273,9 +275,23 @@ def save_json(worst_pairs_dict, args):
     with open(main_json_path, 'w') as f:
         json.dump(main_index, f)
 
-if __name__ == '__main__':
-    args = parse_args()
+def main(args):
     worst_pairs_dict = get_worst_pairs(args)
     get_matches(worst_pairs_dict, args)
     export_images(worst_pairs_dict, args)
     save_json(worst_pairs_dict, args)
+
+if __name__ == '__main__':
+    args = parse_args()
+
+    if args.config_path is not None:
+        for name, config in config_iterator(args.config_path):
+            single_args = copy.copy(args)
+            single_args.name = name
+            single_args.work_path = config["work_path"]
+            single_args.data_path = config["path"]
+            single_args.out_path = config["work_path"].replace('mdrpbench', 'mdrpbench_examples')
+            main(single_args)
+    else:
+        main(args)
+
