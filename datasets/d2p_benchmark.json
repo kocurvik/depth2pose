@@ -114,11 +114,19 @@
         "path": "/projects/p1358-25-2/data/d2p/ambiguous",
         "work_path": "/projects/p1358-25-2/mdrpbench/ambiguous",
         "subsets": {
-            "bottles_monkey_1a": {
+            "apple_orange": {
                 "max_pairs": 250,
                 "cameras": "shared"
             },
-            "bottles_monkey_1b": {
+            "apple_orange_tomatoes": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "babushka_three": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "babushka_two": {
                 "max_pairs": 250,
                 "cameras": "shared"
             },
@@ -126,7 +134,11 @@
                 "max_pairs": 250,
                 "cameras": "shared"
             },
-            "cups_1": {
+            "bottles_pet_4": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "eggplant_citrus": {
                 "max_pairs": 250,
                 "cameras": "shared"
             },
@@ -134,7 +146,19 @@
                 "max_pairs": 250,
                 "cameras": "shared"
             },
-            "monkey_toy_2": {
+            "monkies_citrus": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "tomatoes_pairs": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "tomatoes_two": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "tomatoes_vine": {
                 "max_pairs": 250,
                 "cameras": "shared"
             }
