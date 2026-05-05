@@ -5,8 +5,10 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
+from scipy.stats import pearsonr, linregress
+import matplotlib.ticker as ticker
 
-from utils.tables import estimator_name
+from utils.tables import estimator_name, DEPTH_METRIC_MAP
 
 plt.rcParams.update({
     "text.usetex": True,           # Use LaTeX to render text
@@ -23,6 +25,10 @@ plt.rcParams.update({
         \usepackage{times}
         % Add your custom commands here
         \newcommand{\mAA}{mAA(10$^\circ$)}
+        \newcommand{\dsi}{$\delta_{1}^{si}$}
+        \newcommand{\dssi}{$\delta_{1}^{ai}$}
+        \newcommand{\relsi}{Rel$^{si}$}
+        \newcommand{\relssi}{Rel$^{ai}$}
         \newcommand{\M}[1]{\mathbf{#1}}
                 
         \newcommand{\eth}{ETH3D}
@@ -30,23 +36,24 @@ plt.rcParams.update({
         \newcommand{\scannetpp}{ScanNet++}
         \newcommand{\lamar}{Lamar}
         
-        \newcommand{\baselinecalib}{B}
-        \newcommand{\baselinecalibshift}{B$_f$}
-        \newcommand{\calib}{D}
-        \newcommand{\calibshift}{D$_s$}
-        \newcommand{\mysf}{D$_{f}$}
-        \newcommand{\sfshift}{D$_{s,f}$}
+        \newcommand{\baselinecalib}{$\mathcal{B}$}
+        \newcommand{\baselinecalibshift}{$\mathcal{B}_{\mathrm{f}}$}
+        \newcommand{\calib}{$\mathcal{D}$}
+        \newcommand{\calibshift}{$\mathcal{D}_{\mathrm{a}}$}
+        \newcommand{\mysf}{$\mathcal{D}_{\mathrm{f}}$}
+        \newcommand{\sfshift}{$\mathcal{D}_{\mathrm{a,f}}$}
         
-        \newcommand{\mdecalib}{MK}        
-        \newcommand{\mdecalibshift}{MK$_s$}
+        \newcommand{\mdecalib}{$\mathcal{K}$}
+        \newcommand{\mdecalibshift}{$\mathcal{K}_{\mathrm{a}}$}
         
-        \newcommand{\mdecalibro}{MKR}        
-        \newcommand{\mdecalibshiftro}{MKR$_s$}
+        \newcommand{\calibro}{$\mathcal{R}$}
+        \newcommand{\calibshiftro}{$\mathcal{R}_{\mathrm{a}}$}
+        \newcommand{\sfro}{$\mathcal{R}_{\mathrm{f}}$}
+        \newcommand{\sfshiftro}{$\mathcal{R}_{\mathrm{a,f}}$}
         
-        \newcommand{\calibro}{R}
-        \newcommand{\calibshiftro}{R$_s$}
-        \newcommand{\sfro}{R$_{f}$}
-        \newcommand{\sfshiftro}{R$_{s,f}$}
+        \newcommand{\mdecalibro}{$\mathcal{KR}$}
+        \newcommand{\mdecalibshiftro}{$\mathcal{KR}_{\mathrm{a}}$}
+
     """,
     "pgf.rcfonts": False,          # Don't setup fonts from rc parameters
 })
@@ -82,13 +89,11 @@ def get_mde_marker(mde, basename=None, backbone=None):
     style = {}
     if calib:
         style['markeredgecolor'] = 'black'
-    else:
-        style['markeredgecolor'] = 'gray'
 
     if backbone == 'ViT-S':
         style['marker'] = 'o'
     elif backbone == 'ViT-B':
-        style['marker'] = 's'
+        style['marker'] = 'v'
     elif backbone == 'ViT-G':
         style['marker'] = 'd'
     elif backbone == 'ConvNext':
@@ -161,26 +166,35 @@ def generate_legend_markers(out_dir='vis/legend'):
 
             basename = get_mde_basename(mde)
 
-            backbones = [get_backbone_name(x) for x in ALL_MDEs[k]]
-            if 'ViT-L' in backbones:
-                backbone = 'ViT-L'
-            else:
-                backbone = backbones[0]
+            # backbones = [get_backbone_name(x) for x in ALL_MDEs[k]]
+            # if 'ViT-L' in backbones:
+            #     backbone = 'ViT-L'
+            # else:
+            #     backbone = backbones[0]
 
-            style = get_mde_marker(basename, backbone=backbone)
+            # style = get_mde_marker(basename, backbone=backbone)
+            style = get_mde_marker(basename)
 
-            marker_style = {k: v for k, v in style.items() if k != 'color'}
+            marker_style = {k: v for k, v in style.items()}
+            marker_style['marker'] = 's'
+            marker_style['markeredgecolor'] = None
+
+
 
             styles[basename] = marker_style
+
 
     print(list(styles.keys()))
 
     calib_style = get_mde_marker('UniK3DCalib-vitl')
-    calib_style['markerfacecolor'] = 'white'
+    calib_style['markerfacecolor'] = 'gray'
+    calib_style['marker'] = 's'
     styles['Calib'] = calib_style
 
     uncal_style = get_mde_marker('UniK3D-vitl')
-    uncal_style['markerfacecolor'] = 'white'
+    uncal_style['markerfacecolor'] = 'gray'
+    uncal_style['color'] = 'gray'
+    uncal_style['marker'] = 's'
     styles['NoCalib'] = uncal_style
 
     backbones = ['ViT-L', 'ViT-S', 'ViT-B', 'ViT-G', 'ConvNext']
@@ -188,12 +202,12 @@ def generate_legend_markers(out_dir='vis/legend'):
     for backbone in backbones:
         style = get_mde_marker('UniK3D-vitl', backbone=backbone)
         style['markerfacecolor'] = 'gray'
-        style['color'] = None
+        style['color'] = 'gray'
         styles[backbone] = style
 
     for basename, marker_style in styles.items():
-        marker_style['markersize'] = 14
-        fig, ax = plt.subplots(figsize=(0.4, 0.4))
+        marker_style['markersize'] = 8
+        fig, ax = plt.subplots(figsize=(0.4*8/14, 0.4*8/14))
         ax.plot([0.5], [0.5], linestyle='none', **marker_style)
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
@@ -211,7 +225,7 @@ def generate_legend_markers(out_dir='vis/legend'):
 
 
 def plot_scatter_pose_depth(pose_df, depth_df, dataset, metric, remove_outliers=False, iters=None, out_dir='vis',
-                            label_font_size=18, tick_font_size=14):
+                            label_font_size=18, tick_font_size=14, matches='splg', solvers=None, figsize=None):
     if iters is not None:
         pose_df = pose_df[pose_df['iters'] == iters].copy()
 
@@ -229,9 +243,9 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, metric, remove_outliers=
     mde_list = depth_df['mde'].unique().tolist()
 
     if remove_outliers:
-        mde_list = [x for x in mde_list if 'Infini' not in x and 'AnythingV2' not in x and 'DA3MONO' not in x]
+        plot_mde_list = [x for x in mde_list if 'Infini' not in x and 'AnythingV2' not in x and 'DA3MONO' not in x]
         if dataset == 'lamar' or dataset == 'mean':
-            mde_list = [x for x in mde_list if 'DepthPro' not in x]
+            plot_mde_list = [x for x in plot_mde_list if 'DepthPro' not in x]
 
     depth_df = depth_df[depth_df['mde'].isin(mde_list)]
 
@@ -240,8 +254,9 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, metric, remove_outliers=
     # ncols = 2
     # nrows = 2
 
-    all_solvers = pose_df['solver'].unique().tolist()
-    solvers = [s for s in all_solvers if 'baseline' not in s]
+    if solvers is None:
+        all_solvers = pose_df['solver'].unique().tolist()
+        solvers = [s for s in all_solvers if 'baseline' not in s]
 
     if 'ssi' in metric:
         solvers = [s for s in solvers if 'shift' in s]
@@ -255,8 +270,13 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, metric, remove_outliers=
         # fig.suptitle(f'Dataset: {dataset}, Solver: {solver}')
         # axes = axes.flatten()
 
-        fig = plt.figure(figsize=[4, 3.5])
+        if figsize is None:
+            figsize = [4 * 0.8, 3.5 * 0.8]
 
+        fig = plt.figure(figsize=figsize)
+
+        all_x = []
+        all_y = []
         for mde in mde_list:
             if 'Calib' in mde and any(s in solver for s in ('vf', 'sf', 'mdecalib')):
                 continue
@@ -270,51 +290,59 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, metric, remove_outliers=
             pose_vals = pose_rows['pose_mAA_10'].tolist()
             style = get_mde_marker(mde)
 
-            plt.plot([depth_val] * len(pose_vals), pose_vals,
-                    linestyle='dotted', **style, label=mde)
+            xs = [depth_val] * len(pose_vals)
+            if (not remove_outliers) or (mde in plot_mde_list):
+                plt.plot(xs, pose_vals,
+                        linestyle='dotted', **style, label=mde)
+            all_x.extend(xs)
+            all_y.extend(pose_vals)
 
-        if 'd' in metric:
-            metric_name = '$\\delta_{1}$'
-        else:
-            metric_name = 'Rel'
-
-        if 'ssi' in metric:
-            metric_name += ' (affine inv.)'
-        else:
-            metric_name += ' (scale inv.)'
-        plt.xlabel(metric_name, fontsize=label_font_size)
-        plt.ylabel(f"{estimator_name(solver)} -- \mAA", fontsize=label_font_size)
-        plt.tick_params(axis='both', which='major', labelsize=tick_font_size)
-
-        if 'd' in metric:
-            plt.gca().invert_xaxis()
-
-        baseline_solver = f'baseline_{solver.split("_shift")[0]}'
-        if baseline_solver in all_solvers and '_ro' not in solver:
-            gt_rows = pose_df[(pose_df['mde'] == 'none') & (pose_df['solver'] == baseline_solver)]
-            for pose_val in gt_rows['pose_mAA_10']:
-                plt.axhline(pose_val, linestyle='dashed', color='gray')
-
-        # color_handles = [Line2D([0], [0], color=c, marker='s', linestyle='None', label=lbl)
-        #                  for lbl, c in color_dict.items() if lbl in base_names]
-        # marker_handles = [Line2D([0], [0], color='gray', marker='*', linestyle='None', label='Normal'),
-        #                   Line2D([0], [0], color='gray', marker='o', linestyle='None', label='Calib')]
-        # fig.legend(handles=color_handles + marker_handles, loc='center right')
-        # plt.legend()
-        plt.tight_layout()
         suffix = 'no_outliers' if remove_outliers else 'all'
         suffix += f'_{iters}' if iters is not None else ''
+        pdf_path = f'scatter_pose_depth_{matches}_{dataset}_{solver}_{metric}_{suffix}.pdf'
 
-        plt.savefig(os.path.join(out_dir, f'scatter_pose_depth_{dataset}_{solver}_{metric}_{suffix}.pdf'))
+        if len(all_x) > 1:
+            all_x = np.array(all_x)
+            all_y = np.array(all_y)
+            mask = ~np.isnan(all_x) & ~np.isnan(all_y)
+            all_x, all_y = all_x[mask], all_y[mask]
+            if len(all_x) > 1:
+                corr, _ = pearsonr(all_x, all_y)
+                slope, intercept, _, _, _ = linregress(all_x, all_y)
+                xlim = plt.gca().get_xlim()
+                x_range = np.array(xlim)
+                plt.plot(x_range, slope * x_range + intercept, color='gray', linestyle='--', zorder=0)
+                plt.gca().set_xlim(xlim)
+                plt.text(0.05, 0.95, f'$r={corr:.4f}$', transform=plt.gca().transAxes,
+                         verticalalignment='top', fontsize=tick_font_size)
+                print(f"{pdf_path}: {corr:.4f}")
+
+        plt.xlabel(DEPTH_METRIC_MAP[metric], fontsize=label_font_size)
+        plt.ylabel(f"{estimator_name(solver)} -- \mAA", fontsize=label_font_size)
+        plt.tick_params(axis='both', which='major', labelsize=tick_font_size)
+        plt.gca().xaxis.set_major_locator(ticker.MaxNLocator('auto', integer=True))
+        plt.gca().yaxis.set_major_locator(ticker.MaxNLocator('auto', integer=True))
+
+        # if 'd' in metric:
+        #     plt.gca().invert_xaxis()
+
+        # baseline_solver = f'baseline_{solver.split("_shift")[0]}'
+        # if baseline_solver in all_solvers and '_ro' not in solver:
+        #     gt_rows = pose_df[(pose_df['mde'] == 'none') & (pose_df['solver'] == baseline_solver)]
+        #     for pose_val in gt_rows['pose_mAA_10']:
+        #         plt.axhline(pose_val, linestyle='dashed', color='gray')
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(out_dir, pdf_path))
         plt.close(fig)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pose_csv', type=str, default='csv_results/standard_pose_results.csv')
+    parser.add_argument('--pose_csv', type=str, default='csv_results/standard_splg_pose_results.csv')
     parser.add_argument('--depth_csv', type=str, default='csv_results/standard_depth_results.csv')
     parser.add_argument('--out_dir', type=str, default='vis')
-    parser.add_argument('--dataset', type=str, default=None,
+    parser.add_argument('--dataset', type=str, default='mean',
                         help='Dataset to plot (default: all datasets in the CSV)')
     parser.add_argument('--remove_outliers', action='store_true', default=False)
     args = parser.parse_args()
@@ -322,21 +350,27 @@ def main():
     pose_df = pd.read_csv(args.pose_csv)
     depth_df = pd.read_csv(args.depth_csv)
 
-    datasets = [args.dataset] if args.dataset else pose_df['dataset'].unique().tolist()
-
     generate_legend_markers()
 
-    metrics = ['A.Rel_si', 'd1_si', 'A.Rel_ssi', 'd1_ssi']
+    matches = args.pose_csv.split('/')[-1].split('_')[1]
+
+    # metrics = ['A.Rel_si', 'd1_si', 'A.Rel_ssi', 'd1_ssi']
+    metrics = ['d1_si', 'd1_ssi']
 
     for metric in metrics:
-        plot_scatter_pose_depth(pose_df, depth_df, 'mean', metric,
+        plot_scatter_pose_depth(pose_df, depth_df, args.dataset, metric,
                                 remove_outliers=False,
-                                out_dir=args.out_dir, iters=1000)
+                                out_dir=os.path.join(args.out_dir, 'sm'), iters=1000, matches=matches)
 
-        plot_scatter_pose_depth(pose_df, depth_df, 'mean', metric,
-                                remove_outliers=True,
-                                out_dir=args.out_dir, iters=1000)
+        # plot_scatter_pose_depth(pose_df, depth_df, args.dataset, metric,
+        #                         remove_outliers=True,
+        #                         out_dir=args.out_dir, iters=1000, matches=matches)
 
+
+        plot_scatter_pose_depth(pose_df, depth_df, args.dataset, metric,
+                                remove_outliers=True, out_dir=args.out_dir,
+                                iters=1000, matches=matches, solvers=['calib', 'calib_ro'],
+                                figsize=(0.8*6, 0.8*4))
 
 if __name__ == '__main__':
     main()

@@ -280,17 +280,24 @@ def flatten_pose_metrics(all_metrics):
     return pd.DataFrame(rows)
 
 
-def get_backbone_name(backbone):
-    if 'vitl' in backbone or 'vit-l' in backbone or 'large' in backbone.lower() or 'vggt' in backbone.lower() or 'pi3x' in backbone.lower():
+def get_backbone_name(mde, short=False):
+    if short:
+        backbone_long = get_backbone_name(mde, short=False)
+        if '-' in backbone_long:
+            return backbone_long.split('-')[1]
+        else:
+            return 'C'
+
+    if 'vitl' in mde or 'vit-l' in mde or 'large' in mde.lower() or 'vggt' in mde.lower() or 'pi3x' in mde.lower():
         return 'ViT-L'
-    if 'vits' in backbone or 'vit-s' in backbone or 'small' in backbone:
+    if 'vits' in mde or 'vit-s' in mde or 'small' in mde:
         return 'ViT-S'
-    if 'vitb' in backbone or 'vit-b' in backbone or 'base' in backbone:
+    if 'vitb' in mde or 'vit-b' in mde or 'base' in mde:
         return 'ViT-B'
-    if 'giant' in backbone.lower() or 'map' in backbone.lower():
+    if 'giant' in mde.lower() or 'map' in mde.lower():
         return 'ViT-G'
-    if 'cnv' in backbone.lower():
+    if 'cnv' in mde.lower():
         return 'ConvNext'
-    if '' == backbone:
+    if '' == mde:
         return '-'
     return 'Default'
