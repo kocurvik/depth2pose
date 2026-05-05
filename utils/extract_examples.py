@@ -11,6 +11,7 @@ import cv2
 import h5py
 import numpy as np
 import matplotlib
+import submitit
 from tqdm import tqdm
 
 from utils.config import config_iterator
@@ -33,6 +34,18 @@ def parse_args():
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--dataset_type', type=str, default='')
     parser.add_argument('--config_path', type=str, default=None)
+
+    parser.add_argument('--account', type=str, default='p1358-25-2',
+                        help='Slurm account name')
+    parser.add_argument('--queue', type=str, default='short',
+                        help='Slurm partition/queue name')
+    parser.add_argument('--mem_gb', type=int, default=32,
+                        help='Memory per job in GB')
+    parser.add_argument('--timeout_min', type=int, default=60,
+                        help='Expected max runtime per job in minutes')
+    parser.add_argument('--log_dir', type=str, default=None,
+                        help='Directory for submitit logs (default: <work_path>/slurm_logs)')
+    parser.add_argument('-nw', '--num_workers', type=int, default=8)
 
     return parser.parse_args()
 
@@ -314,6 +327,8 @@ def main(args):
 if __name__ == '__main__':
     args = parse_args()
 
+    job_args = []
+
     if args.config_path is not None:
         for name, config, dataset_type in config_iterator(args.config_path, return_dataset_type=True):
             single_args = copy.copy(args)
@@ -322,7 +337,20 @@ if __name__ == '__main__':
             single_args.work_path = config["work_path"]
             single_args.data_path = config["path"]
             single_args.out_path = config["work_path"].replace('mdrpbench', 'mdrpbench_examples')
-            main(single_args)
+
+            job_args.append(single_args)
+
+        executor = submitit.AutoExecutor(folder='/home/kocurvik/logs/submitit_logs/')
+        executor.update_parameters(
+            slurm_account=args.account,
+            slurm_partition=args.queue,
+            mem_gb=args.mem_gb,
+            timeout_min=args.timeout_min,
+            cpus_per_task=args.num_workers
+        )
+
+        jobs = executor.map_array(main, job_args)
+
     else:
         main(args)
 
