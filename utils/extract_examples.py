@@ -198,7 +198,7 @@ def export_images(worst_pairs_dict, save_dir, args):
     os.makedirs(depths_dir, exist_ok=True)
 
     print("Saving depths")
-    for mde_id, mde in tqdm(enumerate(mde_list)):
+    for mde_id, mde in tqdm(enumerate(mde_list), total=len(mde_list)):
         if mde == 'gt':
             continue
         with h5py.File(os.path.join(work_path, f'{name}_depth_{mde}.h5'), 'r') as f:
@@ -250,6 +250,7 @@ def save_json(worst_pairs_dict, save_dir, args):
     examples_dir = os.path.join(save_dir, 'examples')
     results_dir = os.path.join(save_dir, 'results')
     os.makedirs(results_dir, exist_ok=True)
+    os.makedirs(examples_dir, exist_ok=True)
 
     def convert(obj, key=None):
         if isinstance(obj, dict):
