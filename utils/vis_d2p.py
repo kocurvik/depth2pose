@@ -11,15 +11,18 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Visualise results for the d2p dataset. Results are already computed and sotred in a csv file."
     )
-    parser.add_argument("--input-file", type=Path, nargs="+")
-    parser.add_argument("--output-path", type=Path)
-    parser.add_argument("--iters", type=int, default=1000)
-    parser.add_argument("--new-scene-groups", type=Path, default=None)
-    parser.add_argument("--split-ro", action="store_true")
-    parser.add_argument("--save-heatmap", action="store_true")
-    parser.add_argument("--plot-separate-scenes", action="store_true")
-    parser.add_argument("--save-lineplot", action="store_true")
-    parser.add_argument("--use-green-ranking", action="store_true") # for the heatmap
+    parser.add_argument("--input-file", type=Path, nargs="+") # path to input file. Can be more than one, if lineplots, it has to be two, one for d2p and one for standard
+    parser.add_argument("--output-path", type=Path) # folder to save stuff in 
+    parser.add_argument("--iters", type=int, default=1000) # number of ransac iterations to take results from
+    parser.add_argument("--new-scene-groups", type=Path, default=None) # if scenes have been regrouped a csv with new scene mappings can be sent in
+    parser.add_argument("--coloring-base", type=str, default='rank') # can be rank, maa or inliers. Decides which of these values colors the heatmaps
+    parser.add_argument("--solver-type", type=str, default='') # if only results from one solver should be taken into accout. Baseline is always included. Might produce empty plots and warnings
+    parser.add_argument("--baseline-mde", type=str, default='none') # which mde to use as baseline in the coloring of the heatmap
+    parser.add_argument("--split-ro", action="store_true") # if results from ro should be considered separate. Otherwise, only the mest over all versions are taken
+    parser.add_argument("--save-heatmap", action="store_true") # if the heatmap(s) should be saved
+    parser.add_argument("--plot-separate-scenes", action="store_true") # if heatmaps for separate scenes should be plotted all in one plot. cannot be used together with lineplot option
+    parser.add_argument("--save-lineplot", action="store_true") # if lineplots should be saved. Requires two inlut files
+    parser.add_argument("--use-green-ranking", action="store_true") # for the heatmap, i fonly one color (green) should be used. Otherwise green is good, red bad, yellow in the middle
     return parser.parse_args()
 
 
@@ -52,7 +55,6 @@ def get_common_models(dicts):
     return sorted(common)
 
 def exclude_special(dicts, remove_keys=["gt", "none"]):
-    breakpoint()
     # Normalize each dataset
     processed_dicts = {
         name: normalize_ranks(d, remove_keys)
@@ -265,7 +267,8 @@ def parse_csv_file(
         uncal_solvers,
         new_scene_groups,
         nbr_iters = 1000,
-        split_ro = False
+        split_ro = False,
+        solver_type = ''
     ):
     """
     Returns:
@@ -285,7 +288,30 @@ def parse_csv_file(
 
     # filter by iterations
     df = df[df['iters'] == nbr_iters].copy()
+    # if a solver type is submitted, use only this, by filtering #gabbi
+    if solver_type: #gabbi
+        # get solver group
+        calib_uncal = get_solver_group(solver_type, calib_solvers, uncal_solvers, False)
+        # keep only the chosen solver type and baseline of correct type
+        #df = df[
+        #    (df['solver'] == solver_type) |
+        #    (df['solver'].str.contains('baseline', na=False))
+        #].copy()
+        if calib_uncal == 'calib':
+            df = df[
+                (df['solver'] == solver_type) |
+                (df['solver'] == 'baseline_calib')
+            ].copy()
+        elif calib_uncal == 'uncal':
+            df = df[
+                (df['solver'] == solver_type) |
+                (df['solver'] == 'baseline_sf')
+            ].copy()
+        else:
+            print('Problem!')
+        #gabbi this should remove everything that is other solves than e.g. calib_ro, making it possible to run everything else as it is, hopefully
     
+
     df['solver_group'] = df['solver'].apply(
         lambda s: get_solver_group(s, calib_solvers, uncal_solvers, split_ro)
     )
@@ -339,7 +365,7 @@ def compute_rankings(data):
 
     return rankings
 
-def add_mAA_mean(maa_matrix, color_matrix, model_names,use_green_ranking):
+def add_mAA_inliers_rankings_mean(maa_matrix, inliers_matrix, color_matrix, model_names, coloring_base, use_green_ranking, baseline_mde):
     """
     Adds a 'mean' row on top of the matrices.
     - mAA: mean over scenes
@@ -349,6 +375,7 @@ def add_mAA_mean(maa_matrix, color_matrix, model_names,use_green_ranking):
 
     # --- compute mean mAA ---
     mean_maa = np.nanmean(maa_matrix, axis=0)
+    mean_inliers = np.nanmean(inliers_matrix, axis=0)
 
     # --- compute rankings (higher mAA = better) ---
     valid_mask = ~np.isnan(mean_maa)
@@ -366,36 +393,54 @@ def add_mAA_mean(maa_matrix, color_matrix, model_names,use_green_ranking):
     # --- compute color row (relative to 'none') ---
     mean_color = np.full_like(mean_maa, np.nan)
 
-    if "none" in model_names:
-        none_idx = model_names.index("none")
-        none_rank = mean_ranks[none_idx]
-        max_rank = np.nanmax(mean_ranks)
+    if baseline_mde in model_names:
+        baseline_idx = model_names.index(baseline_mde) 
+        baseline_rank = mean_ranks[baseline_idx] 
+        baseline_maa = mean_maa[baseline_idx] 
+        baseline_inliers = mean_inliers[baseline_idx] 
+        max_rank = np.nanmax(mean_ranks) 
 
         for j in range(len(mean_maa)):
             if np.isnan(mean_ranks[j]):
                 continue
 
-            rank = mean_ranks[j]
-            if use_green_ranking:
-                mean_color[j] = 2 * (max_rank - rank) / (max_rank - 1 + 1e-6) -1
-            else:
-                if rank < none_rank:
-                    mean_color[j] = (none_rank - rank) / (none_rank - 1 + 1e-6)
-                elif rank > none_rank:
-                    mean_color[j] = -(rank - none_rank) / (max_rank - none_rank + 1e-6)
+            if coloring_base == 'rank':
+                rank = mean_ranks[j]
+                if use_green_ranking:
+                    mean_color[j] = 2 * (max_rank - rank) / (max_rank - 1 + 1e-6) -1
                 else:
-                    mean_color[j] = 0
+                    if rank < baseline_rank:
+                        mean_color[j] = (baseline_rank - rank) / (baseline_rank - 1 + 1e-6)
+                    elif rank > baseline_rank:
+                        mean_color[j] = -(rank - baseline_rank) / (max_rank - baseline_rank + 1e-6)
+                    else:
+                        mean_color[j] = 0
+
+            elif coloring_base == 'maa':
+                if use_green_ranking:
+                    mean_color[j] = mean_maa[j] - baseline_maa
+                else:
+                    mean_color[j] = mean_maa[j] - baseline_maa
+
+            elif coloring_base == 'inliers':
+                if use_green_ranking:
+                    mean_color[j] = mean_inliers[j] - baseline_inliers
+                else:
+                    mean_color[j] = mean_inliers[j] - baseline_inliers
+
+
 
     # --- prepend row ---
     new_maa = np.vstack([mean_maa, maa_matrix])
     new_color = np.vstack([mean_color, color_matrix])
+    new_inliers = np.vstack([mean_inliers, inliers_matrix])
 
     # obs. This assumes results for all models. Will fail otherwise
     mean_ranks_dict = {model_name: rank for model_name, rank in zip(model_names, mean_ranks)}
 
-    return new_maa, new_color, mean_ranks_dict
+    return new_maa, new_inliers, new_color, mean_ranks_dict
 
-def plot_heatmaps(data, rankings, output_path, mode, use_green_ranking=False, save_heatmaps=True):
+def plot_heatmaps(data, rankings, output_path, mode, coloring_base, use_green_ranking=False, save_heatmap=True, baseline_mde='none'):
 
     # as input, add input 1) plot_heatmap and 2) plot_lineplot
     # or just make copy for lineplot? and there you then have to submit more data. More clean though?
@@ -404,6 +449,7 @@ def plot_heatmaps(data, rankings, output_path, mode, use_green_ranking=False, sa
 
     unique_solver_groups = {sg for solver_groups in data.values() for sg in solver_groups.keys()}
     rank_dicts = {sg: {} for sg in unique_solver_groups}
+
     for category, solver_groups in data.items():
 
         for solver_group, scenes in solver_groups.items():
@@ -415,6 +461,7 @@ def plot_heatmaps(data, rankings, output_path, mode, use_green_ranking=False, sa
 
             color_matrix = np.full((len(scene_names), len(model_names)), np.nan)
             maa_matrix = np.full((len(scene_names), len(model_names)), np.nan)
+            inliers_matrix = np.full((len(scene_names), len(model_names)), np.nan)
 
             for i, scene in enumerate(scene_names):
 
@@ -425,26 +472,50 @@ def plot_heatmaps(data, rankings, output_path, mode, use_green_ranking=False, sa
                     #breakpoint()
                     continue
 
-                none_rank = scene_ranks["none"]
+                baseline_rank = scene_ranks[baseline_mde] 
                 max_rank = max(scene_ranks.values())
+
+                baseline_maa = data[category][solver_group][scene][baseline_mde]['mAA']
+                baseline_inliers = data[category][solver_group][scene][baseline_mde]['inliers']
 
                 for j, model in enumerate(model_names):
                     if model in scene_ranks:
 
                         rank = scene_ranks[model]
                         mAA = data[category][solver_group][scene][model]["mAA"]
-
+                        inliers = data[category][solver_group][scene][model]["inliers"]
+                        
                         maa_matrix[i, j] = mAA
-                        if use_green_ranking:
-                            color_matrix[i, j] = 2 * (max_rank - rank) / (max_rank - 1 + 1e-6) - 1
+                        inliers_matrix[i,j] = inliers
 
-                        else:
-                            if rank < none_rank:
-                                color_matrix[i, j] = (none_rank - rank) / (none_rank - 1 + 1e-6)
-                            elif rank > none_rank:
-                                color_matrix[i, j] = -(rank - none_rank) / (max_rank - none_rank + 1e-6)
+                        if coloring_base == 'rank':
+                            if use_green_ranking:
+                                color_matrix[i, j] = 2 * (max_rank - rank) / (max_rank - 1 + 1e-6) - 1
+
                             else:
-                                color_matrix[i, j] = 0
+                                if rank < baseline_rank:
+                                    color_matrix[i, j] = (baseline_rank - rank) / (baseline_rank - 1 + 1e-6)
+                                elif rank > baseline_rank:
+                                    color_matrix[i, j] = -(rank - baseline_rank) / (max_rank - baseline_rank + 1e-6)
+                                else:
+                                    color_matrix[i, j] = 0
+                            vmin = -1
+                            vmax = 1
+                        elif coloring_base == 'maa':
+                            if use_green_ranking:
+                                color_matrix[i, j] = mAA - baseline_maa
+                            else:
+                                color_matrix[i, j] = mAA - baseline_maa
+                            vmin = -40
+                            vmax = 5
+                        elif coloring_base == 'inliers':
+                            if use_green_ranking:
+                                color_matrix[i, j] = inliers - baseline_inliers
+                            else:
+                                color_matrix[i, j] = inliers - baseline_inliers
+                            vmin = -30
+                            vmax = 10
+
                 
                 if mode == 'standard':
                     rank_dicts[solver_group][scene] = normalize_ranks(scene_ranks, remove_keys=["gt", "none"])
@@ -457,19 +528,25 @@ def plot_heatmaps(data, rankings, output_path, mode, use_green_ranking=False, sa
             # the dict can then be added into the calib_dicts of uncal_discts
             # maybe only do this option without ro? or also with? just four if..ask chatgpt
             
-            maa_matrix, color_matrix, mean_ranks = add_mAA_mean(
-                maa_matrix, color_matrix, model_names, use_green_ranking
+            # gabbi fix the addition of mAA mean, add inlier_mean instead
+            maa_matrix, inliers_matrix, color_matrix, mean_ranks = add_mAA_inliers_rankings_mean(
+                maa_matrix, inliers_matrix, color_matrix, model_names, coloring_base, use_green_ranking, baseline_mde
             )
             scene_names = ["mean"] + scene_names
 
             if mode == 'd2p':
+                # this is actually only needed for ranks, to not get "holes" in ranks from removing gt and none, not needed for other metrics
                 rank_dicts[solver_group][category] = normalize_ranks(mean_ranks, remove_keys=["gt", "none"])
 
-            if save_heatmaps:
+            if coloring_base == 'rank' or coloring_base == 'maa':
+                annot_matrix = maa_matrix
+            elif coloring_base == 'inliers':
+                annot_matrix = inliers_matrix
+
+            if save_heatmap:
                 plt.figure(figsize=(12, 6))
 
                 mask = np.isnan(color_matrix)
-
 
                 if use_green_ranking:
                     sns.heatmap(
@@ -478,21 +555,29 @@ def plot_heatmaps(data, rankings, output_path, mode, use_green_ranking=False, sa
                         xticklabels=model_names,
                         yticklabels=scene_names,
                         cmap="Greens",
-                        vmin=-1,
-                        vmax=1,
+                        vmin=vmin,
+                        vmax=vmax,
                         center=0,
-                        annot=maa_matrix,
+                        annot=annot_matrix,
                         fmt=".1f",
                         cbar=True
                     )
                     # change colorscale ticks from -1 to 1 to rankings
                     cbar = plt.gca().collections[0].colorbar
 
-                    cbar.set_ticks([-1, 1])
-                    cbar.set_ticklabels([
-                        "Lowest ranking",
-                        "Highest ranking"
-                    ])
+                    cbar.set_ticks([vmin, vmax])
+
+                    if coloring_base == 'rank': 
+                        cbar.set_ticklabels([
+                            "Lowest ranking",
+                            "Highest ranking"
+                        ])
+                    elif coloring_base == 'maa' or coloring_base == 'inliers':
+                         cbar.set_ticklabels([
+                            vmin,
+                            vmax
+                        ])                       
+
 
                 else:
                     sns.heatmap(
@@ -501,22 +586,30 @@ def plot_heatmaps(data, rankings, output_path, mode, use_green_ranking=False, sa
                         xticklabels=model_names,
                         yticklabels=scene_names,
                         cmap="RdYlGn",
-                        vmin=-1,
-                        vmax=1,
+                        vmin=vmin,
+                        vmax=vmax,
                         center=0,
-                        annot=maa_matrix,
+                        annot=annot_matrix,
                         fmt=".1f",
                         cbar=True
                     )
                     # change colorscale ticks from -1 to 1 to rankings
                     cbar = plt.gca().collections[0].colorbar
 
-                    cbar.set_ticks([-1, 0, 1])
-                    cbar.set_ticklabels([
-                        "Lowest ranking",
-                        "Baseline",
-                        "Highest ranking"
-                    ])
+                    cbar.set_ticks([vmin, 0, vmax])
+                    if coloring_base == 'rank':
+                        cbar.set_ticklabels([
+                            "Lowest ranking",
+                            "Baseline",
+                            "Highest ranking"
+                        ])
+                    elif coloring_base == 'maa' or coloring_base == 'inliers':
+                        cbar.set_ticklabels([
+                            vmin,
+                            0,
+                            vmax
+                        ])
+
 
 
                 # vertical line before 'none'
@@ -548,7 +641,11 @@ if __name__ == "__main__":
         raise ValueError("You have to choose between heatmaps for separate scenes and lineplots")
     if args.save_lineplot and len(args.input_file) < 2:
         raise ValueError("For the lineplots you need to input a csv to both d2p and to standard results")
-
+    if args.coloring_base not in ['rank', 'maa', 'inliers']:
+        raise ValueError("Coloring base has to be rank, maa or inliers")
+    if args.solver_type.endswith('ro') and not args.split_ro:
+        raise ValueError("To only use an ro solver, you need to use --split-ro")
+    
     os.makedirs(args.output_path, exist_ok=True)
     rank_dicts = {}
 
@@ -560,13 +657,14 @@ if __name__ == "__main__":
             uncal_solvers,
             new_scene_groups = args.new_scene_groups,
             nbr_iters=args.iters,
-            split_ro = args.split_ro
+            split_ro = args.split_ro,
+            solver_type = args.solver_type
         ) #default is using 1000 iterations, can be inputted
         
         rankings = compute_rankings(data)
 
         if not args.plot_separate_scenes:
-            mode_dicts = plot_heatmaps(data, rankings, args.output_path, mode, args.use_green_ranking, args.save_heatmap)
+            mode_dicts = plot_heatmaps(data, rankings, args.output_path, mode, args.coloring_base, args.use_green_ranking, args.save_heatmap, args.baseline_mde)
         
         else:
 
@@ -580,7 +678,7 @@ if __name__ == "__main__":
 
             rankings_merged = compute_rankings(data_merged)
 
-            _ = plot_heatmaps(data_merged, rankings_merged, args.output_path, mode, args.use_green_ranking, args.save_heatmap)
+            _ = plot_heatmaps(data_merged, rankings_merged, args.output_path, mode, args.coloring_base, args.use_green_ranking, args.save_heatmap, args.baseline_mde)
 
         if args.save_lineplot:
             for solver_group, inner_dict in mode_dicts.items():
