@@ -2,6 +2,8 @@ import argparse
 import copy
 import json
 import os
+import shutil
+import tarfile
 from argparse import Namespace
 from pathlib import PureWindowsPath, Path
 
@@ -9,6 +11,7 @@ import cv2
 import h5py
 import numpy as np
 import matplotlib
+from tqdm import tqdm
 
 from utils.config import config_iterator
 from utils.geometry import get_kp_depth
@@ -26,7 +29,9 @@ def parse_args():
     parser.add_argument('-n', '--n_pairs', type=int, default=20)
     parser.add_argument('--work_path', type=str, default=None)
     parser.add_argument('--data_path', type=str, default=None)
+    parser.add_argument('--out_path', type=str, default=None)
     parser.add_argument('--name', type=str, default=None)
+    parser.add_argument('--dataset_type', type=str, default='')
     parser.add_argument('--config_path', type=str, default=None)
 
     return parser.parse_args()
@@ -55,12 +60,12 @@ def get_worst_pairs(args):
 
     p_errs = np.full([len(pairs), len(mde_list) + 1], np.nan)
     inliers = np.empty([len(pairs), len(mde_list) + 1], dtype=object)
-    shift_solver = np.empty([len(pairs), len(mde_list) + 1], dtype=bool)
+    # shift_solver = np.empty([len(pairs), len(mde_list) + 1], dtype=bool)
 
     for i, pair in enumerate(pairs):
         p_errs[i, -1] = baseline_by_pair[pair]
         inliers[i, -1] = inliers_by_pair[pair]
-        shift_solver[i, -1] = False
+        # shift_solver[i, -1] = False
 
     for mde_id, mde in enumerate(mde_list):
         mde_args = copy.copy(args)
@@ -73,7 +78,8 @@ def get_worst_pairs(args):
 
         iters_results = [r for r in mde_results
                          if r['iterations'] == 1000
-                         and r['experiment'] in ['calib', 'calib_shift']]
+                         # and r['experiment'] in ['calib', 'calib_shift']]
+                         and r['experiment'] == 'calib']
 
         for r in iters_results:
             p_err = max(r['R_err'], r['t_err'])
@@ -83,7 +89,7 @@ def get_worst_pairs(args):
             if np.isnan(p_errs[pair_id, mde_id]):
                 p_errs[pair_id, mde_id] = p_err
                 inliers[pair_id, mde_id] = r_inliers
-                shift_solver[pair_id, mde_id] = r['experiment'] == 'calib_shift'
+                # shift_solver[pair_id, mde_id] = r['experiment'] == 'calib_shift'
 
                 # print('******')
                 # print(len(r_inliers), len(inliers[pair_id, mde_id]),len(inliers[pair_id, -1]))
@@ -91,7 +97,7 @@ def get_worst_pairs(args):
 
             elif p_errs[pair_id, mde_id] > p_err:
                 p_errs[pair_id, mde_id] = p_err
-                shift_solver[pair_id, mde_id] = r['experiment'] == 'calib_shift'
+                # shift_solver[pair_id, mde_id] = r['experiment'] == 'calib_shift'
                 inliers[pair_id, mde_id] = r_inliers
 
                 # print('******')
@@ -99,7 +105,7 @@ def get_worst_pairs(args):
                 # print(np.sum(r_inliers), np.sum(inliers[pair_id, -1]))
 
 
-
+    print("Calculating worst pairs")
     gt_mask = p_errs[:, -1] < 10.0
     difference = p_errs[:, :-1] - p_errs[:, -1:]
     best = np.where(gt_mask, np.nanmin(difference, axis=1), np.nan)
@@ -120,7 +126,8 @@ def get_worst_pairs(args):
         worst_pairs_dict[pair]['results']['gt'] = {'p_err': p_errs[id, -1], 'solver': 'baseline', 'inliers': inliers[id, -1]}
         for mde_id, mde in enumerate(mde_list):
              worst_pairs_dict[pair]['results'][mde] = {'p_err': p_errs[id, mde_id],
-                                                       'solver': 'calib_shift' if shift_solver[id, mde_id] else 'calib',
+                                                       # 'solver': 'calib_shift' if shift_solver[id, mde_id] else 'calib',
+                                                       'solver': 'calib',
                                                        'inliers': inliers[id, mde_id]}
 
     return worst_pairs_dict
@@ -160,7 +167,7 @@ def enforce_max_width(image, max_width=512):
     return cv2.resize(image, (max_width, new_h))
 
 
-def export_images(worst_pairs_dict, args):
+def export_images(worst_pairs_dict, save_dir, args):
     name = args.name
     work_path = args.work_path
     dataset_path = args.data_path
@@ -185,14 +192,13 @@ def export_images(worst_pairs_dict, args):
             mde_dict['exported_depth_image1_path'] = f'depths/depth_{image_ids[pair[0]]}_{mde_ids[mde]}.png'
             mde_dict['exported_depth_image2_path'] = f'depths/depth_{image_ids[pair[1]]}_{mde_ids[mde]}.png'
 
-
-    worst_examples_dir = os.path.join(work_path, 'examples')
-    images_dir = os.path.join(worst_examples_dir, 'images')
-    depths_dir = os.path.join(worst_examples_dir, 'depths')
+    images_dir = os.path.join(save_dir, 'images')
+    depths_dir = os.path.join(save_dir, 'depths')
     os.makedirs(images_dir, exist_ok=True)
     os.makedirs(depths_dir, exist_ok=True)
 
-    for mde_id, mde in enumerate(mde_list):
+    print("Saving depths")
+    for mde_id, mde in tqdm(enumerate(mde_list)):
         if mde == 'gt':
             continue
         with h5py.File(os.path.join(work_path, f'{name}_depth_{mde}.h5'), 'r') as f:
@@ -208,7 +214,8 @@ def export_images(worst_pairs_dict, args):
                     if dd['image2_id'] == i:
                         dd['results'][mde]['d2'] = get_kp_depth(dd['kp2'], depth, interpolation='nearest')
 
-    for i, image_name in enumerate(images):
+    print("Saving images")
+    for i, image_name in tqdm(enumerate(images)):
         image = cv2.imread(os.path.join(dataset_path, Path(PureWindowsPath(image_name))))
         save_image_path = os.path.join(images_dir, f'image_{i}.png')
         resized_image = enforce_max_width(image)
@@ -239,9 +246,9 @@ def export_images(worst_pairs_dict, args):
     # print(worst_pairs_dict)
 
 
-def save_json(worst_pairs_dict, args):
-    examples_dir = os.path.join(args.work_path, 'examples')
-    results_dir = os.path.join(examples_dir, 'results')
+def save_json(worst_pairs_dict, save_dir, args):
+    examples_dir = os.path.join(save_dir, 'examples')
+    results_dir = os.path.join(save_dir, 'results')
     os.makedirs(results_dir, exist_ok=True)
 
     def convert(obj, key=None):
@@ -276,18 +283,41 @@ def save_json(worst_pairs_dict, args):
         json.dump(main_index, f)
 
 def main(args):
+    job_id = os.environ.get('SLURM_JOB_ID', 'local')
+    if job_id == 'local':
+        save_dir = args.out_path
+    else:
+        save_dir = os.path.join(f'/work/{job_id}', args.dataset_type, args.name)
+
+    print(f"Saving to {save_dir}")
+
+    print("Extracting pairs")
     worst_pairs_dict = get_worst_pairs(args)
+    print("Extracting matches")
     get_matches(worst_pairs_dict, args)
-    export_images(worst_pairs_dict, args)
-    save_json(worst_pairs_dict, args)
+    print("Exporting images")
+    export_images(worst_pairs_dict, save_dir, args)
+    print("Saving json")
+    save_json(worst_pairs_dict, save_dir, args)
+
+    tar_file_path = os.path.join(save_dir, f'{args.name}.tar.gz')
+    print(f"Making tar archive: {tar_file_path}")
+    with tarfile.open(tar_file_path, "w:gz") as tar:
+        tar.add(save_dir, arcname=os.path.basename(save_dir))
+
+    final_tar_path = os.path.join(args.out_path, f'{args.name}.tar.gz')
+
+    print("Moving tar archive to: ", final_tar_path)
+    shutil.move(tar_file_path, final_tar_path)
 
 if __name__ == '__main__':
     args = parse_args()
 
     if args.config_path is not None:
-        for name, config in config_iterator(args.config_path):
+        for name, config, dataset_type in config_iterator(args.config_path):
             single_args = copy.copy(args)
             single_args.name = name
+            single_args.dataset_type = dataset_type
             single_args.work_path = config["work_path"]
             single_args.data_path = config["path"]
             single_args.out_path = config["work_path"].replace('mdrpbench', 'mdrpbench_examples')
