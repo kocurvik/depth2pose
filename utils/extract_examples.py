@@ -338,7 +338,7 @@ if __name__ == '__main__':
             single_args.dataset_type = dataset_type
             single_args.work_path = config["work_path"]
             single_args.data_path = config["path"]
-            single_args.out_path = '/projects/p1358-25-2/mdrpench_examples'
+            single_args.out_path = '/projects/p1358-25-2/mdrpbench_examples'
 
             job_args.append(single_args)
 
