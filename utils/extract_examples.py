@@ -314,7 +314,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     if args.config_path is not None:
-        for name, config, dataset_type in config_iterator(args.config_path):
+        for name, config, dataset_type in config_iterator(args.config_path, return_dataset_type=True):
             single_args = copy.copy(args)
             single_args.name = name
             single_args.dataset_type = dataset_type
