@@ -101,27 +101,27 @@ def plot_lineplot(rank_dicts, output_path, plot_with_avg):
         plot_rankings(rank_dicts, save_path,title_ending=' '+category)
 
 
-    if plot_with_avg:
-        save_path = output_path / f"{category}_lineplot_avg.png"
-        # compute average ranks
-        selected_datasets = {'eth3d', 'lamar', 'scannetpp', 'sintel'}
+        if plot_with_avg:
+            save_path = output_path / f"{category}_lineplot_avg.png"
+            # compute average ranks
+            selected_datasets = {'eth3d', 'lamar', 'scannetpp', 'sintel'}
 
-        filtered_dicts =  [
-            rank_dicts[k]
-            for k in selected_datasets
-            if k in rank_dicts
-        ]
-        avg_ranks = {}
-        models = set().union(*filtered_dicts)
-        for model in models:
-            values = [d[model] for d in rank_dicts.values() if model in d]
-            avg_ranks[model] = sum(values) / len(values)
+            filtered_dicts =  [
+                rank_dicts[k]
+                for k in selected_datasets
+                if k in rank_dicts
+            ]
+            avg_ranks = {}
+            models = set().union(*filtered_dicts)
+            for model in models:
+                values = [d[model] for d in rank_dicts.values() if model in d]
+                avg_ranks[model] = sum(values) / len(values)
 
-        rank_dicts_with_avg = {
-            "mean (standard)": avg_ranks,
-            **rank_dicts
-        }
-        plot_rankings(rank_dicts_with_avg, save_path,title_ending=' '+category)
+            rank_dicts_with_avg = {
+                "mean (standard)": avg_ranks,
+                **rank_dicts
+            }
+            plot_rankings(rank_dicts_with_avg, save_path,title_ending=' '+category)
 
 
 # below_: stuff for heatmaps
@@ -568,7 +568,7 @@ if __name__ == "__main__":
         if not args.plot_separate_scenes:
             mode_dicts = plot_heatmaps(data, rankings, args.output_path, mode, args.use_green_ranking, args.save_heatmap)
         
-        elif args.plot_separate_scenes:
+        else:
 
             data_merged = {'d2p': {}}
 
