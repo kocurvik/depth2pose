@@ -5,19 +5,126 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import itertools
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Visualise results for the d2p dataset. Results are already computed and sotred in a csv file."
     )
-    parser.add_argument("--input-file", type=Path)
+    parser.add_argument("--input-file", type=Path, nargs="+")
     parser.add_argument("--output-path", type=Path)
     parser.add_argument("--iters", type=int, default=1000)
     parser.add_argument("--new-scene-groups", type=Path, default=None)
     parser.add_argument("--split-ro", action="store_true")
-    parser.add_argument("--use-green-ranking", action="store_true")
+    parser.add_argument("--save-heatmap", action="store_true")
+    parser.add_argument("--plot-separate-scenes", action="store_true")
+    parser.add_argument("--save-lineplot", action="store_true")
+    parser.add_argument("--use-green-ranking", action="store_true") # for the heatmap
     return parser.parse_args()
 
+
+# stuff for lineplots
+
+
+def get_style_cycle():
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    linestyles = ['-', '--', '-.', ':']
+
+    # Create all combinations
+    return itertools.chain.from_iterable(
+        [(c, ls) for c in colors] for ls in linestyles
+    )
+
+def normalize_ranks(d, remove_keys=None):
+    if remove_keys is None:
+        remove_keys = []
+    # 1. filter
+    filtered = {k: v for k, v in d.items() if k not in remove_keys}
+
+    # 2. sort by original rank
+    sorted_items = sorted(filtered.items(), key=lambda x: x[1])
+
+    # 3. reassign ranks (1..N)
+    return {k: i + 1 for i, (k, _) in enumerate(sorted_items)}
+
+def get_common_models(dicts):
+    common = set.intersection(*(set(d.keys()) for d in dicts.values()))
+    return sorted(common)
+
+def exclude_special(dicts, remove_keys=["gt", "none"]):
+    breakpoint()
+    # Normalize each dataset
+    processed_dicts = {
+        name: normalize_ranks(d, remove_keys)
+        for name, d in dicts.items()
+    }
+
+    return processed_dicts
+
+def plot_rankings(dicts, output_file, title_ending=''):
+    dataset_names = list(dicts.keys())
+
+    # Find common models AFTER filtering
+    models = set.intersection(*(set(d.keys()) for d in dicts.values()))
+    models = sorted(models)
+
+    x = np.arange(len(dataset_names))
+
+    plt.figure(figsize=(10, 6))
+
+    style_cycle = get_style_cycle()
+
+    for model in models:
+        color, linestyle = next(style_cycle)
+        y = [dicts[d][model] for d in dataset_names]
+        
+        plt.plot(x, y, marker='o', linestyle=linestyle, color=color, label=model)
+
+    plt.xticks(x, dataset_names)
+    plt.gca().invert_yaxis()
+    plt.xlabel("Dataset")
+    plt.ylabel("Rank")
+    plt.title("Model Rankings " + title_ending)
+
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+
+    plt.savefig(output_file)
+    plt.close()
+
+
+def plot_lineplot(rank_dicts, output_path, plot_with_avg):
+    
+    for category, rank_dicts in rank_dicts.items(): 
+        save_path = output_path / f"{category}_lineplot.png"
+
+        plot_rankings(rank_dicts, save_path,title_ending=' '+category)
+
+
+    if plot_with_avg:
+        save_path = output_path / f"{category}_lineplot_avg.png"
+        # compute average ranks
+        selected_datasets = {'eth3d', 'lamar', 'scannetpp', 'sintel'}
+
+        filtered_dicts =  [
+            rank_dicts[k]
+            for k in selected_datasets
+            if k in rank_dicts
+        ]
+        avg_ranks = {}
+        models = set().union(*filtered_dicts)
+        for model in models:
+            values = [d[model] for d in rank_dicts.values() if model in d]
+            avg_ranks[model] = sum(values) / len(values)
+
+        rank_dicts_with_avg = {
+            "mean (standard)": avg_ranks,
+            **rank_dicts
+        }
+        plot_rankings(rank_dicts_with_avg, save_path,title_ending=' '+category)
+
+
+# below_: stuff for heatmaps
 def get_solver_group(s, calib_solvers, uncal_solvers, split_ro):
     if any(s.startswith(base) for base in calib_solvers):
         base = "calib"
@@ -283,10 +390,20 @@ def add_mAA_mean(maa_matrix, color_matrix, model_names,use_green_ranking):
     new_maa = np.vstack([mean_maa, maa_matrix])
     new_color = np.vstack([mean_color, color_matrix])
 
-    return new_maa, new_color
+    # obs. This assumes results for all models. Will fail otherwise
+    mean_ranks_dict = {model_name: rank for model_name, rank in zip(model_names, mean_ranks)}
 
-def plot_heatmaps(data, rankings, output_path, use_green_ranking):
-    
+    return new_maa, new_color, mean_ranks_dict
+
+def plot_heatmaps(data, rankings, output_path, mode, use_green_ranking=False, save_heatmaps=True):
+
+    # as input, add input 1) plot_heatmap and 2) plot_lineplot
+    # or just make copy for lineplot? and there you then have to submit more data. More clean though?
+    # or first call this, return scene_ranks and then call plot linemap after
+    # we still need option to not plot/save heatmaps then, but it would be called separately for lineplot which is more clean
+
+    unique_solver_groups = {sg for solver_groups in data.values() for sg in solver_groups.keys()}
+    rank_dicts = {sg: {} for sg in unique_solver_groups}
     for category, solver_groups in data.items():
 
         for solver_group, scenes in solver_groups.items():
@@ -328,83 +445,98 @@ def plot_heatmaps(data, rankings, output_path, use_green_ranking):
                                 color_matrix[i, j] = -(rank - none_rank) / (max_rank - none_rank + 1e-6)
                             else:
                                 color_matrix[i, j] = 0
+                
+                if mode == 'standard':
+                    rank_dicts[solver_group][scene] = normalize_ranks(scene_ranks, remove_keys=["gt", "none"])
+    
+            # this is where we have "solver_group" (calib/uncal/calib_ro/uncal_ro)
+            # this is also where we have cetegory (vegetation/ambiguous/statues)
+            # heatmap plotting is also done here, so we do not necessarily need to fix stuffhere, just in this level of loop
+            # we also have "model_names"
+            # from add_mAA_mean we can return ranks, and together with model_names create dict
+            # the dict can then be added into the calib_dicts of uncal_discts
+            # maybe only do this option without ro? or also with? just four if..ask chatgpt
             
-                        
-
-
-            maa_matrix, color_matrix = add_mAA_mean(
+            maa_matrix, color_matrix, mean_ranks = add_mAA_mean(
                 maa_matrix, color_matrix, model_names, use_green_ranking
             )
             scene_names = ["mean"] + scene_names
 
-            plt.figure(figsize=(12, 6))
+            if mode == 'd2p':
+                rank_dicts[solver_group][category] = normalize_ranks(mean_ranks, remove_keys=["gt", "none"])
 
-            mask = np.isnan(color_matrix)
+            if save_heatmaps:
+                plt.figure(figsize=(12, 6))
 
-
-            if use_green_ranking:
-                sns.heatmap(
-                    color_matrix,
-                    mask=mask,
-                    xticklabels=model_names,
-                    yticklabels=scene_names,
-                    cmap="Greens",
-                    vmin=-1,
-                    vmax=1,
-                    center=0,
-                    annot=maa_matrix,
-                    fmt=".1f",
-                    cbar=True
-                )
-                # change colorscale ticks from -1 to 1 to rankings
-                cbar = plt.gca().collections[0].colorbar
-
-                cbar.set_ticks([-1, 1])
-                cbar.set_ticklabels([
-                    "Lowest ranking",
-                    "Highest ranking"
-                ])
-
-            else:
-                sns.heatmap(
-                    color_matrix,
-                    mask=mask,
-                    xticklabels=model_names,
-                    yticklabels=scene_names,
-                    cmap="RdYlGn",
-                    vmin=-1,
-                    vmax=1,
-                    center=0,
-                    annot=maa_matrix,
-                    fmt=".1f",
-                    cbar=True
-                )
-                # change colorscale ticks from -1 to 1 to rankings
-                cbar = plt.gca().collections[0].colorbar
-
-                cbar.set_ticks([-1, 0, 1])
-                cbar.set_ticklabels([
-                    "Lowest ranking",
-                    "Baseline",
-                    "Highest ranking"
-                ])
+                mask = np.isnan(color_matrix)
 
 
-            # vertical line before 'none'
-            if "none" in model_names:
-                idx = model_names.index("none")
-                plt.axvline(idx, color="white", linewidth=2)
+                if use_green_ranking:
+                    sns.heatmap(
+                        color_matrix,
+                        mask=mask,
+                        xticklabels=model_names,
+                        yticklabels=scene_names,
+                        cmap="Greens",
+                        vmin=-1,
+                        vmax=1,
+                        center=0,
+                        annot=maa_matrix,
+                        fmt=".1f",
+                        cbar=True
+                    )
+                    # change colorscale ticks from -1 to 1 to rankings
+                    cbar = plt.gca().collections[0].colorbar
 
-            # horizontal line below 'mean'
-            plt.axhline(1, color="white", linewidth=2)
+                    cbar.set_ticks([-1, 1])
+                    cbar.set_ticklabels([
+                        "Lowest ranking",
+                        "Highest ranking"
+                    ])
 
-            plt.title(f"{category} - {solver_group}")
-            plt.xticks(rotation=45, ha="right")
-            plt.tight_layout()
+                else:
+                    sns.heatmap(
+                        color_matrix,
+                        mask=mask,
+                        xticklabels=model_names,
+                        yticklabels=scene_names,
+                        cmap="RdYlGn",
+                        vmin=-1,
+                        vmax=1,
+                        center=0,
+                        annot=maa_matrix,
+                        fmt=".1f",
+                        cbar=True
+                    )
+                    # change colorscale ticks from -1 to 1 to rankings
+                    cbar = plt.gca().collections[0].colorbar
 
-            save_path = output_path / f"{category}_{solver_group}_heatmap.png"
-            plt.savefig(save_path)
-            plt.close()
+                    cbar.set_ticks([-1, 0, 1])
+                    cbar.set_ticklabels([
+                        "Lowest ranking",
+                        "Baseline",
+                        "Highest ranking"
+                    ])
+
+
+                # vertical line before 'none'
+                if "none" in model_names:
+                    idx = model_names.index("none")
+                    plt.axvline(idx, color="white", linewidth=2)
+
+                # horizontal line below 'mean'
+                plt.axhline(1, color="white", linewidth=2)
+
+                plt.title(f"{category} - {solver_group}")
+                plt.xticks(rotation=45, ha="right")
+                plt.tight_layout()
+
+                save_path = output_path / f"{category}_{solver_group}_heatmap.png"
+                plt.savefig(save_path)
+                plt.close()
+
+    return rank_dicts
+
 
 
 if __name__ == "__main__":
@@ -412,17 +544,51 @@ if __name__ == "__main__":
     calib_solvers = ['calib', 'calib_shift', 'baseline_calib']
     uncal_solvers = ['mdecalib', 'mdecalib_shift', 'sf', 'sf_shift', 'vf', 'vf_shift', 'baseline_sf']
 
-    os.makedirs(args.output_path, exist_ok=True)
+    if args.plot_separate_scenes and args.save_lineplot:
+        raise ValueError("You have to choose between heatmaps for separate scenes and lineplots")
+    if args.save_lineplot and len(args.input_file) < 2:
+        raise ValueError("For the lineplots you need to input a csv to both d2p and to standard results")
 
-    data = parse_csv_file(
-        args.input_file,
-        calib_solvers,
-        uncal_solvers,
-        new_scene_groups = args.new_scene_groups,
-        nbr_iters=args.iters,
-        split_ro = args.split_ro
-    ) #default is using 1000 iterations, can be inputted
+    os.makedirs(args.output_path, exist_ok=True)
+    rank_dicts = {}
+
+    for input_file in args.input_file:
+        mode = 'd2p' if 'd2p' in str(input_file) else 'standard' if 'standard' in str(input_file) else None
+        data = parse_csv_file(
+            input_file,
+            calib_solvers,
+            uncal_solvers,
+            new_scene_groups = args.new_scene_groups,
+            nbr_iters=args.iters,
+            split_ro = args.split_ro
+        ) #default is using 1000 iterations, can be inputted
+        
+        rankings = compute_rankings(data)
+
+        if not args.plot_separate_scenes:
+            mode_dicts = plot_heatmaps(data, rankings, args.output_path, mode, args.use_green_ranking, args.save_heatmap)
+        
+        elif args.plot_separate_scenes:
+
+            data_merged = {'d2p': {}}
+
+            for old_group, inner_dict in data.items():
+                for solver_group, scenes in inner_dict.items():
+                    if solver_group not in data_merged['d2p']:
+                        data_merged['d2p'][solver_group] = {}
+                    data_merged['d2p'][solver_group].update(scenes)
+
+            rankings_merged = compute_rankings(data_merged)
+
+            _ = plot_heatmaps(data_merged, rankings_merged, args.output_path, mode, args.use_green_ranking, args.save_heatmap)
+
+        if args.save_lineplot:
+            for solver_group, inner_dict in mode_dicts.items():
+                if solver_group not in rank_dicts:
+                    rank_dicts[solver_group] = {}
+                rank_dicts[solver_group].update(inner_dict)
+
+    if args.save_lineplot:   
+        plot_with_avg = True
+        plot_lineplot(rank_dicts, args.output_path, plot_with_avg)
     
-    rankings = compute_rankings(data)
-    
-    plot_heatmaps(data, rankings, args.output_path, args.use_green_ranking)
