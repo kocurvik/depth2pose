@@ -317,9 +317,11 @@ def main(args):
     tar_file_path = os.path.join(save_dir, f'{args.name}.tar.gz')
     print(f"Making tar archive: {tar_file_path}")
     with tarfile.open(tar_file_path, "w:gz") as tar:
+        # in arcname include everything after 'mdrpbench'
         tar.add(save_dir, arcname=os.path.basename(save_dir))
 
     final_tar_path = os.path.join(args.out_path, f'{args.name}.tar.gz')
+
 
     print("Moving tar archive to: ", final_tar_path)
     shutil.move(tar_file_path, final_tar_path)
@@ -336,7 +338,7 @@ if __name__ == '__main__':
             single_args.dataset_type = dataset_type
             single_args.work_path = config["work_path"]
             single_args.data_path = config["path"]
-            single_args.out_path = config["work_path"].replace('mdrpbench', 'mdrpbench_examples')
+            single_args.out_path = '/projects/p1358-25-2/mdrpench_examples'
 
             job_args.append(single_args)
 
