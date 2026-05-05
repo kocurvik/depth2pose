@@ -256,8 +256,10 @@ def print_combined_latex_table(combined_df, baseline=None, include_calib_col=Tru
 
     header += ['\\multicolumn{' + str(solvers_count) + '}{c}{\\mAA}']
     print('\\toprule')
-    print(' & '.join(header) + ' \\\\ ')
-    print(' & '.join(second_row) + ' \\\\ \\midrule')
+    cline_range = f'{num_cols - solvers_count + 1}-{num_cols}'
+    print(' & '.join(header) + f'\\\\  \\cmidrule{{{cline_range}}}')
+
+    print(' & '.join(second_row) + '\\\\ \\midrule')
 
     for _, row in combined_df.iterrows():
         mde = row['mde']
@@ -292,25 +294,29 @@ def print_combined_latex_table(combined_df, baseline=None, include_calib_col=Tru
 
 
 def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='scale', iters=1000, include_ro=True,
-                         keep_only=8, best_only=False):
+                         keep_only=None, best_only=False):
     if depth_type == 'scale':
         depth_cols = ['d1_si', 'A.Rel_si']
-    else:
+    elif depth_type == 'affine':
         depth_cols = ['d1_ssi', 'A.Rel_ssi']
+    else:
+        depth_cols = ['d1_si', 'A.Rel_si', 'd1_ssi', 'A.Rel_ssi']
 
     if cal_type == 'calib':
         solvers = ['calib']
         baseline = 'baseline_calib'
     else:
-        solvers = ['sf']
-        baseline = 'basline_sf'
+        solvers = ['sf', 'mdecalib']
+        baseline = 'baseline_sf'
 
 
-    if depth_type != 'scale':
+    if depth_type == 'affine':
         solvers = [f'{x}_shift' for x in solvers]
+    elif depth_type == 'both':
+        solvers += [f'{x}_shift' for x in solvers]
 
     if include_ro:
-        solvers += [f'{x}_ro' for x in solvers]
+        solvers = [item for x in solvers for item in (x, f'{x}_ro')]
 
     depth_df = depth_df.groupby('mde')[depth_cols].mean().reset_index().copy()
 
@@ -319,14 +325,21 @@ def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='sca
     depth_df = pd.concat([depth_df, pd.DataFrame([new_row])], ignore_index=True)
 
     results_df = results_df.copy()[results_df['iters'] == iters]
+
+    if cal_type == 'uncal':
+        depth_df = depth_df[~depth_df['mde'].str.contains('Calib')]
+        results_df = results_df[~results_df['mde'].str.contains('Calib')]
+
     results_df = results_df.groupby(['solver', 'mde'])['pose_mAA_10'].mean().reset_index()
-    baseline_pose_mAA = results_df[results_df['solver'] == baseline]['pose_mAA_10'][0]
+    baseline_pose_mAA = results_df[results_df['solver'] == baseline]['pose_mAA_10'].values[0]
     baseline = (baseline, baseline_pose_mAA)
 
     pivot_df = results_df.pivot(index='mde', columns='solver', values='pose_mAA_10')[solvers]
     combined_df = depth_df[['mde'] + depth_cols].merge(pivot_df, on='mde', how='left')
+    combined_df = combined_df.fillna(-1.0)
 
-    sort_metric = 'd1_si' if depth_type=='scale' else 'd1_ssi'
+
+    sort_metric = 'd1_ssi' if depth_type=='affine' else 'd1_si'
 
     if best_only:
         combined_df['basename'] = combined_df['mde'].apply(get_mde_basename)
@@ -350,10 +363,11 @@ if __name__ == '__main__':
     results_df = pd.read_csv('csv_results/standard_splg_slim_pose_results.csv')
     depth_df = pd.read_csv('csv_results/standard_depth_results.csv')
 
-    print_combined_table(results_df, depth_df, cal_type='calib', keep_only=None, include_ro=True, best_only=True)
-    # print_combined_table(results_df, depth_df, cal_type='uncal', keep_only=None)
-    # print_combined_table(results_df, depth_df, cal_type='calib', depth_type='affine', keep_only=8)
-    # print_combined_table(results_df, depth_df, cal_type='uncal', depth_type='affine', keep_only=8)
+    # main paper
+    # print_combined_table(results_df, depth_df, cal_type='calib', keep_only=None, include_ro=True, best_only=True)
+    # appendix
+    # print_combined_table(results_df, depth_df, cal_type='calib', depth_type='both', include_ro=True)
+    print_combined_table(results_df, depth_df, cal_type='uncal', depth_type='both', include_ro=True)
 
     # print_best_only_table(results_df, sort_rows=True, use_ro=False)
     #
