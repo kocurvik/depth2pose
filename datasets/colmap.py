@@ -36,6 +36,7 @@ def parse_args():
     parser.add_argument('--single_scene_subsets', action='store_true', default=False)
     parser.add_argument('--out_path', type=str, default=None)
     parser.add_argument('--dataset_path', type=str, default=None)
+    parser.add_argument('--ignore_pairs', action='store_true', default=False, help='Skip loading or computing pairs')
 
     return parser.parse_args()
 
@@ -158,7 +159,22 @@ def valid_pairs(model, image_ids, args):
 
 
 
-def enforce_max_images_pairs(model, args):
+def enforce_max_images_pairs(model, args, subset, image_list=None, pair_list=None):
+
+    if image_list is not None and pair_list is not None:
+        full_img_path = ntpath.normpath(os.path.join(subset, model['img_path']))
+        name_to_id = {ntpath.normpath(ntpath.join(full_img_path, img.name)): img_id
+                      for img_id, img in model['images'].items()}
+
+        image_ids = [name_to_id[image_name] for image_name in image_list if image_name in name_to_id]
+
+        pairs = []
+        for image_1, image_2 in pair_list:
+            if image_1 in name_to_id and image_2 in name_to_id:
+                pairs.append((name_to_id[image_1], name_to_id[image_2]))
+
+        return image_ids, pairs
+
     if args.max_images is None or len(model['images']) <= args.max_images:
         # if there are fewer than max images we keep all
         image_ids = list(model['images'].keys())
@@ -208,6 +224,24 @@ def process_subsets(args, subsets):
     out_path = os.path.join(args.out_path, args.name)
     h5_path = f'{out_path}.h5'
 
+    dataset_path = Path(args.dataset_path)
+    fixed_pairs_txt_path = os.path.join(dataset_path, f'{args.name}_image_pairs.txt')
+    fixed_images_txt_path = os.path.join(dataset_path, f'{args.name}_image_list.txt')
+    if os.path.exists(fixed_pairs_txt_path) and os.path.exists(fixed_images_txt_path) and not args.ignore_pairs:
+        print("Fount existing pair and image info:")
+        print(fixed_images_txt_path)
+        print(fixed_pairs_txt_path)
+        print("Reusing those files.")
+
+        with open(fixed_images_txt_path, 'r') as f:
+            image_list = [x.strip() for x in f.readlines()]
+
+        with open(fixed_pairs_txt_path, 'r') as f:
+            pair_list = [x.strip().split(',') for x in f.readlines()]
+    else:
+        image_list = None
+        pair_list = None
+
     if os.path.exists(h5_path):
         with h5py.File(h5_path, 'r') as f:
             if 'completed' in f and not args.recalc:
@@ -227,9 +261,10 @@ def process_subsets(args, subsets):
 
     for subset in subsets:
         print(f"Processing subset: {subset}")
-        model = get_model(args, subset)
+        model, subset_path = get_model(args, subset)
 
-        image_ids, pairs = enforce_max_images_pairs(model, args)
+        print("Creating new image list and pairs")
+        image_ids, pairs = enforce_max_images_pairs(model, args, subset, image_list=image_list, pair_list=pair_list)
 
         create_gt_h5(model, image_ids, subset, f, f_txt, args)
 
@@ -280,7 +315,7 @@ def get_model(args, subset):
     model['img_path'] = img_path
     model['model_path'] = model_path
     model['points'] = points
-    return model
+    return model, subset_path
 
 
 def process_colmap_dataset(args):
