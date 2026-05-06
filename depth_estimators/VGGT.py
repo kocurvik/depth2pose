@@ -1,6 +1,7 @@
 from time import perf_counter_ns
 
 import cv2
+import matplotlib
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -15,7 +16,7 @@ from vggt.models.vggt import VGGT as VGGTBase
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
 
 
-def load_and_preprocess_images(image_path_list, target_size=518, mode="crop"):
+def load_and_preprocess_images(image_path_list, target_size=518, mode="pad"):
     """
     A quick start function to load and preprocess images for model input.
     This assumes the images should have the same shape for easier batching, but our model can also work well with different shapes.
@@ -70,7 +71,6 @@ def load_and_preprocess_images(image_path_list, target_size=518, mode="crop"):
         img = img.convert("RGB")
 
         width, height = img.size
-        orig_coords.append((height, width))
 
         if mode == "pad":
             # Make the largest dimension 518px while maintaining aspect ratio
@@ -95,6 +95,10 @@ def load_and_preprocess_images(image_path_list, target_size=518, mode="crop"):
             start_y = (new_height - target_size) // 2
             img = img[:, start_y : start_y + target_size, :]
 
+        content_h = img.shape[1]
+        content_w = img.shape[2]
+        pad_top = pad_left = 0
+
         # For pad mode, pad to make a square of target_size x target_size
         if mode == "pad":
             h_padding = target_size - img.shape[1]
@@ -110,6 +114,8 @@ def load_and_preprocess_images(image_path_list, target_size=518, mode="crop"):
                 img = torch.nn.functional.pad(
                     img, (pad_left, pad_right, pad_top, pad_bottom), mode="constant", value=1.0
                 )
+
+        orig_coords.append((height, width, content_h, content_w, pad_top, pad_left))
 
         shapes.add((img.shape[1], img.shape[2]))
         images.append(img)
@@ -194,14 +200,15 @@ class VGGT(BaseDepthEstimator):
     def upsample_predictions(self, depth_maps, depth_confs, intrinsics, orig_coords):
         new_depth_maps, new_depth_confs = [], []
         for i in range(len(depth_maps)):
-            new_height, new_width = depth_confs[i].shape
-            height, width = orig_coords[i]
-            intrinsics[i][0, 2] = width/2
-            intrinsics[i][1, 2] = height/2
-            intrinsics[i][0, 0] *= width / new_width
-            intrinsics[i][1, 1] *= height / new_height
-            depth_map = F.interpolate(depth_maps[i][None, None], size=orig_coords[i], mode='bilinear', align_corners=False).squeeze()
-            depth_conf = F.interpolate(depth_confs[i][None, None], size=orig_coords[i], mode='bilinear', align_corners=False).squeeze()
+            height, width, content_h, content_w, pad_top, pad_left = orig_coords[i]
+            depth_map = depth_maps[i][pad_top:pad_top + content_h, pad_left:pad_left + content_w]
+            depth_conf = depth_confs[i][pad_top:pad_top + content_h, pad_left:pad_left + content_w]
+            intrinsics[i][0, 2] = width / 2
+            intrinsics[i][1, 2] = height / 2
+            intrinsics[i][0, 0] *= width / content_w
+            intrinsics[i][1, 1] *= height / content_h
+            depth_map = F.interpolate(depth_map[None, None], size=(height, width), mode='bilinear', align_corners=False).squeeze()
+            depth_conf = F.interpolate(depth_conf[None, None], size=(height, width), mode='bilinear', align_corners=False).squeeze()
             new_depth_maps.append(depth_map)
             new_depth_confs.append(depth_conf)
         return torch.stack(new_depth_maps), torch.stack(new_depth_confs), intrinsics
@@ -215,11 +222,28 @@ class VGGT(BaseDepthEstimator):
             intrinsic, extrinsic = intrinsic[0], extrinsic[0]
         return {"depth": depth_map, "K": intrinsic, "runtime": runtime}
 
+
+def colorize_depth(depth: np.ndarray, mask: np.ndarray = None, normalize: bool = True, cmap: str = 'Spectral') -> np.ndarray:
+    if mask is None:
+        depth = np.where(depth > 0, depth, np.nan)
+    else:
+        depth = np.where((depth > 0) & mask, depth, np.nan)
+    disp = 1 / depth
+    if normalize:
+        min_disp, max_disp = np.nanquantile(disp, 0.001), np.nanquantile(disp, 0.99)
+        disp = (disp - min_disp) / (max_disp - min_disp)
+    colored = np.nan_to_num(matplotlib.colormaps[cmap](1.0 - disp)[..., :3], 0)
+    colored = np.ascontiguousarray((colored.clip(0, 1) * 255).astype(np.uint8))
+    return colored
+
+
 if __name__ == '__main__':
-    image_path = "./assets/kitchen/images/00.png"
-    image_path2 = "./assets/kitchen/images/01.png"
+    image_path = "00001.png"
     model = VGGT()
     model.load_model()
     print(model.name)
     # model.infer([image_path, image_path2])
-    model.infer([image_path])
+    out = model.infer([image_path])
+    depth_colored =  colorize_depth(out['depth'])
+    cv2.imwrite("colorized.png", depth_colored)
+
