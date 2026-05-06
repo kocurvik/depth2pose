@@ -4,7 +4,7 @@ import { tLabel, csvValueLabel, getTitleAttr } from '../dictionary/index.js';
 import { t } from '../dictionary/dict.js';
 
 
-/* Open the depth comparison workflow for one selected image pair. */
+/** Open the depth comparison workflow for one selected image pair. */
 export function openPairDepths(pairKey, state, controller) {
 	const example = state.currentExamples.find((item) => item.pairKey === pairKey);
 
@@ -33,7 +33,7 @@ export function openPairDepths(pairKey, state, controller) {
 	renderDepthDetailView(example, state, controller);
 }
 
-/* Render the depth detail view from an already resolved image-pair example. */
+/** Render the depth detail view from an already resolved image-pair example. */
 function renderDepthDetailView(example, state, controller) {
 	const preferredResults = getComparableResults(example);
 	const overviewResult = example.selectedResult || preferredResults[0]?.result || null;
@@ -71,7 +71,7 @@ function renderDepthDetailView(example, state, controller) {
 	controller.focusExamplesViewer();
 }
 
-/* Render one depth result card for one MDE on the currently selected pair. */
+/** Render one depth result card for one MDE on the currently selected pair. */
 function renderDepthResultCard(item, index, dataset, example) {
 	const { mdeName, result } = item;
 	const depth1 = result?.exported_depth_image1_path ? datasetAssetUrl(dataset, result.exported_depth_image1_path) : '';
@@ -123,7 +123,7 @@ function renderDepthResultCard(item, index, dataset, example) {
 	`;
 }
 
-/* Render per-depth comparison against the pair baseline p_err. */
+/** Render per-depth comparison against the pair baseline p_err. */
 function renderBaselineComparison(example, result) {
 	const baselineErr = Number(example?.details?.baseline_p_err);
 	const pErr = Number(result?.p_err);

@@ -270,7 +270,7 @@ const dict = {
 
 	'examples.dataset.detail': { label: 'Select a dataset first, then click any pair to inspect its depth results.' },
 	'examples.dataset.detail.count': { label: '{count} pairs in this dataset.' },
-	'examples.dataset.detail.open': { label: 'Open pairs list for this dataset' },
+	'examples.dataset.detail.open': { label: 'Open pairs list' },
 	
 	'examples.pairs.detail': { label: 'Pairs are ordered by descending best <code>p_err</code>, from worst to best. Click a pair to open depth comparison.' },
 	'examples.pairs.card.detail': { label: 'best p_err {bestPerr} · baseline {baseline}' },

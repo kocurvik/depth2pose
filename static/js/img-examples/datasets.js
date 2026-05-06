@@ -1,4 +1,4 @@
-import { IMG_EXAMPLES_CONTENTS_URL } from '../api-config.js';
+import { IMG_EXAMPLES_SOURCE } from '../api-config.js';
 import { fetchJson, sortByName } from '../global.js';
 import { datasetAssetUrl, getBestResult, normalizePairKey } from './shared.js';
 import { tLabel, csvValue, csvValueLabel, getTitleAttr } from '../dictionary/index.js';
@@ -70,12 +70,12 @@ export async function loadDetailedExamples(dataset) {
 
 /** Return folder names from the d2p_examples directory. */
 async function listExampleDatasets() {
-	const entries = await fetchJson(IMG_EXAMPLES_CONTENTS_URL);
-	
-	if (!Array.isArray(entries)) return [];
-	return entries
-		.filter((entry) => entry?.type === 'dir' && entry.name)
-		.map((entry) => entry.name)
+	const response = await fetch(IMG_EXAMPLES_SOURCE);
+	const html = await response.text();
+
+	return [...html.matchAll(/href="([^"]+\/)"/g)].map(match => match[1].slice(0, -1))
+		.filter(name => name !== "../")
+		.filter(name => !name.startsWith("/"))
 		.sort(sortByName);
 }
 
@@ -100,7 +100,7 @@ async function loadAllDatasetSummaries(datasets) {
 async function loadDatasetManifest(dataset) {
 	if (DATASET_MANIFEST_CACHE.has(dataset)) return DATASET_MANIFEST_CACHE.get(dataset);
 
-	const promise = fetchJson(datasetAssetUrl(dataset, `${dataset}_examples.json`));
+	const promise = fetchJson(datasetAssetUrl(dataset, `examples/${dataset}_examples.json`));
 	DATASET_MANIFEST_CACHE.set(dataset, promise);
 	return promise;
 }

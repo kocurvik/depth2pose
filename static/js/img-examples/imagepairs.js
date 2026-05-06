@@ -1,7 +1,7 @@
 import { decoratePairCards, getPoseError, renderPairCard } from './shared.js';
 import { tLabel, csvValueLabel, getTitleAttr } from '../dictionary/index.js';
 
-/* Render the list of RGB pairs for the currently selected dataset. */
+/** Render the list of RGB pairs for the currently selected dataset. */
 export function renderPairListView(state, controller) {
 	const examples = [...state.currentExamples].sort((a, b) => getPoseError(b.selectedResult) - getPoseError(a.selectedResult));
 	const datasetLang = csvValueLabel('dataset', state.currentDatasetName);

@@ -22,8 +22,5 @@ export const GROUP_TABLE_SOURCES = {
 	}
 };
 
-/** BASE URL to the folder containing image examples. */
-export const IMG_EXAMPLES_BASE_URL = 'https://raw.githubusercontent.com/lbujnak/depth2pose_webdata/main/benchmark/d2p_examples';
-
-/** URL to the JSON file for listing the contents of the d2p_examples folder. */
-export const IMG_EXAMPLES_CONTENTS_URL = 'https://api.github.com/repos/lbujnak/depth2pose_webdata/contents/benchmark/d2p_examples?ref=main';
+/** URL to the source folder for image examples. */
+export const IMG_EXAMPLES_SOURCE = 'https://davinci.fmph.uniba.sk/~kocur15/d2p_examples/';

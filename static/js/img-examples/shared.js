@@ -1,10 +1,10 @@
 import { isGtMde } from '../global.js';
-import { IMG_EXAMPLES_BASE_URL } from '../api-config.js';
+import { IMG_EXAMPLES_SOURCE } from '../api-config.js';
 import { tLabel, getTitleAttr } from '../dictionary/index.js';
 
 /** Build an absolute URL for one asset inside a dataset example folder. */
 export function datasetAssetUrl(dataset, relativePath) {
-	return `${IMG_EXAMPLES_BASE_URL}/${dataset}/${relativePath}`;
+	return `${IMG_EXAMPLES_SOURCE}${dataset}/${relativePath}`;
 }
 
 
