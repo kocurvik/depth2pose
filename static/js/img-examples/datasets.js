@@ -18,7 +18,7 @@ export async function loadAvailableDatasets(state, controller) {
 	);
 
 	try {
-		const datasets = await listExampleDatasets();
+		const datasets = JSON.parse(await (await fetch(IMG_EXAMPLES_SOURCE + 'listdatasets.json')).text());
 		state.availableDatasets = datasets;
 
 		if (!datasets.length) {
@@ -66,17 +66,6 @@ export async function loadDetailedExamples(dataset) {
 
 	DATASET_EXAMPLES_CACHE.set(dataset, promise);
 	return promise;
-}
-
-/** Return folder names from the d2p_examples directory. */
-async function listExampleDatasets() {
-	const response = await fetch(IMG_EXAMPLES_SOURCE);
-	const html = await response.text();
-
-	return [...html.matchAll(/href="([^"]+\/)"/g)].map(match => match[1].slice(0, -1))
-		.filter(name => name !== "../")
-		.filter(name => !name.startsWith("/"))
-		.sort(sortByName);
 }
 
 /** Load lightweight manifest summaries for every listed dataset folder. */
