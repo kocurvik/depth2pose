@@ -14,7 +14,7 @@ export const STANDARD_TABLE_SOURCES = {
 export const GROUP_TABLE_SOURCES = {
 	loma: {
 		key: 'controls.select.source.loma',
-		url: 'https://raw.githubusercontent.com/kocurvik/depth2pose/main/csv_results/d2p_slim_pose_results.csv'
+		url: 'https://raw.githubusercontent.com/kocurvik/depth2pose/main/csv_results/d2p_loma_slim_pose_results.csv'
 	},
 	splg: {
 		key: 'controls.select.source.splg',
