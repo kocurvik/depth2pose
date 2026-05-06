@@ -320,35 +320,51 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, metric, remove_outliers=
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--pose_csv', type=str, default='csv_results/standard_splg_pose_results.csv')
-    parser.add_argument('--depth_csv', type=str, default='csv_results/standard_depth_results.csv')
-    parser.add_argument('--out_dir', type=str, default='vis')
-    parser.add_argument('--dataset', type=str, default='mean',
-                        help='Dataset to plot (default: all datasets in the CSV)')
-    parser.add_argument('--remove_outliers', action='store_true', default=False)
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--pose_csv', type=str, default='csv_results/standard_splg_pose_results.csv')
+    # parser.add_argument('--depth_csv', type=str, default='csv_results/standard_depth_results.csv')
+    # parser.add_argument('--out_dir', type=str, default='vis')
+    # parser.add_argument('--remove_outliers', action='store_true', default=False)
+    # args = parser.parse_args()
 
-    pose_df = pd.read_csv(args.pose_csv)
-    depth_df = pd.read_csv(args.depth_csv)
+    out_dir = 'vis'
 
     generate_legend_markers()
 
-    matches = args.pose_csv.split('/')[-1].split('_')[1]
+    depth_csv = 'csv_results/standard_depth_results.csv'
+    depth_df = pd.read_csv(depth_csv)
+
+    for matches in ['splg', 'loma']:
+        pose_csv = f'csv_results/standard_{matches}_slim_pose_results.csv'
+        pose_df = pd.read_csv(pose_csv)
+
 
     # metrics = ['A.Rel_si', 'd1_si', 'A.Rel_ssi', 'd1_ssi']
-    metrics = ['d1_si', 'd1_ssi']
+    # metrics = ['d1_si', 'd1_ssi']
+        dataset = 'mean'
 
+        plot_scatter_pose_depth(pose_df, depth_df, dataset, 'd1_si',
+                                remove_outliers=False,
+                                out_dir=os.path.join(out_dir, 'sm'), iters=1000, matches=matches,
+                                solvers=['calib', 'calib_ro', 'sf', 'sf_ro'])
 
-    # for metric in metrics:
-        # plot_scatter_pose_depth(pose_df, depth_df, args.dataset, metric,
-        #                         remove_outliers=False,
-        #                         out_dir=os.path.join(args.out_dir, 'sm'), iters=1000, matches=matches)
+        plot_scatter_pose_depth(pose_df, depth_df, dataset, 'd1_ssi',
+                                remove_outliers=False,
+                                out_dir=os.path.join(out_dir, 'sm'), iters=1000, matches=matches,
+                                solvers=['calib_shift', 'calib_shift_ro', 'sf_shift', 'sf_shift_ro'])
 
-        # plot_scatter_pose_depth(pose_df, depth_df, args.dataset, metric,
-        #                         remove_outliers=True, out_dir=args.out_dir,
-        #                         iters=1000, matches=matches, solvers=['calib', 'calib_ro'],
-        #                         figsize=(0.8*6, 0.8*4))
+        if matches == 'loma':
+            plot_scatter_pose_depth(pose_df, depth_df, dataset, 'd1_si',
+                                    remove_outliers=True, out_dir=out_dir,
+                                    iters=1000, matches=matches, solvers=['calib', 'calib_ro'],
+                                    figsize=(0.8*6, 0.8*4))
+
+            for dataset in ['eth3d', 'lamar', 'sintel','scannetpp']:
+                plot_scatter_pose_depth(pose_df, depth_df, dataset,
+                                        'd1_si', remove_outliers=False, out_dir=os.path.join(out_dir, 'per_scene'),
+                                        iters=1000, matches=matches, solvers=['calib', 'calib_ro'],
+                                        figsize=(0.8*6, 0.8*4))
+
 
 if __name__ == '__main__':
     main()
