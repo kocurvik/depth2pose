@@ -1,7 +1,7 @@
 {
     "vegetation": {
         "single_scene_subsets": true,
-        "path": "/mnt/d/Research/data/d2p/vegetation",
+        "path": "/mnt/d/Research/data/mdrpbench_data/vegetation",
         "work_path": "/mnt/d/Research/data/mdrpbench/vegetation",
         "subsets": {
             "dresden_1": {
@@ -13,6 +13,10 @@
               "cameras": "shared"
             },
             "kyoto_nakagawahigashiyama_tree": {
+              "max_pairs": 250,
+              "cameras": "shared"
+            },
+            "nadina_domestica": {
               "max_pairs": 250,
               "cameras": "shared"
             },
@@ -36,6 +40,10 @@
                 "max_pairs": 250,
                 "cameras": "shared"
             },
+            "stromovka_5": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
             "stromovka_7": {
                 "max_pairs": 250,
                 "cameras": "shared"
@@ -46,9 +54,9 @@
             }
         }
     },
-    "illusion": {
+    "statues": {
         "single_scene_subsets": true,
-        "path": "/mnt/d/Research/data/d2p/statues",
+        "path": "/mnt/d/Research/data/mdrpbench_data/statues",
         "work_path": "/mnt/d/Research/data/mdrpbench/statues",
         "subsets": {
             "babies_cerny": {
@@ -59,7 +67,11 @@
               "max_pairs": 250,
               "cameras": "shared"
             },
-            "gothenburg_statue": {
+            "giant_chair_vltava": {
+              "max_pairs": 250,
+              "cameras": "shared"
+            },
+            "hanging_girl": {
                 "max_pairs": 250,
                 "cameras": "shared"
             },
@@ -87,54 +99,11 @@
                 "max_pairs": 250,
                 "cameras": "shared"
             },
-            "zlata_kasna_chrt": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            }
-        }
-    },
-    "ambiguous": {
-        "single_scene_subsets": true,
-        "path": "/mnt/d/Research/data/d2p/ambiguous",
-        "work_path": "/mnt/d/Research/data/mdrpbench/ambiguous",
-        "subsets": {
-            "bottles_monkey_1a": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
-            "bottles_monkey_1b": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
-            "bottles_pet_1": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
-            "cups_1": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
-            "giant_chair_vltava": {
-              "max_pairs": 250,
-              "cameras": "shared"
-            },
-            "hanging_girl": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
-            "monkey_toy_1": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
-            "monkey_toy_2": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
-            "pohang_homigot": {
-                "max_pairs": 250,
-                "cameras": "shared"
-            },
             "yvr_huge_chair": {
+                "max_pairs": 250,
+                "cameras": "shared"
+            },
+            "zlata_kasna_chrt": {
                 "max_pairs": 250,
                 "cameras": "shared"
             }
