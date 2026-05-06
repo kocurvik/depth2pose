@@ -249,11 +249,6 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, metric, remove_outliers=
 
     depth_df = depth_df[depth_df['mde'].isin(mde_list)]
 
-    # depth_evals = ['A.Rel_si', 'd1_si', 'A.Rel_ssi', 'd1_ssi']
-    # n = len(depth_evals)
-    # ncols = 2
-    # nrows = 2
-
     if solvers is None:
         all_solvers = pose_df['solver'].unique().tolist()
         solvers = [s for s in all_solvers if 'baseline' not in s]
@@ -266,10 +261,6 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, metric, remove_outliers=
     os.makedirs(out_dir, exist_ok=True)
 
     for solver in solvers:
-        # fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 3 * nrows), squeeze=False)
-        # fig.suptitle(f'Dataset: {dataset}, Solver: {solver}')
-        # axes = axes.flatten()
-
         if figsize is None:
             figsize = [4 * 0.8, 3.5 * 0.8]
 
@@ -323,18 +314,92 @@ def plot_scatter_pose_depth(pose_df, depth_df, dataset, metric, remove_outliers=
         plt.gca().xaxis.set_major_locator(ticker.MaxNLocator('auto', integer=True))
         plt.gca().yaxis.set_major_locator(ticker.MaxNLocator('auto', integer=True))
 
-        # if 'd' in metric:
-        #     plt.gca().invert_xaxis()
-
-        # baseline_solver = f'baseline_{solver.split("_shift")[0]}'
-        # if baseline_solver in all_solvers and '_ro' not in solver:
-        #     gt_rows = pose_df[(pose_df['mde'] == 'none') & (pose_df['solver'] == baseline_solver)]
-        #     for pose_val in gt_rows['pose_mAA_10']:
-        #         plt.axhline(pose_val, linestyle='dashed', color='gray')
-
         plt.tight_layout()
         plt.savefig(os.path.join(out_dir, pdf_path))
         plt.close(fig)
+
+
+def plot_scatter_pose_inliers(pose_df, dataset, remove_outliers=False, iters=None, out_dir='vis',
+                              label_font_size=18, tick_font_size=14, matches='splg', solvers=None, figsize=None):
+    if iters is not None:
+        pose_df = pose_df[pose_df['iters'] == iters].copy()
+
+
+    if dataset == 'mean':
+        pose_df = pose_df.groupby(['mde', 'solver', 'iters'], as_index=False).mean(numeric_only=True)
+        # pose_df = pose_df.groupby(['mde', 'solver', 'iters'])['pose_mAA_10'].mean().reset_index()
+        pose_df['dataset'] = 'mean'
+    else:
+        pose_df = pose_df[pose_df['dataset'] == dataset].copy()
+
+    mde_list = pose_df['mde'].unique().tolist()
+
+    mde_list = [x for x in mde_list if 'gt' not in x and 'none' not in x]
+
+    if remove_outliers:
+        plot_mde_list = [x for x in mde_list if 'Infini' not in x and 'AnythingV2' not in x and 'DA3MONO' not in x]
+        if dataset == 'lamar' or dataset == 'mean':
+            plot_mde_list = [x for x in plot_mde_list if 'DepthPro' not in x]
+    else:
+        plot_mde_list = mde_list
+
+    os.makedirs(out_dir, exist_ok=True)
+
+    solver = 'calib_ro'
+    if figsize is None:
+        figsize = [4 * 0.8, 3.5 * 0.8]
+
+    fig = plt.figure(figsize=figsize)
+
+    all_x = []
+    all_y = []
+    for mde in mde_list:
+        if 'Calib' in mde and any(s in solver for s in ('vf', 'sf', 'mdecalib')):
+            continue
+        pose_rows = pose_df[(pose_df['mde'] == mde) & (pose_df['solver'] == solver)]
+        if pose_rows.empty:
+            continue
+        pose_vals = pose_rows['pose_mAA_10'].tolist()
+        inliers_vals = pose_rows['mean_inliers'].tolist()
+        style = get_mde_marker(mde)
+
+        xs = inliers_vals
+        if (not remove_outliers) or (mde in plot_mde_list):
+            plt.plot(xs, pose_vals,
+                    linestyle='dotted', **style, label=mde)
+        all_x.extend(xs)
+        all_y.extend(pose_vals)
+
+    suffix = 'no_outliers' if remove_outliers else 'all'
+    suffix += f'_{iters}' if iters is not None else ''
+    pdf_path = f'scatter_pose_inliers_{matches}_{dataset}_{solver}_{suffix}.pdf'
+
+    if len(all_x) > 1:
+        all_x = np.array(all_x)
+        all_y = np.array(all_y)
+        mask = ~np.isnan(all_x) & ~np.isnan(all_y)
+        all_x, all_y = all_x[mask], all_y[mask]
+        if len(all_x) > 1:
+            corr, _ = pearsonr(all_x, all_y)
+            slope, intercept, _, _, _ = linregress(all_x, all_y)
+            xlim = plt.gca().get_xlim()
+            x_range = np.array(xlim)
+            plt.plot(x_range, slope * x_range + intercept, color='gray', linestyle='--', zorder=0)
+            plt.gca().set_xlim(xlim)
+            plt.text(0.05, 0.95, f'$r={corr:.4f}$', transform=plt.gca().transAxes,
+                     verticalalignment='top', fontsize=tick_font_size)
+            print(f"{pdf_path}: {corr:.4f}")
+
+    plt.xlabel('Inlier Ratio', fontsize=label_font_size)
+    plt.ylabel(f"{estimator_name(solver)} -- \mAA", fontsize=label_font_size)
+    plt.tick_params(axis='both', which='major', labelsize=tick_font_size)
+    plt.gca().xaxis.set_major_locator(ticker.MaxNLocator('auto', integer=True))
+    plt.gca().yaxis.set_major_locator(ticker.MaxNLocator('auto', integer=True))
+
+    plt.tight_layout()
+    os.makedirs(out_dir, exist_ok=True)
+    plt.savefig(os.path.join(out_dir, pdf_path))
+    plt.close(fig)
 
 
 def main():
@@ -354,23 +419,23 @@ def main():
 
     matches = args.pose_csv.split('/')[-1].split('_')[1]
 
+    plot_scatter_pose_inliers(pose_df, args.dataset,
+                            remove_outliers=False,
+                            out_dir=os.path.join(args.out_dir, 'inliers'), iters=1000, matches=matches)
+
     # metrics = ['A.Rel_si', 'd1_si', 'A.Rel_ssi', 'd1_ssi']
     metrics = ['d1_si', 'd1_ssi']
 
-    for metric in metrics:
-        plot_scatter_pose_depth(pose_df, depth_df, args.dataset, metric,
-                                remove_outliers=False,
-                                out_dir=os.path.join(args.out_dir, 'sm'), iters=1000, matches=matches)
+
+    # for metric in metrics:
+        # plot_scatter_pose_depth(pose_df, depth_df, args.dataset, metric,
+        #                         remove_outliers=False,
+        #                         out_dir=os.path.join(args.out_dir, 'sm'), iters=1000, matches=matches)
 
         # plot_scatter_pose_depth(pose_df, depth_df, args.dataset, metric,
-        #                         remove_outliers=True,
-        #                         out_dir=args.out_dir, iters=1000, matches=matches)
-
-
-        plot_scatter_pose_depth(pose_df, depth_df, args.dataset, metric,
-                                remove_outliers=True, out_dir=args.out_dir,
-                                iters=1000, matches=matches, solvers=['calib', 'calib_ro'],
-                                figsize=(0.8*6, 0.8*4))
+        #                         remove_outliers=True, out_dir=args.out_dir,
+        #                         iters=1000, matches=matches, solvers=['calib', 'calib_ro'],
+        #                         figsize=(0.8*6, 0.8*4))
 
 if __name__ == '__main__':
     main()
