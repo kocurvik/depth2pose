@@ -1,6 +1,6 @@
 import { isGtMde } from '../global.js';
 import { IMG_EXAMPLES_SOURCE } from '../api-config.js';
-import { tLabel, getTitleAttr } from '../dictionary/index.js';
+import { tLabel, getTitleAttr, setOptionTitle } from '../dictionary/index.js';
 
 /** Build an absolute URL for one asset inside a dataset example folder. */
 export function datasetAssetUrl(dataset, relativePath) {
@@ -61,18 +61,18 @@ export function shortPairName(pairKey) {
 
 /** Render the selected pair overview in the same format as pair cards from the list. */
 export function renderPairOverviewCard(example, overviewResult) {
-	return renderPairCard(example, { selectedResult: overviewResult, includeAction: false, extraCardClass: 'pair-detail-example-card', largeVisual: true });
+	return renderPairCard(example, { selectedResult: overviewResult, includeDepthAction: false, includeCorrespondenceAction: true, extraCardClass: 'pair-detail-example-card', largeVisual: true });
 }
 
 /** Render one RGB pair card with summary statistics and correspondence overlay. */
 export function renderPairCard(example, options = {}) {
-	const { selectedResult = example.selectedResult, includeAction = true, extraCardClass = '', largeVisual = false } = options;
+	const { selectedResult = example.selectedResult, includeDepthAction = true, includeCorrespondenceAction = true, extraCardClass = '', largeVisual = false } = options;
 
 	const pErr = selectedResult?.p_err;
 	const baselineErr = example.details?.baseline_p_err;
 	const unusedCount = Array.isArray(selectedResult?.unused_kps) ? selectedResult.unused_kps.length : 0;
 	const totalCount = Array.isArray(example.details?.kp1) ? example.details.kp1.length : 0;
-	const inlierCount = buildInlierSet(totalCount, selectedResult?.inliers).size;
+	const inlierCount = buildInlierSet(totalCount, selectedResult?.inliers, selectedResult?.unused_kps).size;
 	const outlierCount = Math.max(totalCount - inlierCount - unusedCount, 0);
 
 	const safeExample = encodeURIComponent(JSON.stringify({
@@ -116,31 +116,43 @@ export function renderPairCard(example, options = {}) {
 					<div class="example-image-label">Image 2</div>
 				</div>
 
-				<svg class="example-correspondence-overlay" aria-hidden="true"></svg>
+				<svg class="example-correspondence-overlay" aria-hidden="true" hidden></svg>
 			</div>
 
-			${includeAction ? renderPairCardActions(example) : ''}
+			${(includeDepthAction || includeCorrespondenceAction) ? renderPairCardActions(example, { includeDepthAction, includeCorrespondenceAction }) : ''}
 		</article>
 	`;
 }
 
 /** Render action buttons for one pair card. */
-function renderPairCardActions(example) {
+function renderPairCardActions(example, options = {}) {
+	const { includeDepthAction = true, includeCorrespondenceAction = true } = options;
+
 	return `
 		<div class="example-card-actions">
-			<button class="button is-link is-light is-small" type="button" data-open-pair="${example.pairKey}" ${getTitleAttr('examples.pairs.card.showdepth')}>
-				${tLabel('examples.pairs.card.showdepth')}
-			</button>
+			${includeCorrespondenceAction ? `
+				<button class="button is-light is-small example-correspondence-toggle" type="button" aria-pressed="false" ${getTitleAttr('examples.pairs.card.showcorrespondences')}>
+					${tLabel('examples.pairs.card.hidecorrespondences')}
+				</button>
+			` : ''}
+
+			${includeDepthAction ? `
+				<button class="button is-link is-light is-small" type="button" data-open-pair="${example.pairKey}" ${getTitleAttr('examples.pairs.card.showdepth')}>
+					${tLabel('examples.pairs.card.showdepth')}
+				</button>
+			` : ''}
 		</div>
 	`;
 }
 
 
-/** Decorate every currently visible RGB pair panel with correspondence overlays after images load. */
+/** Decorate every currently visible RGB pair panel with correspondence overlays after images load and after responsive resizes. */
 export function decoratePairCards(scope = document) {
 	const cards = scope.querySelectorAll('.example-visual-pair[data-example]');
 
 	cards.forEach((card) => {
+		if (card.__corrCleanup) card.__corrCleanup();
+
 		const payload = card.getAttribute('data-example');
 		if (!payload) return;
 
@@ -150,22 +162,124 @@ export function decoratePairCards(scope = document) {
 
 		const imgs = card.querySelectorAll('.example-rgb-image');
 		const svg = card.querySelector('.example-correspondence-overlay');
-		if (imgs.length < 2 || !svg) return;
+		const parentCard = card.closest('.example-card') || card.parentElement;
+		const toggle = parentCard?.querySelector('.example-correspondence-toggle');
 
-		const draw = () => drawCorrespondences(card, imgs[0], imgs[1], svg, data);
+		if (imgs.length < 2 || !svg || !toggle) return;
 
-		let remaining = 0;
-		imgs.forEach((img) => {
-			if (!img.complete) {
-				remaining += 1;
-				img.addEventListener('load', () => {
-					remaining -= 1;
-					if (remaining <= 0) draw();
-				}, { once: true });
+		let isVisible = false;
+		let rafId = 0, resizeTimeoutId = 0, lastLayoutKey = '';
+
+		const getLayoutKey = () => {
+			const containerRect = card.getBoundingClientRect();
+			const rect1 = imgs[0].getBoundingClientRect();
+			const rect2 = imgs[1].getBoundingClientRect();
+
+			return [
+				Math.round(containerRect.width), Math.round(containerRect.height),
+				Math.round(rect1.width), Math.round(rect1.height),
+				Math.round(rect2.width), Math.round(rect2.height),
+				imgs[0].naturalWidth, imgs[0].naturalHeight,
+				imgs[1].naturalWidth, imgs[1].naturalHeight,
+			].join(':');
+		};
+
+		const canDraw = () => (isVisible && imgs[0].complete && imgs[1].complete && imgs[0].naturalWidth && imgs[1].naturalWidth);
+
+		const draw = (force = false) => {
+			if (!canDraw()) return;
+
+			const layoutKey = getLayoutKey();
+			if (!force && layoutKey === lastLayoutKey) return;
+
+			lastLayoutKey = layoutKey;
+			drawCorrespondences(card, imgs[0], imgs[1], svg, data);
+		};
+
+		const scheduleDraw = (force = false) => {
+			if (!isVisible) return;
+			if (resizeTimeoutId) clearTimeout(resizeTimeoutId);
+
+			resizeTimeoutId = window.setTimeout(() => {
+				resizeTimeoutId = 0;
+
+				if (rafId) cancelAnimationFrame(rafId);
+				rafId = requestAnimationFrame(() => {
+					rafId = 0;
+					draw(force);
+				});
+			}, force ? 0 : 120);
+		};
+
+		const showCorrespondences = () => {
+			isVisible = true;
+
+			toggle.textContent = tLabel('examples.pairs.card.hidecorrespondences');
+			setOptionTitle(toggle, 'examples.pairs.card.hidecorrespondences');
+			toggle.setAttribute('aria-pressed', 'true');
+
+			svg.hidden = false;
+			svg.removeAttribute('hidden');
+			svg.style.display = 'block';
+
+			lastLayoutKey = '';
+			scheduleDraw(true);
+		};
+
+		const hideCorrespondences = () => {
+			isVisible = false;
+
+			toggle.textContent = tLabel('examples.pairs.card.showcorrespondences');
+			setOptionTitle(toggle, 'examples.pairs.card.showcorrespondences');
+			toggle.setAttribute('aria-pressed', 'false');
+
+			svg.innerHTML = '';
+			svg.hidden = true;
+			svg.setAttribute('hidden', '');
+			svg.style.display = 'none';
+
+			lastLayoutKey = '';
+		};
+
+		const onToggleClick = () => {
+			if (isVisible) hideCorrespondences();
+			else showCorrespondences();
+		};
+
+		const onImageLoad = () => { scheduleDraw(true); };
+		const onWindowResize = () => { scheduleDraw(false); };
+		const onOrientationChange = () => { scheduleDraw(true); };
+		toggle.addEventListener('click', onToggleClick);
+		imgs.forEach((img) => { img.addEventListener('load', onImageLoad); });
+
+		let resizeObserver = null;
+
+		if ('ResizeObserver' in window) {
+			resizeObserver = new ResizeObserver(() => { scheduleDraw(false); });
+			resizeObserver.observe(card);
+		}
+		else {
+			window.addEventListener('resize', onWindowResize);
+			window.addEventListener('orientationchange', onOrientationChange);
+		}
+
+		card.__corrCleanup = () => {
+			if (rafId) cancelAnimationFrame(rafId);
+			if (resizeTimeoutId) clearTimeout(resizeTimeoutId);
+
+			toggle.removeEventListener('click', onToggleClick);
+			imgs.forEach((img) => { img.removeEventListener('load', onImageLoad); });
+
+			if (resizeObserver) resizeObserver.disconnect();
+			else {
+				window.removeEventListener('resize', onWindowResize);
+				window.removeEventListener('orientationchange', onOrientationChange);
 			}
-		});
 
-		if (remaining === 0) draw();
+			delete card.__corrCleanup;
+		};
+
+		showCorrespondences();
 	});
 }
 
@@ -179,7 +293,7 @@ function drawCorrespondences(container, img1, img2, svg, data) {
 
 	const total = Math.min(data.kp1.length, data.kp2.length);
 	const unusedSet = new Set(Array.isArray(data.unusedKps) ? data.unusedKps.map(Number) : []);
-	const inlierSet = buildInlierSet(total, data.inliers);
+	const inlierSet = buildInlierSet(total, data.inliers, data.unusedKps);
 
 	const inlierIdx = [];
 	const outlierIdx = [];
@@ -191,12 +305,14 @@ function drawCorrespondences(container, img1, img2, svg, data) {
 		else outlierIdx.push(i);
 	}
 
+	const linesPerGroup = 120/(unusedIdx.length + inlierIdx.length + outlierIdx.length);
+
 	svg.setAttribute('viewBox', `0 0 ${Math.round(containerRect.width)} ${Math.round(containerRect.height)}`);
 	svg.innerHTML = '';
 
-	drawKeypointGroup(svg, evenlySample(inlierIdx, 60), 'inlier', data, img1, img2, rect1, rect2, containerRect, true);
-	drawKeypointGroup(svg, evenlySample(outlierIdx, 80), 'outlier', data, img1, img2, rect1, rect2, containerRect, true);
-	drawKeypointGroup(svg, evenlySample(unusedIdx, 24), 'unused', data, img1, img2, rect1, rect2, containerRect, false);
+	drawKeypointGroup(svg, evenlySample(inlierIdx, inlierIdx.length*linesPerGroup), 'inlier', data, img1, img2, rect1, rect2, containerRect, true);
+	drawKeypointGroup(svg, evenlySample(outlierIdx, outlierIdx.length*linesPerGroup), 'outlier', data, img1, img2, rect1, rect2, containerRect, true);
+	drawKeypointGroup(svg, evenlySample(unusedIdx, unusedIdx.length*linesPerGroup), 'unused', data, img1, img2, rect1, rect2, containerRect, false);
 }
 
 /** Draw a sampled group of keypoints, optionally including correspondence lines. */
@@ -227,7 +343,7 @@ function appendCircle(svg, x, y, kind) {
 	const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
 	circle.setAttribute('cx', x);
 	circle.setAttribute('cy', y);
-	circle.setAttribute('r', kind === 'unused' ? 1.8 : 2.1);
+	circle.setAttribute('r', kind === 'unused' ? 0.8 : 1.1);
 	circle.setAttribute('class', `corr-point ${kind}`);
 	svg.appendChild(circle);
 }
@@ -256,21 +372,36 @@ function evenlySample(items, maxCount) {
 
 
 /** Normalize inlier representation into a set of active keypoint indices. */
-export function buildInlierSet(total, inliers) {
+export function buildInlierSet(total, inliers, unusedKps = []) {
 	if (!Array.isArray(inliers)) return new Set();
 
-	const looksLikeMask = inliers.length === total && inliers.every((value) => (
-		typeof value === 'boolean' || value === 0 || value === 1
-	));
+	const unusedSet = new Set(Array.isArray(unusedKps) ? unusedKps.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value >= 0 && value < total) : []);
+	const isBinaryMask = inliers.every((value) => (typeof value === 'boolean' || value === 0 || value === 1));
 
-	if (looksLikeMask) {
+	//console.log('Building inlier set with', { total, inliersLength: inliers.length, unusedKpsLength: unusedSet.size, inliers: inliers.filter(v => v == true).length });
+
+	// Case 1: inliers is a full mask over all kp1/kp2. Example: kp1.length = 733, inliers.length = 733
+	if (isBinaryMask && inliers.length === total) {
 		const out = new Set();
 
-		inliers.forEach((value, index) => {
-			if (Boolean(value)) out.add(index);
-		});
+		inliers.forEach((value, index) => { if (Boolean(value) && !unusedSet.has(index)) out.add(index); });
 		return out;
 	}
 
-	return new Set(inliers.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value >= 0));
+	// Case 2: inliers is a compact mask over only used keypoints. Example: kp1.length = 733, unused_kps.length = 2, inliers.length = 731
+	if (isBinaryMask && inliers.length === total - unusedSet.size) {
+		const out = new Set();
+		let compactIndex = 0;
+
+		for (let originalIndex = 0; originalIndex < total; originalIndex += 1) {
+			if (unusedSet.has(originalIndex)) continue;
+			if (Boolean(inliers[compactIndex])) out.add(originalIndex);
+			compactIndex += 1;
+		}
+
+		return out;
+	}
+
+	console.warn('Inliers mask length does not match kp count.', { total, inliersLength: inliers.length, unusedKpsLength: unusedSet.size });
+	return new Set();
 }

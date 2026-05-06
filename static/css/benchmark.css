@@ -275,7 +275,7 @@
 
 .benchmark-examples-scroll {
 	/* height: 680px; */
-	max-height: 72vh;
+	max-height: 80vh;
 	overflow: auto;
 	padding: 1.25rem;
 	border: 1px solid #e8edf4;
@@ -324,7 +324,7 @@
 
 .dataset-summary-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	grid-template-columns: 1fr 1fr;
 	gap: 1rem;
 }
 
@@ -380,7 +380,12 @@
 
 .example-card-actions {
 	display: flex;
+	gap: 0.5em;
 	justify-content: flex-end;
+}
+
+.example-card-actions .example-correspondence-toggle {
+	white-space: nowrap;
 }
 
 /* Stat pills */
@@ -471,13 +476,19 @@
 	width: 100%;
 	height: 100%;
 	pointer-events: none;
+	z-index: 2;
+	display: block;
+}
+
+.example-correspondence-overlay[hidden] {
+	display: none !important;
 }
 
 /* Correspondences */
 
 .corr-line {
-	stroke-width: 1.25;
-	opacity: 0.78;
+	stroke-width: 1;
+	opacity: 1;
 }
 
 .corr-line.inlier {

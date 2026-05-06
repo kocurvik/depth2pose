@@ -427,7 +427,7 @@ async function switchSource(sourceKey) {
 	state.currentIters = 'all';
 	state.page = 1;
 
-	setTableLoadingState({ key: 'table.loading', params: { option: sources[sourceKey].label } });
+	setTableLoadingState({ key: 'table.loading', params: { option: tLabel(sources[sourceKey].key) } });
 
 	try {
 		await loadData();

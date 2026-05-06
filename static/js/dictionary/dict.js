@@ -278,6 +278,8 @@ const dict = {
 	'examples.pairs.card.outliers': { label: '{outliers} outliers' },
 	'examples.pairs.card.unused': { label: '{unused} unused' },
 	'examples.pairs.card.showdepth': { label: 'Show depth comparison' },
+	'examples.pairs.card.showcorrespondences': { label: 'Show correspondences' },
+	'examples.pairs.card.hidecorrespondences': { label: 'Hide correspondences' },
 
 	'examples.depth.not-available': { label: 'Selected image pair is no longer available.' },
 	'examples.depth.detail': { label: 'Depth results are ordered by ascending <code>p_err</code>, from best to worst for this pair.</p>' },

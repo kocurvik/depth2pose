@@ -79,7 +79,7 @@ function renderDepthResultCard(item, index, dataset, example) {
 
 	const totalCount = Array.isArray(example?.details?.kp1) ? example.details.kp1.length : 0;
 	const unusedCount = Array.isArray(result?.unused_kps) ? result.unused_kps.length : 0;
-	const inlierCount = buildInlierSet(totalCount, result?.inliers).size;
+	const inlierCount = buildInlierSet(totalCount, result?.inliers, result?.unused_kps).size;
 	const outlierCount = Math.max(totalCount - inlierCount - unusedCount, 0);
 
 	const solverLabel = t('table.value.solver.' + String(result?.solver ?? '—'))?.label || String(result?.solver ?? '—');
@@ -129,10 +129,7 @@ function renderBaselineComparison(example, result) {
 	const pErr = Number(result?.p_err);
 
 	if (!Number.isFinite(baselineErr)) return '';
-
-	const comparison = Number.isFinite(pErr)
-		? `· Δ ${formatSignedMetric(pErr - baselineErr)}`
-		: '';
+	const comparison = Number.isFinite(pErr) ? `· Δ ${formatSignedMetric(pErr - baselineErr)}` : '';
 
 	return `
 		<span ${getTitleAttr('examples.depth.card.baseline', { baselineErr: formatMetric(baselineErr), comparison })}>
