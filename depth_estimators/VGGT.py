@@ -243,7 +243,7 @@ if __name__ == '__main__':
     model.load_model()
     print(model.name)
     # model.infer([image_path, image_path2])
-    out = model.infer([image_path])
+    out = model.infer(image_path)
     depth_colored =  colorize_depth(out['depth'])
     cv2.imwrite("colorized.png", depth_colored)
 
