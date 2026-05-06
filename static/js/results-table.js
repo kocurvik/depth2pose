@@ -1,4 +1,4 @@
-import { attachCardToggle, isGtMde, isCalibMde, getMdeFamilyKey, isRoSolver, isSISolver, baseSolverName, normalizeForSearch, sortByName, isNumericValue } from "./global.js";
+import { attachCardToggle, isGtMde, isCalibMde, getMdeFamilyKey, isRoSolver, isAISolver, baseSolverName, normalizeForSearch, sortByName, isNumericValue } from "./global.js";
 import { STANDARD_TABLE_SOURCES, GROUP_TABLE_SOURCES } from "./api-config.js";
 import { tLabel, tDesc, csvValueLabel, csvValueDesc, setOptionTitle, getTitleAttr } from "./dictionary/index.js";
 import { t } from "./dictionary/dict.js";
@@ -512,8 +512,8 @@ function applyRoVariant(rows) {
 function applyDepthType(rows) {
 	if (state.depthType === 'all') return rows;
 	return rows.filter((row) => {
-		if (state.depthType === 'scale') return isSISolver(row.solver);
-		else return !isSISolver(row.solver);
+		if (state.depthType === 'affine') return isAISolver(row.solver);
+		else return !isAISolver(row.solver);
 	});
 }
 

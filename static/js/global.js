@@ -49,7 +49,7 @@ export function isRoSolver(solver) {
 }
 
 /** Check if a solver name indicates that it is scale-invariant, based on the presence of the '_shift' suffix. */
-export function isSISolver(solver) {
+export function isAISolver(solver) {
 	return normalizeForSearch(solver).includes('_shift');
 }
 
