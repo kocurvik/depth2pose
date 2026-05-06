@@ -53,17 +53,21 @@ const dict = {
 		label: 'Group / scene',
 		description: 'Filter by group mean, individual scene, or the global mean.'
 	},
-	'controls.label.solverVariant': {
-		label: 'Solver variant',
-		description: 'Choose between standard RANSAC and reprojection-only RANSAC.'
+	'controls.label.iters': {
+		label: 'Iters',
+		description: 'Filter by RANSAC iteration count.'
 	},
 	'controls.label.evaluationCase': {
 		label: 'Evaluation case',
 		description: 'Filter by calibration mode.'
 	},
-	'controls.label.iters': {
-		label: 'Iters',
-		description: 'Filter by RANSAC iteration count.'
+	'controls.label.solverVariant': {
+		label: 'Solver variant',
+		description: 'Choose between standard RANSAC and reprojection-only RANSAC.'
+	},
+	'controls.label.depthType': {
+		label: 'Depth type',
+		description: 'Choose between scale invariant and affine invariant.'
 	},
 	'controls.label.search': {
 		label: 'Search',
@@ -101,6 +105,29 @@ const dict = {
 		description: null
 	},
 
+	// Select options: dataset mean labels
+
+	'controls.select.dataset.mean.standard': {
+		label: 'Mean over datasets',
+		description: 'Average metrics across all datasets.'
+	},
+	'controls.select.dataset.mean.group': {
+		label: 'Mean over all scenes',
+		description: 'Average metrics across all scenes and groups.'
+	},
+	'controls.select.dataset.meanOverGroupPrefix': {
+		label: 'Mean over',
+		description: null
+	},
+
+	// Select options: iters
+
+	'controls.select.iters.all': {
+		label: 'All',
+		description: 'Show results for all iteration counts.'
+	},
+
+
 	// Select options: evaluation case
 
 	'controls.select.evaluationCase.all': {
@@ -131,26 +158,18 @@ const dict = {
 		description: 'RANSAC using only reprojection error for scoring.'
 	},
 
-	// Select options: iters
-
-	'controls.select.iters.all': {
+	// Select options: depth type
+	'controls.select.depthType.all': {
 		label: 'All',
-		description: 'Show results for all iteration counts.'
+		description: 'Show both scale invariant and affine invariant results.'
 	},
-
-	// Select options: dataset mean labels
-
-	'controls.select.dataset.mean.standard': {
-		label: 'Mean over datasets',
-		description: 'Average metrics across all datasets.'
+	'controls.select.depthType.scale': {
+		label: 'Scale invariant',
+		description: 'Show scale invariant depth results.'
 	},
-	'controls.select.dataset.mean.group': {
-		label: 'Mean over all scenes',
-		description: 'Average metrics across all scenes and groups.'
-	},
-	'controls.select.dataset.meanOverGroupPrefix': {
-		label: 'Mean over',
-		description: null
+	'controls.select.depthType.affine': {
+		label: 'Affine invariant',
+		description: 'Show affine invariant depth results.'
 	},
 
 	// Filter checkboxes

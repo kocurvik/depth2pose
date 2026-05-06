@@ -1,4 +1,4 @@
-import { attachCardToggle, isGtMde, isCalibMde, getMdeFamilyKey, isRoSolver, baseSolverName, normalizeForSearch, sortByName, isNumericValue } from "./global.js";
+import { attachCardToggle, isGtMde, isCalibMde, getMdeFamilyKey, isRoSolver, isSISolver, baseSolverName, normalizeForSearch, sortByName, isNumericValue } from "./global.js";
 import { STANDARD_TABLE_SOURCES, GROUP_TABLE_SOURCES } from "./api-config.js";
 import { tLabel, tDesc, csvValueLabel, csvValueDesc, setOptionTitle, getTitleAttr } from "./dictionary/index.js";
 import { t } from "./dictionary/dict.js";
@@ -34,6 +34,7 @@ const state = {
 	currentIters: 'all',
 	mode: 'calibrated',
 	roVariant: 'non_ro',
+	depthType: 'all',
 	hideGtOnly: true,
 	bestMdeOnly: false,
 	sortKey: 'pose_mAA_10',
@@ -49,6 +50,7 @@ const els = {
 	itersSelect: document.getElementById('itersSelect'),
 	evaluationCaseSelect: document.getElementById('evaluationCaseSelect'),
 	solverVariantSelect: document.getElementById('solverVariantSelect'),
+	depthTypeSelect: document.getElementById('depthTypeSelect'),
 	searchInput: document.getElementById('searchInput'),
 	pageSizeSelect: document.getElementById('pageSizeSelect'),
 	hideGtOnly: document.getElementById('hideGtOnly'),
@@ -230,6 +232,18 @@ function populateControls() {
 		els.solverVariantSelect.appendChild(option);
 	}
 
+	// Depth type select
+	els.depthTypeSelect.innerHTML = '';
+	for (const val of ['all', 'scale', 'affine']) {
+		const key = `controls.select.depthType.${val}`;
+		const option = document.createElement('option');
+		
+		option.value = val;
+		option.textContent = tLabel(key);
+		setOptionTitle(option, tDesc(key));
+		els.depthTypeSelect.appendChild(option);
+	}
+
 	// Set current values
 	els.datasetSelect.value = state.currentDataset;
 	els.itersSelect.value = state.currentIters;
@@ -355,6 +369,12 @@ function bindControls() {
 		render();
 	});
 
+	els.depthTypeSelect.addEventListener('change', (event) => {
+		state.depthType = event.target.value;
+		state.page = 1;
+		render();
+	});
+
 	els.searchInput.addEventListener('input', (event) => {
 		state.search = event.target.value;
 		state.page = 1;
@@ -447,6 +467,7 @@ function render() {
 		let rows = [...state.rawRows];
 		rows = applyMode(rows);
 		rows = applyRoVariant(rows);
+		rows = applyDepthType(rows);
 		rows = applyIters(rows);
 		rows = applyDatasetOrMean(rows);
 
@@ -484,6 +505,15 @@ function applyRoVariant(rows) {
 	return rows.filter((row) => {
 		if (state.roVariant === 'ro') return isRoSolver(row.solver);
 		return !isRoSolver(row.solver);
+	});
+}
+
+/** Filter rows based on the selected depth type. */
+function applyDepthType(rows) {
+	if (state.depthType === 'all') return rows;
+	return rows.filter((row) => {
+		if (state.depthType === 'scale') return isSISolver(row.solver);
+		else return !isSISolver(row.solver);
 	});
 }
 

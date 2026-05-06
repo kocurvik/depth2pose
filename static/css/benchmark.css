@@ -110,7 +110,8 @@
 }
 
 .control-row-break {
-	display: none;
+	display: block;
+	grid-column: span 1;
 }
 
 .row-label {
@@ -653,13 +654,6 @@
 
 
 /* Responsive styles */
-
-@media (min-width: 1101px) {
-	.control-row-break {
-		display: block;
-		grid-column: span 1;
-	}
-}
 
 @media (max-width: 1100px) {
 	.top-controls-grid {

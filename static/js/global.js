@@ -48,6 +48,11 @@ export function isRoSolver(solver) {
 	return normalizeForSearch(solver).endsWith('_ro');
 }
 
+/** Check if a solver name indicates that it is scale-invariant, based on the presence of the '_shift' suffix. */
+export function isSISolver(solver) {
+	return normalizeForSearch(solver).includes('_shift');
+}
+
 /** Extract the base solver name by removing any '_ro' suffix, used for grouping related solvers together. */
 export function baseSolverName(solver) {
 	return String(solver ?? '').replace(/_ro$/, '');
