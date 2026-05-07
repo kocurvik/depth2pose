@@ -1,11 +1,14 @@
+import os
+import sys
 import pandas as pd
 import argparse
 from pathlib import Path
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import itertools
+from matplotlib.colors import LinearSegmentedColormap
+import random
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -27,6 +30,81 @@ def parse_args():
 
 
 # stuff for lineplots
+
+
+
+
+def get_mde_marker(mde, basename=None, backbone=None):
+
+    calib = 'Calib' in mde
+
+    style = {}
+    if calib:
+        style['markeredgecolor'] = 'black'
+
+    if backbone == 'ViT-S':
+        style['marker'] = 'o'
+    elif backbone == 'ViT-B':
+        style['marker'] = 'v'
+    elif backbone == 'ViT-G':
+        style['marker'] = 'd'
+    elif backbone == 'ConvNext':
+        style['marker'] = 'h'
+    else:
+        style['marker'] = 'p'
+
+    if 'MoGe' in basename:
+        style['markerfacecolor'] = '#2ca02c'   # tab green
+        if '1' in basename:
+            style['markerfacecolor'] = '#98df8a'  # light green
+
+    if 'UniDepth' in basename or 'UniK3D' in basename:
+        style['markerfacecolor'] = '#1f77b4'   # tab blue
+        if '1' in basename:
+            style['markerfacecolor'] = '#aec7e8'  # light blue
+        if '3' in basename:
+            style['markerfacecolor'] = '#6baed6'  # medium blue (UniK3D)
+
+    if 'Metric3D' in basename:
+        style['markerfacecolor'] = '#17becf'   # tab teal
+
+    if 'DepthAnything' in basename:
+        style['markerfacecolor'] = '#ff9896'  # light red
+
+    if 'DAv3' in basename:
+        style['markerfacecolor'] = '#ff7f7f'   # tab red
+
+        if 'Metric' in mde:
+            style['markerfacecolor'] = '#ff4d4d'  # tab orange
+
+    if 'VGGT' == basename:
+        style['markerfacecolor'] = '#9467bd'   # tab purple
+
+    if 'Pi3' == basename:
+        style['markerfacecolor'] = '#ff7f0e'   # tab orange
+
+    if 'MapAnything' in basename:
+        style['markerfacecolor'] = '#e377c2'   # tab pink
+
+    if 'DepthPro' == basename:
+        style['markerfacecolor'] = '#8c564b'   # tab brown
+
+    # Unused
+    if 'InfiniDepth' == basename:
+        style['markerfacecolor'] = '#7f7f7f'   # tab gray
+
+    if 'markerfacecoloralt' in style:
+        style['fillstyle'] = 'left'
+    else:
+        style['fillstyle'] = 'full'
+
+    style['color'] = style['markerfacecolor']
+    style['markersize'] = 8
+
+    return style
+
+
+
 
 
 def get_style_cycle():
@@ -63,7 +141,180 @@ def exclude_special(dicts, remove_keys=["gt", "none"]):
 
     return processed_dicts
 
-def plot_rankings(dicts, output_file, title_ending=''):
+def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
+    #dataset_names = list(maa_dicts.keys())
+    ordered_first = ['sintel', 'scannetpp', 'eth3d', 'lamar']
+    remaining = [d for d in maa_dicts if d not in ordered_first]
+    # Sort remaining by descending average mAA
+    if maa_dicts is not None:
+        remaining.sort(
+            #key=lambda d: np.mean(list(maa_dicts[d].values())),
+            key=lambda d: np.max(list(maa_dicts[d].values())),
+            reverse=True
+        )
+    dataset_names = ordered_first + remaining
+    dataset_nicknames = [nicknames[dataset_name] for dataset_name in dataset_names]
+
+    # Find common models AFTER filtering
+    models = set.intersection(*(set(d.keys()) for d in maa_dicts.values()))
+    models = sorted(models)
+    models_nicknames = {
+        'DepthAnythingV2': 'DAv3',
+        'MapAnything': 'Map\nAnything',
+        'MoGeV2': 'MoGeV2',
+        'Pi3': 'Pi3',
+        'UniK3D': 'UniK3D'
+    }
+
+    x = np.arange(len(dataset_names))
+ 
+    plt.figure(figsize=(20, 5))
+
+    style_cycle = get_style_cycle()
+
+    for model in models:
+        color, linestyle = next(style_cycle)
+        y = [maa_dicts[d][model] for d in dataset_names]
+
+        #plt.plot(x, y, marker='o', linestyle=linestyle, color=color, label=model)
+        style = get_mde_marker(model,model)
+        plt.plot(x, y, linestyle=linestyle, **style, label=models_nicknames[model])
+
+
+    split_idx = 4
+    plt.axvspan(
+        -1.5,
+        split_idx - 0.5,
+        color='lightgray',
+        alpha=0.2,
+        zorder=0
+    ) 
+    plt.axvspan(
+        split_idx - 0.5,
+        12,
+        color='lightblue',
+        alpha=0.2,
+        zorder=0
+    ) 
+    plt.axvline(
+        x=split_idx - 0.5,
+        color='gray',
+        linestyle='--',
+        linewidth=1
+    )
+    
+    #plt.xticks(x, dataset_names, rotation=90)
+    plt.xticks(x, dataset_nicknames)
+    plt.yticks(np.asarray([70,80,90]))
+    #plt.gca().invert_yaxis()
+    #plt.xlabel("Dataset")
+    plt.ylim(63,94)
+    plt.xlim(-0.3,10.3)
+    plt.ylabel("mAA@10")
+    #plt.title("Model Rankings " + title_ending)
+    
+    plt.rcParams.update({        # Use LaTeX to render text
+        "font.family": "serif",   
+        'font.size': 16,          # base size for everything
+        'axes.titlesize': 16,
+        'axes.labelsize': 16,
+        'xtick.labelsize': 16,
+        'ytick.labelsize': 16,
+        'legend.fontsize': 16
+    }) 
+
+    #plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.legend(loc='upper right')
+    plt.tight_layout()
+
+    plt.savefig(output_file)
+    plt.close()
+
+def filter_models(dicts, remove_mdes):
+    return {
+        category: {
+            scene: {
+                model: value
+                for model, value in models.items()
+                if model not in remove_mdes
+            }
+            for scene, models in scenes.items()
+        }
+        for category, scenes in dicts.items()
+    }
+def filter_scenes(dicts, remove_scenes):
+    return {
+        scene: {
+            model: value
+            for model, value in models.items()
+            if model not in remove_scenes
+        }
+        for scene, models in dicts.items()
+    }
+
+def plot_maa_lineplot(maa_dicts, output_path, plot_with_avg):
+    
+    # manually prune data
+    remove_mdes = ['gt','none','VGGT','Metric3DV2','DepthAnythingV3','MoGeV1','UniDepth2','UniDepth1','DepthPro']
+    
+    statues_scenes = ['babies_cerny','giant_chair_vltava','kyoto_nakagawahigashiyama_statue','niemand_statue','r2d2_folimanka','yvr_huge_chair','franz_kafka','hanging_girl','memorial_victims_of_communism','prague_castle_statue','spejbl_hurvinek','zlata_kasna_chrt']
+    remove_statues = ['babies_cerny','giant_chair_vltava','niemand_statue','r2d2_folimanka','yvr_huge_chair','hanging_girl','prague_castle_statue','spejbl_hurvinek']
+    
+    vegetation_scenes = ['dresden_1','kyoto_nakagawahigashiyama_tree','overgrown_statue_couple','stromovka_2','stromovka_3','stromovka_7','klamovka_sign1','nadina_domestica','overgrown_statue_pot','stromovka_2b','stromovka_5','tree_orbit_normal1']
+    remove_vegetation = ['dresden_1','stromovka_2','stromovka_3','stromovka_7','klamovka_sign1','nadina_domestica','overgrown_statue_pot','tree_orbit_normal1','overgrown_statue_couple']
+
+    nicknames = {
+        'sintel': 'Sintel',
+        'scannetpp': 'ScanNet\n++',
+        'eth3d': 'ETH3D',
+        'lamar': 'LaMaR',
+        'franz_kafka': 'Franz\nKafka',
+        'zlata_kasna_chrt': 'Zlata\nkasna',
+        'stromovka_2b': 'Stromovka2b',
+        'memorial_victims_of_communism': 'Memorial',
+        'stromovka_5': 'Stromovka5',
+        'kyoto_nakagawahigashiyama_statue': 'Kyoto\nstatue',
+        'kyoto_nakagawahigashiyama_tree': 'Kyoto\ntree'
+    }
+
+
+    maa_dicts = filter_models(maa_dicts, remove_mdes)
+
+    maa_dicts = filter_scenes(maa_dicts,remove_statues+remove_vegetation)
+
+    for category, maa_dict in maa_dicts.items(): 
+        save_path = output_path / f"{category}_maa_subset_lineplot.pdf"
+        #save_path = output_path / f"{category}_maa_statues_lineplot.png"
+
+        plot_maa(maa_dict, save_path, title_ending=' '+category, nicknames=nicknames)
+
+        '''
+        if plot_with_avg:
+            save_path = output_path / f"{category}_lineplot_avg.png"
+            # compute average ranks
+            selected_datasets = {'eth3d', 'lamar', 'scannetpp', 'sintel'}
+
+            filtered_dicts =  [
+                rank_dicts[k]
+                for k in selected_datasets
+                if k in rank_dicts
+            ]
+            avg_ranks = {}
+            avg_maa = {}
+            models = set().union(*filtered_dicts)
+            for model in models:
+                values = [d[model] for d in rank_dicts.values() if model in d]
+                avg_ranks[model] = sum(values) / len(values)
+
+            rank_dicts_with_avg = {
+                "mean (standard)": avg_ranks,
+                **rank_dicts
+            }
+            plot_rankings(rank_dicts_with_avg, save_path,title_ending=' '+category)
+        '''
+
+
+def plot_rankings(dicts, output_file, title_ending='', maa_dicts=None):
     dataset_names = list(dicts.keys())
 
     # Find common models AFTER filtering
@@ -71,18 +322,83 @@ def plot_rankings(dicts, output_file, title_ending=''):
     models = sorted(models)
 
     x = np.arange(len(dataset_names))
-
-    plt.figure(figsize=(10, 6))
+ 
+    figwidth = max(10, 1 * len(dataset_names))
+    plt.figure(figsize=(figwidth, 16))
 
     style_cycle = get_style_cycle()
 
     for model in models:
         color, linestyle = next(style_cycle)
         y = [dicts[d][model] for d in dataset_names]
-        
+
         plt.plot(x, y, marker='o', linestyle=linestyle, color=color, label=model)
 
-    plt.xticks(x, dataset_names)
+        if maa_dicts is not None:
+            for i, dataset in enumerate(dataset_names):
+                if dataset in maa_dicts and model in maa_dicts[dataset]:
+                    maa_val = maa_dicts[dataset][model]
+                    plt.text(
+                        x[i],
+                        y[i] - 0.1,  # slightly above point (since inverted y-axis)
+                        f"{maa_val:.2f}",
+                        ha='center',
+                        va='bottom',
+                        fontsize=8,
+                        color=color
+                    )
+
+    plt.xticks(x, dataset_names, rotation=90, ha='center')
+    plt.gca().invert_yaxis()
+    plt.xlabel("Dataset")
+    plt.ylabel("Rank")
+    plt.title("Model Rankings " + title_ending)
+
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+
+    plt.savefig(output_file)
+    plt.close()
+
+def plot_rankings_paper(dicts, output_file, title_ending='', maa_dicts=None):
+    #dataset_names = list(dicts.keys())
+    ordered_first = ['sintel', 'scannetpp', 'eth3d', 'lamar']
+    remaining = [d for d in dicts if d not in ordered_first]
+    random.shuffle(remaining)
+    dataset_names = ordered_first + remaining
+
+    # Find common models AFTER filtering
+    models = set.intersection(*(set(d.keys()) for d in dicts.values()))
+    models = sorted(models)
+
+    x = np.arange(len(dataset_names))
+ 
+    figwidth = max(10, 1 * len(dataset_names))
+    plt.figure(figsize=(figwidth, 8))
+
+    style_cycle = get_style_cycle()
+
+    for model in models:
+        color, linestyle = next(style_cycle)
+        y = [dicts[d][model] for d in dataset_names]
+
+        plt.plot(x, y, marker='o', linestyle=linestyle, color=color, label=model)
+
+        if maa_dicts is not None:
+            for i, dataset in enumerate(dataset_names):
+                if dataset in maa_dicts and model in maa_dicts[dataset]:
+                    maa_val = maa_dicts[dataset][model]
+                    plt.text(
+                        x[i],
+                        y[i] - 0.1,  # slightly above point (since inverted y-axis)
+                        f"{maa_val:.2f}",
+                        ha='center',
+                        va='bottom',
+                        fontsize=8,
+                        color=color
+                    )
+
+    plt.xticks(x, dataset_names, rotation=90, ha='center')
     plt.gca().invert_yaxis()
     plt.xlabel("Dataset")
     plt.ylabel("Rank")
@@ -95,12 +411,40 @@ def plot_rankings(dicts, output_file, title_ending=''):
     plt.close()
 
 
-def plot_lineplot(rank_dicts, output_path, plot_with_avg):
+
+def plot_lineplot_paper(rank_dicts, output_path, plot_with_avg, maa_dicts):
+
+    # manually prune data
+    remove_mdes = ['gt','none','VGGT','Metric3DV2','DepthAnythingV3','MoGeV1','UniDepth2','UniDepth1','DepthPro']
+    
+    statues_scenes = ['babies_cerny','giant_chair_vltava','kyoto_nakagawahigashiyama_statue','niemand_statue','r2d2_folimanka','yvr_huge_chair','franz_kafka','hanging_girl','memorial_victims_of_communism','prague_castle_statue','spejbl_hurvinek','zlata_kasna_chrt']
+    remove_statues = ['babies_cerny','giant_chair_vltava','niemand_statue','r2d2_folimanka','yvr_huge_chair','hanging_girl','prague_castle_statue','spejbl_hurvinek']
+    
+    vegetation_scenes = ['dresden_1','kyoto_nakagawahigashiyama_tree','overgrown_statue_couple','stromovka_2','stromovka_3','stromovka_7','klamovka_sign1','nadina_domestica','overgrown_statue_pot','stromovka_2b','stromovka_5','tree_orbit_normal1']
+    remove_vegetation = ['dresden_1','stromovka_2','stromovka_3','stromovka_7','klamovka_sign1','nadina_domestica','overgrown_statue_pot','tree_orbit_normal1','overgrown_statue_couple']
+
+    
+
+    maa_dicts = filter_models(maa_dicts, remove_mdes)
+    rank_dicts = filter_models(rank_dicts, remove_mdes)
+
+    #maa_dicts = filter_scenes(maa_dicts,statues_scenes+remove_vegetation)
+    #rank_dicts = filter_scenes(rank_dicts,statues_scenes+remove_vegetation)
+
+    #maa_dicts = filter_scenes(maa_dicts,vegetation_scenes+remove_statues)
+    #rank_dicts = filter_scenes(rank_dicts,vegetation_scenes+remove_statues)
+
+    maa_dicts = filter_scenes(maa_dicts,remove_statues+remove_vegetation)
+    rank_dicts = filter_scenes(rank_dicts,remove_statues+remove_vegetation)
+
     
     for category, rank_dicts in rank_dicts.items(): 
-        save_path = output_path / f"{category}_lineplot.png"
+        #save_path = output_path / f"{category}_rank_vegetation_lineplot.png"
+        #save_path = output_path / f"{category}_rank_statues_lineplot.png"
+        save_path = output_path / f"{category}_rank_subset_lineplot.png"
+        
 
-        plot_rankings(rank_dicts, save_path,title_ending=' '+category)
+        plot_rankings_paper(rank_dicts, save_path,title_ending=' '+category, maa_dicts=maa_dicts.get(category))
 
 
         if plot_with_avg:
@@ -114,6 +458,40 @@ def plot_lineplot(rank_dicts, output_path, plot_with_avg):
                 if k in rank_dicts
             ]
             avg_ranks = {}
+            avg_maa = {}
+            models = set().union(*filtered_dicts)
+            for model in models:
+                values = [d[model] for d in rank_dicts.values() if model in d]
+                avg_ranks[model] = sum(values) / len(values)
+
+            rank_dicts_with_avg = {
+                "mean (standard)": avg_ranks,
+                **rank_dicts
+            }
+            plot_rankings(rank_dicts_with_avg, save_path,title_ending=' '+category)
+
+
+
+def plot_lineplot(rank_dicts, output_path, plot_with_avg, maa_dicts = None):
+    
+    for category, rank_dicts in rank_dicts.items(): 
+        save_path = output_path / f"{category}_lineplot.png"
+
+        plot_rankings(rank_dicts, save_path,title_ending=' '+category, maa_dicts=maa_dicts.get(category))
+
+
+        if plot_with_avg:
+            save_path = output_path / f"{category}_lineplot_avg.png"
+            # compute average ranks
+            selected_datasets = {'eth3d', 'lamar', 'scannetpp', 'sintel'}
+
+            filtered_dicts =  [
+                rank_dicts[k]
+                for k in selected_datasets
+                if k in rank_dicts
+            ]
+            avg_ranks = {}
+            avg_maa = {}
             models = set().union(*filtered_dicts)
             for model in models:
                 values = [d[model] for d in rank_dicts.values() if model in d]
@@ -280,6 +658,9 @@ def parse_csv_file(
        
     df_orig = pd.read_csv(filepath)
 
+    # manually filter out the ambiguous scene
+    df_orig = df_orig[df_orig['group']!='ambiguous']
+
     # update to new groups for the scenes
     if new_scene_groups is not None:
         df = update_group(df_orig,new_scene_groups)
@@ -424,7 +805,7 @@ def add_mAA_inliers_rankings_mean(maa_matrix, inliers_matrix, color_matrix, mode
 
             elif coloring_base == 'inliers':
                 if use_green_ranking:
-                    mean_color[j] = mean_inliers[j] - baseline_inliers
+                    mean_color[j] = mean_inliers[j]
                 else:
                     mean_color[j] = mean_inliers[j] - baseline_inliers
 
@@ -437,10 +818,11 @@ def add_mAA_inliers_rankings_mean(maa_matrix, inliers_matrix, color_matrix, mode
 
     # obs. This assumes results for all models. Will fail otherwise
     mean_ranks_dict = {model_name: rank for model_name, rank in zip(model_names, mean_ranks)}
+    mean_maa_dict = {model_name: maa for model_name, maa in zip(model_names, mean_maa)}
 
-    return new_maa, new_inliers, new_color, mean_ranks_dict
+    return new_maa, new_inliers, new_color, mean_ranks_dict, mean_maa_dict
 
-def plot_heatmaps(data, rankings, output_path, mode, coloring_base, use_green_ranking=False, save_heatmap=True, baseline_mde='none'):
+def plot_heatmaps(data, rankings, output_path, mode, coloring_base, use_green_ranking=False, save_heatmap=True, baseline_mde='none', plot_separate_scenes = False):
 
     # as input, add input 1) plot_heatmap and 2) plot_lineplot
     # or just make copy for lineplot? and there you then have to submit more data. More clean though?
@@ -449,6 +831,7 @@ def plot_heatmaps(data, rankings, output_path, mode, coloring_base, use_green_ra
 
     unique_solver_groups = {sg for solver_groups in data.values() for sg in solver_groups.keys()}
     rank_dicts = {sg: {} for sg in unique_solver_groups}
+    maa_dicts = {sg: {} for sg in unique_solver_groups}
 
     for category, solver_groups in data.items():
 
@@ -510,15 +893,21 @@ def plot_heatmaps(data, rankings, output_path, mode, coloring_base, use_green_ra
                             vmax = 5
                         elif coloring_base == 'inliers':
                             if use_green_ranking:
-                                color_matrix[i, j] = inliers - baseline_inliers
+                                color_matrix[i, j] = inliers
+                                vmin = inliers_matrix.min()
+                                vmax = inliers_matrix.max()
                             else:
                                 color_matrix[i, j] = inliers - baseline_inliers
-                            vmin = -30
-                            vmax = 10
-
+                                vmin = -30
+                                vmax = 10
                 
                 if mode == 'standard':
                     rank_dicts[solver_group][scene] = normalize_ranks(scene_ranks, remove_keys=["gt", "none"])
+                    maa_dicts[solver_group][scene] = {key: data[category][solver_group][scene][key]['mAA'] for key in data[category][solver_group][scene].keys()}
+                if mode == 'd2p' and plot_separate_scenes:
+                    rank_dicts[solver_group][scene] = normalize_ranks(scene_ranks, remove_keys=["gt", "none"])
+                    maa_dicts[solver_group][scene] = {key: data[category][solver_group][scene][key]['mAA'] for key in data[category][solver_group][scene].keys()}
+
     
             # this is where we have "solver_group" (calib/uncal/calib_ro/uncal_ro)
             # this is also where we have cetegory (vegetation/ambiguous/statues)
@@ -529,14 +918,15 @@ def plot_heatmaps(data, rankings, output_path, mode, coloring_base, use_green_ra
             # maybe only do this option without ro? or also with? just four if..ask chatgpt
             
             # gabbi fix the addition of mAA mean, add inlier_mean instead
-            maa_matrix, inliers_matrix, color_matrix, mean_ranks = add_mAA_inliers_rankings_mean(
+            maa_matrix, inliers_matrix, color_matrix, mean_ranks, mean_maa = add_mAA_inliers_rankings_mean(
                 maa_matrix, inliers_matrix, color_matrix, model_names, coloring_base, use_green_ranking, baseline_mde
             )
             scene_names = ["mean"] + scene_names
 
-            if mode == 'd2p':
+            if mode == 'd2p' and not plot_separate_scenes:
                 # this is actually only needed for ranks, to not get "holes" in ranks from removing gt and none, not needed for other metrics
                 rank_dicts[solver_group][category] = normalize_ranks(mean_ranks, remove_keys=["gt", "none"])
+                maa_dicts[solver_group][category] = {k: v for k, v in mean_maa.items() if k not in ["gt", "none"]}
 
             if coloring_base == 'rank' or coloring_base == 'maa':
                 annot_matrix = maa_matrix
@@ -554,10 +944,10 @@ def plot_heatmaps(data, rankings, output_path, mode, coloring_base, use_green_ra
                         mask=mask,
                         xticklabels=model_names,
                         yticklabels=scene_names,
-                        cmap="Greens",
+                        cmap="Greens", #"RdYlGn",# th 
                         vmin=vmin,
                         vmax=vmax,
-                        center=0,
+                        center=(vmin+vmax)/2,
                         annot=annot_matrix,
                         fmt=".1f",
                         cbar=True
@@ -628,7 +1018,7 @@ def plot_heatmaps(data, rankings, output_path, mode, coloring_base, use_green_ra
                 plt.savefig(save_path)
                 plt.close()
 
-    return rank_dicts
+    return rank_dicts, maa_dicts
 
 
 
@@ -637,8 +1027,8 @@ if __name__ == "__main__":
     calib_solvers = ['calib', 'calib_shift', 'baseline_calib']
     uncal_solvers = ['mdecalib', 'mdecalib_shift', 'sf', 'sf_shift', 'vf', 'vf_shift', 'baseline_sf']
 
-    if args.plot_separate_scenes and args.save_lineplot:
-        raise ValueError("You have to choose between heatmaps for separate scenes and lineplots")
+ #   if args.plot_separate_scenes and args.save_lineplot:
+ #       raise ValueError("You have to choose between heatmaps for separate scenes and lineplots")
     if args.save_lineplot and len(args.input_file) < 2:
         raise ValueError("For the lineplots you need to input a csv to both d2p and to standard results")
     if args.coloring_base not in ['rank', 'maa', 'inliers']:
@@ -648,6 +1038,7 @@ if __name__ == "__main__":
     
     os.makedirs(args.output_path, exist_ok=True)
     rank_dicts = {}
+    maa_dicts = {}
 
     for input_file in args.input_file:
         mode = 'd2p' if 'd2p' in str(input_file) else 'standard' if 'standard' in str(input_file) else None
@@ -660,11 +1051,11 @@ if __name__ == "__main__":
             split_ro = args.split_ro,
             solver_type = args.solver_type
         ) #default is using 1000 iterations, can be inputted
-        
+
         rankings = compute_rankings(data)
 
         if not args.plot_separate_scenes:
-            mode_dicts = plot_heatmaps(data, rankings, args.output_path, mode, args.coloring_base, args.use_green_ranking, args.save_heatmap, args.baseline_mde)
+            mode_rank_dicts, mode_maa_dicts = plot_heatmaps(data, rankings, args.output_path, mode, args.coloring_base, args.use_green_ranking, args.save_heatmap, args.baseline_mde, plot_separate_scenes = args.plot_separate_scenes)
         
         else:
 
@@ -678,15 +1069,21 @@ if __name__ == "__main__":
 
             rankings_merged = compute_rankings(data_merged)
 
-            _ = plot_heatmaps(data_merged, rankings_merged, args.output_path, mode, args.coloring_base, args.use_green_ranking, args.save_heatmap, args.baseline_mde)
+            mode_rank_dicts, mode_maa_dicts = plot_heatmaps(data_merged, rankings_merged, args.output_path, mode, args.coloring_base, args.use_green_ranking, args.save_heatmap, args.baseline_mde, plot_separate_scenes = args.plot_separate_scenes)
 
         if args.save_lineplot:
-            for solver_group, inner_dict in mode_dicts.items():
+            for solver_group, inner_dict in mode_rank_dicts.items():
                 if solver_group not in rank_dicts:
                     rank_dicts[solver_group] = {}
                 rank_dicts[solver_group].update(inner_dict)
+            for solver_group, inner_dict in mode_maa_dicts.items():
+                if solver_group not in maa_dicts:
+                    maa_dicts[solver_group] = {}
+                maa_dicts[solver_group].update(inner_dict)
 
     if args.save_lineplot:   
         plot_with_avg = True
-        plot_lineplot(rank_dicts, args.output_path, plot_with_avg)
+        #plot_lineplot(rank_dicts, args.output_path, plot_with_avg, maa_dicts)
+        plot_lineplot_paper(rank_dicts, args.output_path, plot_with_avg, maa_dicts)
+        plot_maa_lineplot(maa_dicts, args.output_path, plot_with_avg)
     
