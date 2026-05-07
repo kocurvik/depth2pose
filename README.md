@@ -20,8 +20,8 @@
 
   [![arXiv](https://img.shields.io/badge/arXiv-tba.tba-b31b1b.svg)](https://arxiv.org/abs/tba)
   [![Project Page](https://img.shields.io/static/v1?label=Project&message=Website&color=red)](https://kocurvik.github.io/depth2pose)
-  [![Project Page](https://img.shields.io/static/v1?label=D2P&message=Dataset(Sample)&color=blue)](https://huggingface.co/datasets/floodgab/depth2pose_example)
-  [![Project Page](https://img.shields.io/static/v1?label=D2P&message=Dataset&color=blue)](https://huggingface.co/datasets/floodgab/depth2pose)
+  [![Project Page](https://img.shields.io/static/v1?label=D2P&message=Dataset(Sample)&color=blue)](https://huggingface.co/datasets/floodgab/d2p_dataset_example)
+  [![Project Page](https://img.shields.io/static/v1?label=D2P&message=Dataset&color=blue)](https://huggingface.co/datasets/floodgab/d2p_dataset)
   
   </div>
 </p>
@@ -31,7 +31,7 @@ This repository contains the full evalautation code the depth2pose framework for
 
 ## Dataset download
 
-You can download the full D2P dataset used in the paper from [hugging face](https://huggingface.co/datasets/floodgab/depth2pose)
+You can download the full D2P dataset used in the paper from [hugging face](https://huggingface.co/datasets/floodgab/d2p_dataset)
 
 ## Installation
 
