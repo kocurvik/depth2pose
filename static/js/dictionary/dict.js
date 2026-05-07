@@ -11,13 +11,9 @@ const dict = {
 
 	// Hero section
 
-	'hero.title': { label: 'Depth2Pose: A Pose-Based Benchmark for Monocular Depth Estimation without Ground-Truth Depth' },
-	'hero.subtitle': { label: 'Project Website' },
-	'hero.tags': { label: '<span><a href="https://arxiv.org/abs/tba" rel="nofollow"><img src="https://img.shields.io/badge/arXiv-tba.tba-b31b1b.svg" style="max-width: 100%;"></a>
-<a href="https://github.com/kocurvik/depth2pose" rel="nofollow"><img  alt="Code" src="https://img.shields.io/static/v1?label=Project&amp;message=Code&amp;color=red" style="max-width: 100%;"></a>
-<a href="https://huggingface.co/datasets/floodgab/d2p_dataset_example" rel="nofollow"><img alt="Project Page" src="https://img.shields.io/static/v1?label=D2P&amp;message=Dataset(Sample)&amp;color=blue" style="max-width: 100%;"></a>
-<a href="https://huggingface.co/datasets/floodgab/d2p_dataset" rel="nofollow"><img alt="Project Page" src="https://img.shields.io/static/v1?label=D2P&amp;message=Dataset&amp;color=blue" style="max-width: 100%;"></a>
-</span>' },
+	'hero.title': { label: 'Benchmarking Monocular Depth Estimators via Relative Pose Estimation' },
+	'hero.subtitle': { label: 'Frontend viewer for the benchmark section on the paper website' },
+	'hero.tags': { label: '<span>Monocular depth estimators</span><span>•</span><span>Relative pose solvers</span>' },
 
 
 	// Toggle buttons
