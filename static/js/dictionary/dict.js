@@ -11,7 +11,7 @@ const dict = {
 
 	// Hero section
 
-	'hero.title': { label: 'Benchmarking Monocular Depth Estimators via Relative Pose Estimation' },
+	'hero.title': { label: 'Depth2Pose: A Pose-Based Benchmark for Monocular Depth Estimation without Ground-Truth Depth' },
 
 
 	// Toggle buttons
