@@ -1,7 +1,6 @@
 /* Hero */
 
 .benchmark-hero {
-	background: linear-gradient(135deg, #ffffff 0%, #f4f7fb 100%);
 	border-bottom: 1px solid #e8edf4;
 }
 
@@ -239,7 +238,7 @@
 
 .summary-box {
 	background: #f7f9fc;
-	border: 1px solid #e7edf6;
+	box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
 	border-radius: 14px;
 	padding: 0.9rem 1rem;
 }
@@ -337,7 +336,7 @@
 	border: 1px solid #e7edf6;
 	border-radius: 18px;
 	padding: 1rem;
-	box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+	box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
 }
 
 .dataset-summary-subtitle {
@@ -363,7 +362,7 @@
 	border: 1px solid #e7edf6;
 	border-radius: 18px;
 	padding: 1rem;
-	box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+	box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
 }
 
 .example-card-header {
@@ -559,7 +558,7 @@
 	border: 1px solid #e7edf6;
 	border-radius: 18px;
 	padding: 1rem;
-	box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+	box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
 }
 
 .depth-result-meta {
@@ -650,6 +649,14 @@
 
 .dict-tooltip:hover {
 	color: #6b7280;
+}
+
+
+
+/* Common styles */
+.controls-card, .table-card, .controls-card {
+	background-color: var(--background-primary);
+	box-shadow: var(--shadow-around);
 }
 
 

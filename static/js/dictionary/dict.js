@@ -12,20 +12,18 @@ const dict = {
 	// Hero section
 
 	'hero.title': { label: 'Benchmarking Monocular Depth Estimators via Relative Pose Estimation' },
-	'hero.subtitle': { label: 'Frontend viewer for the benchmark section on the paper website' },
-	'hero.tags': { label: '<span>Monocular depth estimators</span><span>•</span><span>Relative pose solvers</span>' },
 
 
 	// Toggle buttons
 
 	'controls.toggle.show': { label: 'Show controls' },
 	'controls.toggle.hide': { label: 'Hide controls' },
-	'table.toggle.show': { label: 'Show table' },
-	'table.toggle.hide': { label: 'Hide table' },
-	'results.toggle.show': { label: 'Show results' },
-	'results.toggle.hide': { label: 'Hide results' },
-	'examples.toggle.show': { label: 'Show examples' },
-	'examples.toggle.hide': { label: 'Hide examples' },
+	'table.toggle.show': { label: 'Show results table' },
+	'table.toggle.hide': { label: 'Hide results table' },
+	'results.toggle.show': { label: 'Show table summary' },
+	'results.toggle.hide': { label: 'Hide table summary' },
+	'examples.toggle.show': { label: 'Show image examples' },
+	'examples.toggle.hide': { label: 'Hide image examples' },
 
 
 	// Pagination
@@ -244,7 +242,7 @@ const dict = {
 
 	// Result cards
 
-	'results.title': { label: 'Results' },
+	'results.title': { label: 'Table Summary' },
 	'results.note': { label: 'Rows are computed directly in the browser from the selected CSV file.' },
 
 	// Summary cards
