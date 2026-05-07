@@ -31,6 +31,58 @@ def parse_args():
 
 # stuff for lineplots
 
+plt.rcParams.update({
+    "text.usetex": True,  # Use LaTeX to render text
+    "font.family": "serif",  # Use serif for most text
+    "font.serif": ["Times"],  # Specifically Times New Roman
+    # "font.size": 10,               # Matches NeurIPS \normalsize
+    # "axes.labelsize": 10,
+    # "legend.fontsize": 8,          # Matches \footnotesize
+    # "xtick.labelsize": 8,
+    # "ytick.labelsize": 8,
+    "text.latex.preamble": r"""
+        \usepackage{amsmath}
+        \usepackage{amsfonts}
+        \usepackage{times}
+        \usepackage{mathptmx} % Use Times-compatible math fonts
+
+        \renewcommand{\rmdefault}{ptm}
+        \renewcommand{\sfdefault}{phv}
+
+        % Add your custom commands here
+        \newcommand{\mAA}{mAA(10$^\circ$)}
+        \newcommand{\dsi}{$\delta_{1}^{si}$}
+        \newcommand{\dssi}{$\delta_{1}^{ai}$}
+        \newcommand{\relsi}{Rel$^{si}$}
+        \newcommand{\relssi}{Rel$^{ai}$}
+        \newcommand{\M}[1]{\mathbf{#1}}
+
+        \newcommand{\eth}{ETH3D}
+        \newcommand{\sintel}{Sintel}
+        \newcommand{\scannetpp}{ScanNet++}
+        \newcommand{\lamar}{Lamar}
+
+        \newcommand{\baselinecalib}{$\mathsf{B}$}
+        \newcommand{\baselinesf}{$\mathsf{B}_{\mathrm{f}}$}
+        \newcommand{\calib}{$\mathsf{H}$}
+        \newcommand{\calibshift}{$\mathsf{H}_{\mathrm{a}}$}
+        \newcommand{\mysf}{$\mathsf{H}_{\mathrm{f}}$}
+        \newcommand{\sfshift}{$\mathsf{H}_{\mathrm{a,f}}$}
+
+        \newcommand{\mdecalib}{$\mathsf{K}$}
+        \newcommand{\mdecalibshift}{$\mathsf{K}_{\mathrm{a}}$}
+
+        \newcommand{\calibro}{$\mathsf{R}$}
+        \newcommand{\calibshiftro}{$\mathsf{R}_{\mathrm{a}}$}
+        \newcommand{\sfro}{$\mathsf{R}_{\mathrm{f}}$}
+        \newcommand{\sfshiftro}{$\mathsf{R}_{\mathrm{a,f}}$}
+
+        \newcommand{\mdecalibro}{$\mathsf{KR}$}
+        \newcommand{\mdecalibshiftro}{$\mathsf{KR}_{\mathrm{a}}$}
+
+    """,
+    "pgf.rcfonts": False,  # Don't setup fonts from rc parameters
+})
 
 
 
@@ -160,7 +212,7 @@ def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
     models = sorted(models)
     models_nicknames = {
         'DepthAnythingV2': 'DAv3',
-        'MapAnything': 'Map\nAnything',
+        'MapAnything': 'Map Anything',
         'MoGeV2': 'MoGeV2',
         'Pi3': 'Pi3',
         'UniK3D': 'UniK3D'
@@ -168,7 +220,7 @@ def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
 
     x = np.arange(len(dataset_names))
  
-    plt.figure(figsize=(20, 5))
+    plt.figure(figsize=(20*0.85, 5*0.85))
 
     style_cycle = get_style_cycle()
 
@@ -178,6 +230,7 @@ def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
 
         #plt.plot(x, y, marker='o', linestyle=linestyle, color=color, label=model)
         style = get_mde_marker(model,model)
+        style['markersize'] = 10
         plt.plot(x, y, linestyle=linestyle, **style, label=models_nicknames[model])
 
 
@@ -208,26 +261,28 @@ def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
     plt.yticks(np.asarray([70,80,90]))
     #plt.gca().invert_yaxis()
     #plt.xlabel("Dataset")
-    plt.ylim(63,94)
+    plt.ylim(61,94)
     plt.xlim(-0.3,10.3)
-    plt.ylabel("mAA@10")
+    # HARDCODED \calib TODO: fix
+    plt.ylabel("\\mAA")
     #plt.title("Model Rankings " + title_ending)
     
     plt.rcParams.update({        # Use LaTeX to render text
-        "font.family": "serif",   
-        'font.size': 16,          # base size for everything
-        'axes.titlesize': 16,
-        'axes.labelsize': 16,
-        'xtick.labelsize': 16,
-        'ytick.labelsize': 16,
-        'legend.fontsize': 16
+        # "font.family": "serif",
+        'font.size': 24,          # base size for everything
+        'axes.titlesize': 24,
+        'axes.labelsize': 24,
+        'xtick.labelsize': 24,
+        'ytick.labelsize': 24,
+        'legend.fontsize': 20
     }) 
 
     #plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.legend(loc='upper right')
+    plt.legend(loc='lower center', ncol=5)
+
     plt.tight_layout()
 
-    plt.savefig(output_file)
+    plt.savefig(output_file,bbox_inches='tight', pad_inches=0.00,)
     plt.close()
 
 def filter_models(dicts, remove_mdes):
@@ -270,9 +325,9 @@ def plot_maa_lineplot(maa_dicts, output_path, plot_with_avg):
         'lamar': 'LaMaR',
         'franz_kafka': 'Franz\nKafka',
         'zlata_kasna_chrt': 'Zlata\nkasna',
-        'stromovka_2b': 'Stromovka2b',
+        'stromovka_2b': 'Stromovka\n2b',
         'memorial_victims_of_communism': 'Memorial',
-        'stromovka_5': 'Stromovka5',
+        'stromovka_5': 'Stromovka\n5',
         'kyoto_nakagawahigashiyama_statue': 'Kyoto\nstatue',
         'kyoto_nakagawahigashiyama_tree': 'Kyoto\ntree'
     }

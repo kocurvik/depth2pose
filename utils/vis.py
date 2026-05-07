@@ -23,6 +23,11 @@ plt.rcParams.update({
         \usepackage{amsmath}
         \usepackage{amsfonts}
         \usepackage{times}
+        \usepackage{mathptmx} % Use Times-compatible math fonts
+        
+        \renewcommand{\rmdefault}{ptm}
+        \renewcommand{\sfdefault}{phv}
+        
         % Add your custom commands here
         \newcommand{\mAA}{mAA(10$^\circ$)}
         \newcommand{\dsi}{$\delta_{1}^{si}$}
@@ -36,23 +41,23 @@ plt.rcParams.update({
         \newcommand{\scannetpp}{ScanNet++}
         \newcommand{\lamar}{Lamar}
         
-        \newcommand{\baselinecalib}{$\mathcal{B}$}
-        \newcommand{\baselinecalibshift}{$\mathcal{B}_{\mathrm{f}}$}
-        \newcommand{\calib}{$\mathcal{D}$}
-        \newcommand{\calibshift}{$\mathcal{D}_{\mathrm{a}}$}
-        \newcommand{\mysf}{$\mathcal{D}_{\mathrm{f}}$}
-        \newcommand{\sfshift}{$\mathcal{D}_{\mathrm{a,f}}$}
+        \newcommand{\baselinecalib}{$\mathsf{B}$}
+        \newcommand{\baselinesf}{$\mathsf{B}_{\mathrm{f}}$}
+        \newcommand{\calib}{$\mathsf{H}$}
+        \newcommand{\calibshift}{$\mathsf{H}_{\mathrm{a}}$}
+        \newcommand{\mysf}{$\mathsf{H}_{\mathrm{f}}$}
+        \newcommand{\sfshift}{$\mathsf{H}_{\mathrm{a,f}}$}
         
-        \newcommand{\mdecalib}{$\mathcal{K}$}
-        \newcommand{\mdecalibshift}{$\mathcal{K}_{\mathrm{a}}$}
+        \newcommand{\mdecalib}{$\mathsf{K}$}
+        \newcommand{\mdecalibshift}{$\mathsf{K}_{\mathrm{a}}$}
         
-        \newcommand{\calibro}{$\mathcal{R}$}
-        \newcommand{\calibshiftro}{$\mathcal{R}_{\mathrm{a}}$}
-        \newcommand{\sfro}{$\mathcal{R}_{\mathrm{f}}$}
-        \newcommand{\sfshiftro}{$\mathcal{R}_{\mathrm{a,f}}$}
+        \newcommand{\calibro}{$\mathsf{R}$}
+        \newcommand{\calibshiftro}{$\mathsf{R}_{\mathrm{a}}$}
+        \newcommand{\sfro}{$\mathsf{R}_{\mathrm{f}}$}
+        \newcommand{\sfshiftro}{$\mathsf{R}_{\mathrm{a,f}}$}
         
-        \newcommand{\mdecalibro}{$\mathcal{KR}$}
-        \newcommand{\mdecalibshiftro}{$\mathcal{KR}_{\mathrm{a}}$}
+        \newcommand{\mdecalibro}{$\mathsf{KR}$}
+        \newcommand{\mdecalibshiftro}{$\mathsf{KR}_{\mathrm{a}}$}
 
     """,
     "pgf.rcfonts": False,          # Don't setup fonts from rc parameters
