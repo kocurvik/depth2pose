@@ -13,11 +13,7 @@ const dict = {
 
 	'hero.title': { label: 'Depth2Pose: A Pose-Based Benchmark for Monocular Depth Estimation without Ground-Truth Depth' },
 	'hero.subtitle': { label: 'Project Website' },
-	'hero.tags': { label: '<span><a href="https://arxiv.org/abs/tba"><img src="https://img.shields.io/badge/arXiv-tba.tba-b31b1b.svg"></a>
-<a href="https://github.com/kocurvik/depth2pose"><img  alt="Code" src="https://img.shields.io/static/v1?label=Project&amp;message=Code&amp;color=red"></a>
-<a href="https://huggingface.co/datasets/floodgab/d2p_dataset_example" rel="nofollow"><img alt="Project Page" src="https://img.shields.io/static/v1?label=D2P&amp;message=Dataset(Sample)&amp;color=blue"></a>
-<a href="https://huggingface.co/datasets/floodgab/d2p_dataset"><img alt="Project Page" src="https://img.shields.io/static/v1?label=D2P&amp;message=Dataset&amp;color=blue"></a>
-</span>' },
+	'hero.tags': { label: '<span> MDE Evaluation</span>' },
 
 
 	// Toggle buttons
