@@ -11,7 +11,7 @@ This document provides step-by-step instructions for setting up the environment 
 
 ## Step 0
 
-Recreate the saved mamba environment, then install the pip dependencies into it:
+Recreate the saved mamba/conda environment, then install the pip dependencies into it:
 
 ```bash
 mamba env create -f environment.yml
