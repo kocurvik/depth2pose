@@ -179,10 +179,11 @@ def df_vals_to_latex_string(combined_df):
         if col == 'mde':
             continue
 
-        higher_is_better = 'A.Rel' not in col
+        higher_is_better = 'A.Rel' not in col and 'pose' not in col
         numeric_vals = pd.to_numeric(combined_df[col], errors='coerce')
 
         rank_mask = combined_df['mde'] != 'gt'
+        max_rank = rank_mask.sum()
         ranks = numeric_vals[rank_mask].rank(ascending=not higher_is_better, method='min')
         ranks = ranks.reindex(combined_df.index)
 
@@ -193,29 +194,23 @@ def df_vals_to_latex_string(combined_df):
             digits = len(str(int(abs(val))))
             max_digits = max(max_digits, digits)
 
-        def format_cell(val, rank, max_d):
-            if np.isnan(val) or val < 0.0:
-                return ' '
-
+        def format_cell(val, rank, max_d, max_r):
             if pd.isna(val) or val < 0.0:
-                return " "
+                return ' '
 
             res = f"{val:.2f}"
             digits = len(str(int(abs(val))))
             prefix = "\\phantom{1}" * (max_d - digits)
 
-            if rank == 1:
-                res = f"\\best{{{res}}}"
-            elif rank == 2:
-                res =  f"\\second{{{res}}}"
-            elif rank == 3:
-                res = f"\\third{{{res}}}"
+            if pd.isna(rank):
+                rank = 0
+            else:
+                rank = int(rank)
 
-            res = prefix + res
+            res = f'\\rank{{{res}}}{{{rank}}}{{{max_r}}}'
+            return prefix + res
 
-            return res
-
-        combined_df[col] = [format_cell(v, r, max_digits) for v, r in zip(numeric_vals, ranks)]
+        combined_df[col] = [format_cell(v, r, max_digits, max_rank) for v, r in zip(numeric_vals, ranks)]
 
 
 def print_combined_latex_table(combined_df, baseline=None, include_calib_col=True):
@@ -291,32 +286,35 @@ def print_combined_latex_table(combined_df, baseline=None, include_calib_col=Tru
     print('\\end{tabular}')
 
 
-
-
-def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='scale', iters=1000, include_ro=True,
-                         keep_only=None, best_only=False):
+def get_solvers_depths(cal_type, depth_type, include_ro):
     if depth_type == 'scale':
         depth_cols = ['d1_si', 'A.Rel_si']
     elif depth_type == 'affine':
         depth_cols = ['d1_ssi', 'A.Rel_ssi']
     else:
         depth_cols = ['d1_si', 'A.Rel_si', 'd1_ssi', 'A.Rel_ssi']
-
     if cal_type == 'calib':
         solvers = ['calib']
         baseline = 'baseline_calib'
     else:
         solvers = ['sf', 'mdecalib']
         baseline = 'baseline_sf'
-
-
     if depth_type == 'affine':
         solvers = [f'{x}_shift' for x in solvers]
     elif depth_type == 'both':
         solvers += [f'{x}_shift' for x in solvers]
-
     if include_ro:
         solvers = [item for x in solvers for item in (x, f'{x}_ro')]
+    return baseline, depth_cols, solvers
+
+
+def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='scale', iters=1000, include_ro=True,
+                         keep_only=None, best_only=False, dataset=None):
+    baseline, depth_cols, solvers = get_solvers_depths(cal_type, depth_type, include_ro)
+
+    if dataset is not None:
+        results_df = results_df[results_df['dataset'] == dataset]
+        depth_df = depth_df[depth_df['dataset'] == dataset]
 
     depth_df = depth_df.groupby('mde')[depth_cols].mean().reset_index().copy()
 
@@ -357,19 +355,379 @@ def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='sca
     print_combined_latex_table(combined_df, baseline=baseline, include_calib_col=cal_type == 'calib')
 
 
+def print_pose_latex_table(pivot, baselines=None, include_calib_col=True):
+    # pivot: index=mde, columns=MultiIndex(group, solver)
+    groups = list(dict.fromkeys(pivot.columns.get_level_values(0)))
+    solvers = list(dict.fromkeys(pivot.columns.get_level_values(1)))
+    solvers_per_group = len(solvers)
+    extra_cols = 1 + (1 if include_calib_col else 0)
+    num_cols = extra_cols + len(groups) * solvers_per_group
+
+    def format_cell(val, rank, max_d, max_rank):
+        if pd.isna(val) or val < 0.0:
+            return ' '
+        res = f"{val:.2f}"
+        prefix = "\\phantom{1}" * (max_d - len(str(int(abs(val)))))
+        if pd.isna(rank):
+            rank = 0
+        else:
+            rank = int(rank)
+        res = f'\\rank{{{res}}}{{{rank}}}{{{max_rank}}}'
+        return prefix + res
+
+    formatted = pivot.copy().astype(object)
+    for col in pivot.columns:
+        vals = pd.to_numeric(pivot[col], errors='coerce')
+        rank_mask = pivot.index != 'gt'
+        max_rank = int(rank_mask.sum())
+        ranks = vals[rank_mask].rank(ascending=False, method='min').reindex(pivot.index)
+        max_digits = max((len(str(int(abs(v)))) for v in vals if not pd.isna(v) and v >= 0), default=1)
+        formatted[col] = [format_cell(v, r, max_digits, max_rank) for v, r in zip(vals, ranks)]
+
+    alignment = 'l' + ('c' * (num_cols - 1))
+    print('\\begin{tabular}{' + alignment + '}')
+    print('\\toprule')
+
+    total_solver_cols = len(groups) * solvers_per_group
+    maa_start = extra_cols + 1
+
+    row1 = [' '] * extra_cols
+    row1.append('\\multicolumn{' + str(total_solver_cols) + '}{c}{\\mAA}')
+    maa_cmidrule = f'\\cmidrule(lr){{{maa_start}-{num_cols}}}'
+
+    group_cmidrules = []
+    row2 = [' ']
+    if include_calib_col:
+        row2.append('MDE')
+    for i, group in enumerate(groups):
+        row2.append('\\multicolumn{' + str(solvers_per_group) + '}{c}{' + group.capitalize() + '}')
+        start = maa_start + i * solvers_per_group
+        end = start + solvers_per_group - 1
+        group_cmidrules.append(f'\\cmidrule(lr){{{start}-{end}}}')
+
+    row3 = ['MDE-Backbone']
+    if include_calib_col:
+        row3.append('w/$\\M K$')
+    for group in groups:
+        for solver in solvers:
+            row3.append(estimator_name(solver))
+
+    print(' & '.join(row1) + ' \\\\ ' + maa_cmidrule)
+    print(' & '.join(row2) + ' \\\\ ' + ' '.join(group_cmidrules))
+    print(' & '.join(row3) + '\\\\ \\midrule')
+
+    for mde, row in formatted.iterrows():
+        if mde == 'gt':
+            mde_name = '\\midrule GT'
+        else:
+            basename = get_mde_basename(mde)
+            backbone = get_backbone_name(mde, short=True)
+            mde_name = f'{basename}-{backbone}'
+
+        cells = [mde_name]
+        if include_calib_col:
+            cells.append('\\checkmark' if 'Calib' in mde else '')
+        for group in groups:
+            for solver in solvers:
+                cells.append(str(row[(group, solver)]))
+        print(' & '.join(cells) + ' \\\\')
+
+    if baselines is not None:
+        cells = [f'\\midrule No Depth + {estimator_name(baselines["name"])}']
+        if include_calib_col:
+            cells.append('')
+        for group in groups:
+            val = baselines.get(group)
+            inner = f'{val:.2f}' if val is not None else ' '
+            cells.append('\\multicolumn{' + str(solvers_per_group) + '}{c}{' + inner + '}')
+        print(' & '.join(cells) + ' \\\\')
+
+    print('\\bottomrule')
+    print('\\end{tabular}')
+
+
+def print_join_latex_table(depth_df, standard_pivot, d2p_pivot, depth_cols, solvers, groups,
+                           standard_baseline=None, d2p_baselines=None, include_calib_col=True):
+    def format_cell(val, rank, max_d, max_rank):
+        if pd.isna(val) or val < 0.0:
+            return ' '
+        res = f"{val:.2f}"
+        prefix = "\\phantom{1}" * (max_d - len(str(int(abs(val)))))
+        # if rank == 1:
+        #     res = f"\\best{{{res}}}"
+        # elif rank == 2:
+        #     res = f"\\second{{{res}}}"
+        # elif rank == 3:
+        #     res = f"\\third{{{res}}}"
+        if pd.isna(rank):
+            rank = 0
+        else:
+            rank = int(rank)
+
+        res = f'\\rank{{{res}}}{{{rank}}}{{{max_rank}}}'
+        return prefix + res
+
+    def format_column(series, higher_is_better):
+        vals = pd.to_numeric(series, errors='coerce')
+        rank_mask = series.index != 'gt'
+        max_rank = rank_mask.sum()
+        ranks = vals[rank_mask].rank(ascending=not higher_is_better, method='min').reindex(series.index)
+        max_digits = max((len(str(int(abs(v)))) for v in vals if not pd.isna(v) and v >= 0), default=1)
+        return [format_cell(v, r, max_digits, max_rank) for v, r in zip(vals, ranks)]
+
+    formatted_depth = pd.DataFrame(index=depth_df.index)
+    for col in depth_cols:
+        formatted_depth[col] = format_column(depth_df[col], higher_is_better='A.Rel' not in col)
+
+    formatted_std = pd.DataFrame(index=standard_pivot.index)
+    for col in solvers:
+        formatted_std[col] = format_column(standard_pivot[col], higher_is_better=True)
+
+    formatted_d2p = pd.DataFrame(index=d2p_pivot.index, columns=d2p_pivot.columns).astype(object)
+    for col in d2p_pivot.columns:
+        formatted_d2p[col] = format_column(d2p_pivot[col], higher_is_better=True)
+
+    n_depth = len(depth_cols)
+    n_std = len(solvers)
+    n_groups = len(groups)
+    n_sol = len(solvers)
+    n_d2p = n_groups * n_sol
+
+    extra_cols = 1 + (1 if include_calib_col else 0)
+    num_cols = extra_cols + n_depth + n_std + n_d2p
+
+    depth_end = extra_cols + n_depth
+    std_start = depth_end + 1
+    std_end = std_start + n_std - 1
+    d2p_start = std_end + 1
+
+    alignment = 'l' + ('c' * (num_cols - 1))
+    print('\\begin{tabular}{' + alignment + '}')
+    print('\\toprule')
+
+    row1 = [' '] * (extra_cols + n_depth)
+    row1.append('\\multicolumn{' + str(n_std + n_d2p) + '}{c}{\\mAA}')
+    cmid_row1 = f'\\cmidrule(lr){{{std_start}-{num_cols}}}'
+
+    row2 = [' ']
+    if include_calib_col:
+        row2.append('MDE')
+    for col in depth_cols:
+        name = DEPTH_METRIC_MAP.get(col, col)
+        row2.append('\\multirow{2}{*}{' + name + '}')
+    row2.append('\\multicolumn{' + str(n_std) + '}{c}{Standard}')
+    group_cmidrules = [f'\\cmidrule(lr){{{std_start}-{std_end}}}']
+    cur = d2p_start
+    for group in groups:
+        end = cur + n_sol - 1
+        row2.append('\\multicolumn{' + str(n_sol) + '}{c}{' + group.capitalize() + '}')
+        group_cmidrules.append(f'\\cmidrule(lr){{{cur}-{end}}}')
+        cur = end + 1
+    cmid_row2 = ' '.join(group_cmidrules)
+
+    row3 = ['MDE-Backbone']
+    if include_calib_col:
+        row3.append('w/$\\M K$')
+    for _ in depth_cols:
+        row3.append(' ')
+    for solver in solvers:
+        row3.append(estimator_name(solver))
+    for _ in groups:
+        for solver in solvers:
+            row3.append(estimator_name(solver))
+
+    print(' & '.join(row1) + ' \\\\ ' + cmid_row1)
+    print(' & '.join(row2) + ' \\\\ ' + cmid_row2)
+    print(' & '.join(row3) + ' \\\\ \\midrule')
+
+    for mde in depth_df.index:
+        if mde == 'gt':
+            mde_name = '\\midrule GT'
+        else:
+            basename = get_mde_basename(mde)
+            backbone = get_backbone_name(mde, short=True)
+            mde_name = f'{basename}-{backbone}'
+
+        cells = [mde_name]
+        if include_calib_col:
+            cells.append('\\checkmark' if 'Calib' in mde else '')
+        for col in depth_cols:
+            cells.append(str(formatted_depth.loc[mde, col]))
+        for solver in solvers:
+            if mde in formatted_std.index:
+                cells.append(str(formatted_std.loc[mde, solver]))
+            else:
+                cells.append(' ')
+        for group in groups:
+            for solver in solvers:
+                if mde in formatted_d2p.index:
+                    cells.append(str(formatted_d2p.loc[mde, (group, solver)]))
+                else:
+                    cells.append(' ')
+        print(' & '.join(cells) + ' \\\\')
+
+    if standard_baseline is not None or d2p_baselines is not None:
+        baseline_name = (d2p_baselines or {}).get('name', '')
+        cells = [f'\\midrule No Depth + {estimator_name(baseline_name)}']
+        if include_calib_col:
+            cells.append('')
+        for _ in depth_cols:
+            cells.append(' ')
+        std_val_str = f'{standard_baseline:.2f}' if standard_baseline is not None else ' '
+        cells.append('\\multicolumn{' + str(n_std) + '}{c}{' + std_val_str + '}')
+        for group in groups:
+            val = d2p_baselines.get(group) if d2p_baselines else None
+            inner = f'{val:.2f}' if val is not None else ' '
+            cells.append('\\multicolumn{' + str(n_sol) + '}{c}{' + inner + '}')
+        print(' & '.join(cells) + ' \\\\')
+
+    print('\\bottomrule')
+    print('\\end{tabular}')
+
+
+def print_join_table(standard_results_df, d2p_results_df, depth_df, cal_type='calib',
+                     depth_type='both', iters=1000, include_ro=True, keep_only=None, best_only=True):
+    baseline_name, depth_cols, solvers = get_solvers_depths(cal_type, depth_type, include_ro)
+
+    sort_metric = 'd1_si'
+    agg_cols = list(depth_cols) + ([sort_metric] if sort_metric not in depth_cols else [])
+    depth_df = depth_df.groupby('mde')[agg_cols].mean().reset_index().copy()
+    new_row = {col: -1.0 for col in agg_cols}
+    new_row['mde'] = 'gt'
+    depth_df = pd.concat([depth_df, pd.DataFrame([new_row])], ignore_index=True)
+
+    standard_results_df = standard_results_df.copy()[standard_results_df['iters'] == iters]
+    d2p_results_df = d2p_results_df.copy()[d2p_results_df['iters'] == iters]
+    d2p_results_df = d2p_results_df[~(d2p_results_df['group'] == 'ambiguos')]
+
+    if cal_type == 'uncal':
+        depth_df = depth_df[~depth_df['mde'].str.contains('Calib')]
+        standard_results_df = standard_results_df[~standard_results_df['mde'].str.contains('Calib')]
+        d2p_results_df = d2p_results_df[~d2p_results_df['mde'].str.contains('Calib')]
+
+    standard_grouped = standard_results_df.groupby(['solver', 'mde'])['pose_mAA_10'].mean().reset_index()
+    standard_baseline_vals = standard_grouped[standard_grouped['solver'] == baseline_name]['pose_mAA_10'].values
+    standard_baseline_value = standard_baseline_vals[0] if len(standard_baseline_vals) > 0 else None
+    standard_pivot = standard_grouped.pivot(index='mde', columns='solver', values='pose_mAA_10').reindex(columns=solvers)
+
+    groups = ['mean', 'statues', 'vegetation']
+    d2p_baselines = {'name': baseline_name}
+    for group in groups:
+        if group == 'mean':
+            b_df = d2p_results_df[d2p_results_df['solver'] == baseline_name]
+        else:
+            b_df = d2p_results_df[(d2p_results_df['solver'] == baseline_name) & (d2p_results_df['group'] == group)]
+        d2p_baselines[group] = b_df['pose_mAA_10'].mean() if not b_df.empty else None
+
+    group_results_df = d2p_results_df.groupby(['solver', 'mde', 'group'])['pose_mAA_10'].mean().reset_index()
+    mean_results_df = d2p_results_df.groupby(['solver', 'mde'])['pose_mAA_10'].mean().reset_index()
+    mean_results_df['group'] = 'mean'
+    d2p_all = pd.concat([group_results_df, mean_results_df], axis=0)
+    d2p_pivot = d2p_all[d2p_all['group'].isin(groups)].pivot(
+        index='mde', columns=['group', 'solver'], values='pose_mAA_10')
+    d2p_pivot = d2p_pivot.reindex(columns=pd.MultiIndex.from_product([groups, solvers]))
+
+    combined = depth_df.set_index('mde')
+
+    if best_only:
+        combined['_basename'] = combined.index.to_series().apply(get_mde_basename)
+        idx = combined.groupby('_basename')[sort_metric].idxmax()
+        combined = combined.loc[idx].drop(columns=['_basename'])
+
+    combined = combined.sort_values(by=sort_metric, ascending=False)
+    if keep_only is not None:
+        combined = combined.head(keep_only)
+
+    if 'gt' in combined.index:
+        combined = pd.concat([combined.drop(index='gt'), combined.loc[['gt']]])
+
+    selected_mdes = list(combined.index)
+    standard_pivot = standard_pivot.reindex(selected_mdes)
+    d2p_pivot = d2p_pivot.reindex(selected_mdes)
+    depth_df_selected = combined[depth_cols]
+
+    print_join_latex_table(depth_df_selected, standard_pivot, d2p_pivot, depth_cols, solvers, groups,
+                           standard_baseline=standard_baseline_value,
+                           d2p_baselines=d2p_baselines,
+                           include_calib_col=cal_type == 'calib')
+
+
+def print_pose_table(results_df, cal_type='calib', depth_type='scale', iters=1000, include_ro=True, best_only=True):
+    baseline_name, depth_cols, solvers = get_solvers_depths(cal_type, depth_type, include_ro)
+
+    solvers = [x for x in solvers if 'mde' not in x]
+
+    results_df = results_df.copy()[results_df['iters'] == iters]
+    results_df = results_df[~(results_df['group'] == 'ambiguos')]
+
+    if cal_type == 'uncal':
+        results_df = results_df[~results_df['mde'].str.contains('Calib')]
+
+    groups = ['mean', 'statues', 'vegetation']
+
+    baselines = {'name': baseline_name}
+    for group in groups:
+        if group == 'mean':
+            b_df = results_df[results_df['solver'] == baseline_name]
+        else:
+            b_df = results_df[(results_df['solver'] == baseline_name) & (results_df['group'] == group)]
+        baselines[group] = b_df['pose_mAA_10'].mean() if not b_df.empty else None
+
+    group_results_df = results_df.groupby(['solver', 'mde', 'group'])['pose_mAA_10'].mean().reset_index()
+    mean_results_df = results_df.groupby(['solver', 'mde'])['pose_mAA_10'].mean().reset_index()
+    mean_results_df['group'] = 'mean'
+
+    all_results_df = pd.concat([group_results_df, mean_results_df], axis=0)
+
+    if best_only:
+        mean_first = all_results_df[(all_results_df['group'] == 'mean') &
+                                    (all_results_df['solver'] == solvers[0])].copy()
+        mean_first['basename'] = mean_first['mde'].apply(get_mde_basename)
+        idx = mean_first.groupby('basename')['pose_mAA_10'].idxmax()
+        keep_mdes = mean_first.loc[idx, 'mde'].values
+        all_results_df = all_results_df[all_results_df['mde'].isin(keep_mdes)]
+
+    pivot = all_results_df[all_results_df['group'].isin(groups)].pivot(
+        index='mde', columns=['group', 'solver'], values='pose_mAA_10')
+    pivot = pivot.reindex(columns=pd.MultiIndex.from_product([groups, solvers]))
+    pivot = pivot.dropna(how='all')
+    pivot = pivot.sort_values(by=('mean', solvers[0]), ascending=False)
+    if 'gt' in pivot.index:
+        pivot = pd.concat([pivot.drop(index='gt'), pivot.loc[['gt']]])
+
+    print_pose_latex_table(pivot, baselines=baselines, include_calib_col=cal_type == 'calib')
+
+
+
+
 
 if __name__ == '__main__':
-    # results_df = pd.read_csv('csv_results/d2p_slim_pose_results.csv')
-    results_df = pd.read_csv('csv_results/standard_splg_slim_pose_results.csv')
     depth_df = pd.read_csv('csv_results/standard_depth_results.csv')
 
-    # main paper
-    # print_combined_table(results_df, depth_df, cal_type='calib', keep_only=None, include_ro=True, best_only=True)
-    # appendix
-    # print_combined_table(results_df, depth_df, cal_type='calib', depth_type='both', include_ro=True)
-    print_combined_table(results_df, depth_df, cal_type='uncal', depth_type='both', include_ro=True)
+    matches_list = ['loma', 'splg']
 
-    # print_best_only_table(results_df, sort_rows=True, use_ro=False)
-    #
-    # depth_results_df = pd.read_csv('csv_results/standard_depth_results.csv')
-    # print_best_only_depth_table(depth_results_df, sort_rows=True)
+    for matches in matches_list:
+        d2p_results = pd.read_csv(f'csv_results/d2p_{matches}_slim_pose_results.csv')
+        standard_results = pd.read_csv(f'csv_results/standard_{matches}_slim_pose_results.csv')
+
+        # print("-------MAIN PAPER TABLE ------")
+        # print()
+        # print_join_table(standard_results, d2p_results, depth_df, cal_type='calib', depth_type='scale', include_ro=True, keep_only=None, best_only=True)
+
+
+        # appendix
+        # print("-------- D2P Appendix Table ---------")
+        # print_pose_table(d2p_results, cal_type='calib', depth_type='both', include_ro=True, best_only=False)
+
+        # main paper
+        # appendix
+        # print("-------APPENDIX TABLE ------")
+        # print_combined_table(standard_results, depth_df, cal_type='calib', depth_type='both', include_ro=True)
+        # print("-------APPENDIX TABLE ------")
+        # print_combined_table(standard_results, depth_df, cal_type='uncal', depth_type='both', include_ro=True)
+        print("-------APPENDIX TABLE ------")
+        print_combined_table(standard_results, depth_df, cal_type='calib', depth_type='both', include_ro=True, dataset='eth3d')
+
+
+
+
