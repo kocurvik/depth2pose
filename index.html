@@ -13,6 +13,7 @@
 	<!-- Critical CSS - Load synchronously -->
 	<link rel="stylesheet" href="static/css/bulma.min.css">
 	<link rel="stylesheet" href="static/css/primeicons.css">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
 	<link rel="stylesheet" href="static/css/index.css">
 	<link rel="stylesheet" href="static/css/benchmark.css">
 
@@ -38,9 +39,86 @@
 	<section class="hero benchmark-hero">
 		<div class="hero-body benchmark-hero-body">
 			<div class="container benchmark-hero-container is-max-desktop has-text-centered">
-				<h1 class="title is-2 publication-title" data-i18n="hero.title"></h1>
-				<p class="subtitle is-5 mb-3" data-i18n="hero.subtitle"></p>
-				<div class="author-row" data-i18n="hero.tags"/>
+				<h1 class="title is-1 publication-title" data-i18n="hero.title"></h1>
+				<h2 class="title is-3 publication-authors">NeurIPS 2026</h2>
+				<div class="is-size-5 publication-authors">
+                	<span class="author-block">Viktor Kocur<sup>2</sup></span>
+					<span class="author-block">Sithu Aung<sup>TODO</sup></span>
+					<span class="author-block">Gabrielle Flood<sup>TODO</sup></span>
+					<span class="author-block">Yaqing Ding<sup>TODO</sup></span><br>
+					<span class="author-block">Lukáš Bujňák<sup>2</sup></span>
+					<span class="author-block">Torsten Sattler<sup>4</sup></span>
+					<span class="author-block">Zuzana Kukelova<sup>1</sup></span>
+                </div>
+				<div class="is-size-5 publication-authors">
+                    <span class="author-block">
+						<sup>1</sup>Visual Recognition Group, CTU Prague,  
+						<sup>2</sup>Comenius University Bratislava,
+						<sup>4</sup>CIIRC, CTU Prague<br> 
+					</span>
+                </div>
+			</div>
+			<div class="column has-text-centered">
+                <div class="publication-links">
+					<span class="link-block">
+						<a href="https://arxiv.org/abs/tba" target="_blank" class="external-link button is-normal is-rounded is-dark">
+							<span class="icon"><i class="pi pi-file-pdf"></i></span>
+							<span>Paper</span>
+						</a>
+					</span>
+
+					<span class="link-block">
+						<a href="https://github.com/kocurvik/depth2pose" target="_blank" class="external-link button is-normal is-rounded is-dark">
+							<span class="icon"><i class="pi pi-github"></i></span>
+							<span>Code</span>
+						</a>
+					</span>
+					<span class="link-block">
+						<a href="https://huggingface.co/datasets/floodgab/d2p_dataset" target="_blank" class="external-link button is-normal is-rounded is-dark">
+							<span class="icon"><i class="pi pi-database"></i></span>
+							<span>Dataset</span>
+						</a>
+					</span>
+					<span class="link-block">
+						<a href="https://huggingface.co/datasets/floodgab/d2p_dataset_example" target="_blank" class="external-link button is-normal is-rounded is-dark">
+							<span class="icon"><i class="pi pi-database"></i></span>
+							<span>Dataset (Sample)</span>
+						</a>
+					</span>
+					<span class="link-block">
+						<a href="https://arxiv.org/abs/tba" target="_blank" class="external-link button is-normal is-rounded is-dark">
+							<span class="icon"><i class="ai ai-arxiv"></i></span>
+							<span>arXiv</span>
+						</a>
+					</span>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- Paper abstract -->
+	<section class="section hero is-light">
+	<div class="container is-max-desktop">
+		<div class="columns is-centered has-text-centered">
+		<div class="column is-four-fifths">
+			<h2 class="title is-3">Abstract</h2>
+			<div class="content has-text-justified">
+			<p>
+				Monocular depth estimation has improved significantly in recent years, driven by increasingly powerful models and large-scale training data. Predicted depth is increasingly used as an input signal for downstream tasks such as Structure-from-Motion (SfM), visual localization, and SLAM. However, monocular depth estimators (MDEs) are still primarily evaluated in terms of depth accuracy. Standard metrics aggregate errors globally and may not reflect the usefulness of depth for downstream geometric tasks. We therefore propose Depth2Pose, a framework for evaluating MDEs in the context of downstream tasks. By combining depth predictions with feature correspondences in depth-aware geometric solvers, we use relative camera pose estimation accuracy as a task-driven proxy for depth quality. Traditional benchmarks require dense ground truth in the form of per-pixel depth, which is expensive to obtain. In contrast, our formulation requires only camera poses, which can be estimated efficiently, e.g., using Structure-from-Motion pipelines. As a result, our framework can be applied to scenes where ground-truth depth is difficult to obtain, for example due to large scene scale or heavy occlusions (e.g., vegetated environments). Leveraging this, we introduce the D2P dataset, which contains challenging scenes outside the distribution of commonly used training data. We show that methods performing well under standard depth error metrics on existing benchmarks also perform well under our pose-based metric when evaluated on the same datasets, but do not necessarily generalize to our more challenging dataset. Finally, we provide a simple and extensible evaluation framework. The dataset and code are available at kocurvik.github.io/depth2pose.
+			</p>
+			</div>
+		</div>
+		</div>
+	</div>
+	</section>
+
+	<!-- Results title -->
+	<section class="hero pt-4 is-small">
+		<div class="hero-body">
+			<div class="container">
+				<div class="columns is-centered has-text-centered">
+					<h2 class="title is-3 is-centered">Results</h2>
+				</div>
 			</div>
 		</div>
 	</section>
