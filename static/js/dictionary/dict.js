@@ -61,7 +61,7 @@ const dict = {
 	},
 	'controls.label.solverVariant': {
 		label: 'Solver variant',
-		description: 'Choose between standard RANSAC and reprojection-only RANSAC.'
+		description: 'Choose between standard estimator using hybrid error and reprojection-only estimator.'
 	},
 	'controls.label.depthType': {
 		label: 'Depth type',
@@ -88,8 +88,8 @@ const dict = {
 		description: 'Per-dataset evaluation using standard matching pipelines.'
 	},
 	'controls.select.benchmark.group': {
-		label: 'Group-based benchmark',
-		description: 'Scene-level evaluation grouped by benchmark families.'
+		label: 'D2P Dataset',
+		description: 'Evaluation on the dataset proposed in the paper'
 	},
 
 	// Select options: match type
@@ -122,7 +122,7 @@ const dict = {
 
 	'controls.select.iters.all': {
 		label: 'All',
-		description: 'Show results for all iteration counts.'
+		description: 'Show results for all RANSAC iteration counts.'
 	},
 
 
@@ -134,26 +134,26 @@ const dict = {
 	},
 	'controls.select.evaluationCase.calibrated': {
 		label: 'With calibration',
-		description: 'Only solvers that receive ground-truth intrinsic calibration.'
+		description: 'Only estimators that use ground-truth intrinsics.'
 	},
 	'controls.select.evaluationCase.uncalibrated': {
 		label: 'Without calibration',
-		description: 'Solvers that estimate or ignore intrinsics.'
+		description: 'Solvers estimators that assume unknown intrinsics.'
 	},
 
 	// Select options: solver variant
 
 	'controls.select.solverVariant.all': {
 		label: 'All',
-		description: 'Show both standard and reprojection-only RANSAC results.'
+		description: 'Show both hybrid (H) and reprojection-only (R) RANSAC results.'
 	},
 	'controls.select.solverVariant.non_ro': {
-		label: 'Standard RANSAC',
-		description: 'Standard RANSAC solver variants.'
+		label: 'Hybrid (H)',
+		description: 'Hybrid (H) RANSAC solver variants.'
 	},
 	'controls.select.solverVariant.ro': {
-		label: 'Reprojection-only RANSAC (_ro)',
-		description: 'RANSAC using only reprojection error for scoring.'
+		label: 'Reprojection-only (R)',
+		description: 'RANSAC estimators using only reprojection error for scoring. Uses only those 2D-2D correspondences which are inliers wrt ground truth pose.'
 	},
 
 	// Select options: depth type
@@ -162,12 +162,12 @@ const dict = {
 		description: 'Show both scale invariant and affine invariant results.'
 	},
 	'controls.select.depthType.scale': {
-		label: 'Scale invariant',
-		description: 'Show scale invariant depth results.'
+		label: 'Scale-invariant',
+		description: 'Show results for the assumption of scale-invariant depth.'
 	},
 	'controls.select.depthType.affine': {
-		label: 'Affine invariant',
-		description: 'Show affine invariant depth results.'
+		label: 'Affine-invariant',
+		description: 'Show results for the assumption of affine-invariant depth.'
 	},
 
 	// Filter checkboxes
@@ -186,7 +186,7 @@ const dict = {
 
 	'table.column.group': {
 		label: 'Group',
-		description: 'Benchmark family grouping (used in group-based mode).'
+		description: 'Scene type'
 	},
 	'table.column.dataset': {
 		label: 'Dataset',
@@ -194,7 +194,7 @@ const dict = {
 	},
 	'table.column.dataset.group': {
 		label: 'Scene',
-		description: 'Individual scene within a benchmark group.'
+		description: 'Individual scene within a scene type.'
 	},
 	'table.column.iters': {
 		label: 'Iters',
@@ -299,9 +299,9 @@ const dict = {
 	'examples.pairs.card.hidecorrespondences': { label: 'Hide correspondences' },
 
 	'examples.depth.not-available': { label: 'Selected image pair is no longer available.' },
-	'examples.depth.detail': { label: 'Depth results are ordered by ascending <code>p_err</code>, from best to worst for this pair.</p>' },
-	'examples.depth.card.solver': { label: '<strong>solver:</strong> {solverName}' },
-	'examples.depth.card.perr': { label: '<strong>p_err:</strong> {pErr}' },
+	'examples.depth.detail': { label: 'Depth results are ordered by ascending <code>pose error</code>, from best to worst for this pair.</p>' },
+	'examples.depth.card.solver': { label: '<strong>Estimator:</strong> {solverName}' },
+	'examples.depth.card.perr': { label: '<strong>Pose Error:</strong> {pErr}' },
 	'examples.depth.card.baseline': { label: '<strong>baseline:</strong> {baselineErr} {comparison}' },
 
 	'examples.back': { label: 'Back' },
