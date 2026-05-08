@@ -60,7 +60,7 @@ const dict = {
 		description: 'Filter by calibration mode.'
 	},
 	'controls.label.solverVariant': {
-		label: 'Solver variant',
+		label: 'Estimator variant',
 		description: 'Choose between standard estimator using hybrid error and reprojection-only estimator.'
 	},
 	'controls.label.depthType': {
@@ -138,7 +138,7 @@ const dict = {
 	},
 	'controls.select.evaluationCase.uncalibrated': {
 		label: 'Without calibration',
-		description: 'Solvers estimators that assume unknown intrinsics.'
+		description: 'Estimators that assume unknown intrinsics.'
 	},
 
 	// Select options: solver variant
@@ -205,8 +205,8 @@ const dict = {
 		description: 'Monocular depth estimation method.'
 	},
 	'table.column.solver': {
-		label: 'Solver',
-		description: 'Relative pose solver used for estimation.'
+		label: 'Estimator',
+		description: 'Relative pose estimator used for estimation.'
 	},
 	'table.column.pose_mAA_10': {
 		label: 'mAA(10°)',
@@ -322,8 +322,8 @@ const dict = {
 		description: 'Distinct monocular depth estimation methods.'
 	},
 	'summary.solvers': {
-		label: 'Solvers',
-		description: 'Distinct relative pose solvers.'
+		label: 'Estimators',
+		description: 'Distinct relative pose estimators.'
 	},
 
 
