@@ -250,8 +250,44 @@ const dict = {
 		 description: 'Calibrated solver with the assumption of affine-invariant depth using only the symmetric reprojection error in RANSAC. Only 2D-2D correspondences which are inliers wrt GT pose are used.'
 	 },
 	 'table.value.solver.baseline_calib': {
-		 label: 'R',
+		 label: 'B',
 		 description: 'Standard 5-pt solver for calibrated relative pose using Sampson error.'
+	 },
+	 'table.value.solver.sf': {
+	 label: 'H_f',
+	 description: 'Uncalibrated solver with the assumption of scale-invariant depth using hybrid error in RANSAC.'
+	 },
+	 'table.value.solver.sf_ro': {
+		 label: 'R_f',
+		 description: 'Uncalibrated solver with the assumption of scale-invariant depth using only the symmetric reprojection error in RANSAC. Only 2D-2D correspondences which are inliers wrt GT pose are used.'
+	 },	
+	 'table.value.solver.sf_shift': {
+		 label: 'H_f,s',
+		 description: 'Uncalibrated solver with the assumption of affine-invariant depth using hybrid error in RANSAC.'
+	 },
+	 'table.value.solver.sf_shift_ro': {
+		 label: 'R_f,s',
+		 description: 'Uncalibrated solver with the assumption of affine-invariant depth using only the symmetric reprojection error in RANSAC. Only 2D-2D correspondences which are inliers wrt GT pose are used.'
+	 },
+	 'table.value.solver.baseline_sf': {
+		 label: 'B_f',
+		 description: 'Standard 6-pt solver for uncalibrated relative pose using Sampson error.'
+	 },
+	 'table.value.solver.mdecalib': {
+		 label: 'K',
+		 description: 'Calibrated solver using intrinsics predicted by the MDE with the assumption of scale-invariant depth using hybrid error in RANSAC.'
+	 },
+	 'table.value.solver.mdecalib_ro': {
+		 label: 'R',
+		 description: 'Calibrated solver using intrinsics predicted by the MDE with the assumption of scale-invariant depth using only the symmetric reprojection error in RANSAC. Only 2D-2D correspondences which are inliers wrt GT pose are used.'
+	 },	
+	 'table.value.solver.mdecalib_shift': {
+		 label: 'H_s',
+		 description: 'Calibrated solver using intrinsics predicted by the MDE with the assumption of affine-invariant depth using hybrid error in RANSAC.'
+	 },
+	 'table.value.solver.mdecalib_shift_ro': {
+		 label: 'R_s',
+		 description: 'Calibrated solver using intrinsics predicted by the MDE with the assumption of affine-invariant depth using only the symmetric reprojection error in RANSAC. Only 2D-2D correspondences which are inliers wrt GT pose are used.'
 	 },
 	 
 	 
@@ -311,8 +347,8 @@ const dict = {
 	'examples.dataset.detail.count': { label: '{count} pairs in this dataset.' },
 	'examples.dataset.detail.open': { label: 'Open pairs list' },
 	
-	'examples.pairs.detail': { label: 'Pairs are ordered by descending best <code>p_err</code>, from worst to best. Click a pair to open depth comparison.' },
-	'examples.pairs.card.detail': { label: 'best p_err {bestPerr} · baseline {baseline}' },
+	'examples.pairs.detail': { label: 'Pairs are ordered by descending best <code>pose error</code>, from worst to best. Click a pair to open depth comparison.' },
+	'examples.pairs.card.detail': { label: 'best pose error {bestPerr} · baseline {baseline}' },
 	'examples.pairs.card.inliers': { label: '{inliers} inliers' },
 	'examples.pairs.card.outliers': { label: '{outliers} outliers' },
 	'examples.pairs.card.unused': { label: '{unused} unused' },
