@@ -278,15 +278,15 @@ const dict = {
 		 description: 'Calibrated solver using intrinsics predicted by the MDE with the assumption of scale-invariant depth using hybrid error in RANSAC.'
 	 },
 	 'table.value.solver.mdecalib_ro': {
-		 label: 'R',
+		 label: 'KR',
 		 description: 'Calibrated solver using intrinsics predicted by the MDE with the assumption of scale-invariant depth using only the symmetric reprojection error in RANSAC. Only 2D-2D correspondences which are inliers wrt GT pose are used.'
 	 },	
 	 'table.value.solver.mdecalib_shift': {
-		 label: 'H_s',
+		 label: 'K_s',
 		 description: 'Calibrated solver using intrinsics predicted by the MDE with the assumption of affine-invariant depth using hybrid error in RANSAC.'
 	 },
 	 'table.value.solver.mdecalib_shift_ro': {
-		 label: 'R_s',
+		 label: 'KR_s',
 		 description: 'Calibrated solver using intrinsics predicted by the MDE with the assumption of affine-invariant depth using only the symmetric reprojection error in RANSAC. Only 2D-2D correspondences which are inliers wrt GT pose are used.'
 	 },
 	 
