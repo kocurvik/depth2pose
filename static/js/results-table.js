@@ -751,10 +751,11 @@ function renderTable(rows) {
 			<tr class="benchmark-row">
 				${visibleColumns.map((column) => {
 					const classes = ((column === 'pose_mAA_10' && topRank) ? [`pose-top-${topRank}`] : []);
-					const dict = csvValueLabel(column, row[column]);
-					const titleAttr = getTitleAttr(csvValueDesc(column, row[column]));
+					const label = csvValueLabel(column, row[column]);
+					const desc = csvValueDesc(column, row[column]);
+					const titleAttr = desc ? ` title="${desc}"` : '';
 					
-					return `<td class="${classes.join(' ')}" ${titleAttr}>${dict}</td>`;
+					return `<td class="${classes.join(' ')}" ${titleAttr}>${label}</td>`;
 				}).join('')}
 			</tr>
 		`;
