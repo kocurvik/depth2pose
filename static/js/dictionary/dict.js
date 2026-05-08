@@ -232,7 +232,29 @@ const dict = {
 	 *       description: 'A particularly interesting test mde.'
 	 *   },
 	 */
-
+	
+	 'table.value.solver.calib': {
+		 label: 'H',
+		 description: 'Calibrated solver with the assumption of scale-invariant depth using hybrid error in RANSAC.'
+	 },
+	 'table.value.solver.calib_ro': {
+		 label: 'R',
+		 description: 'Calibrated solver with the assumption of scale-invariant depth using only the symmetric reprojection error in RANSAC. Only 2D-2D correspondences which are inliers wrt GT pose are used.'
+	 },	
+	 'table.value.solver.calib_shift': {
+		 label: 'H_s',
+		 description: 'Calibrated solver with the assumption of affine-invariant depth using hybrid error in RANSAC.'
+	 },
+	 'table.value.solver.calib_shift_ro': {
+		 label: 'R_s',
+		 description: 'Calibrated solver with the assumption of affine-invariant depth using only the symmetric reprojection error in RANSAC. Only 2D-2D correspondences which are inliers wrt GT pose are used.'
+	 },
+	 'table.value.solver.baseline_calib': {
+		 label: 'R',
+		 description: 'Standard 5-pt solver for calibrated relative pose using Sampson error.'
+	 },
+	 
+	 
 	// Empty / loading states
 
 	'table.loading': { label: 'Loading {option}…' },
