@@ -31,10 +31,10 @@ const state = {
 	datasets: [],
 	groups: [],
 	currentDataset: 'mean',
-	currentIters: 'all',
+	currentIters: '1000',
 	mode: 'calibrated',
 	roVariant: 'non_ro',
-	depthType: 'all',
+	depthType: 'scale',
 	hideGtOnly: true,
 	bestMdeOnly: false,
 	sortKey: 'pose_mAA_10',
@@ -420,7 +420,7 @@ async function switchBenchmarkMode(mode) {
 	state.benchmarkMode = mode;
 	state.currentSource = Object.keys(BENCHMARK_CONFIG[mode].sources)[0];
 	state.currentDataset = 'mean';
-	state.currentIters = 'all';
+	state.currentIters = '1000';
 	state.page = 1;
 
 	const bmLabel = tLabel(`controls.select.benchmark.${mode}`);
@@ -444,7 +444,7 @@ async function switchSource(sourceKey) {
 
 	state.currentSource = sourceKey;
 	state.currentDataset = 'mean';
-	state.currentIters = 'all';
+	state.currentIters = '1000';
 	state.page = 1;
 
 	setTableLoadingState({ key: 'table.loading', params: { option: tLabel(sources[sourceKey].key) } });
