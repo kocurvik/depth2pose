@@ -22,8 +22,8 @@ const MODE_CONFIG = {
 };
 
 const state = {
-	benchmarkMode: 'standard',
-	currentSource: Object.keys(STANDARD_TABLE_SOURCES)[0],
+	benchmarkMode: 'group',
+	currentSource: Object.keys(GROUP_TABLE_SOURCES)[0],
 	rawRows: [],
 	columns: [],
 	numericColumns: new Set(),
