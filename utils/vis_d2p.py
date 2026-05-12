@@ -209,7 +209,7 @@ def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
 
     # Find common models AFTER filtering
     models = set.intersection(*(set(d.keys()) for d in maa_dicts.values()))
-    models = sorted(models)
+    models = ['MoGeV2', 'UniK3D', 'Pi3', 'MapAnything', 'DepthAnythingV2']
     models_nicknames = {
         'DepthAnythingV2': 'DAv3',
         'MapAnything': 'Map Anything',

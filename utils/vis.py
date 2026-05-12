@@ -30,9 +30,9 @@ plt.rcParams.update({
         
         % Add your custom commands here
         \newcommand{\mAA}{mAA(10$^\circ$)}
-        \newcommand{\dsi}{$\delta_{1}^{si}$}
+        \newcommand{\dsi}{$\delta_{1}$}
         \newcommand{\dssi}{$\delta_{1}^{ai}$}
-        \newcommand{\relsi}{Rel$^{si}$}
+        \newcommand{\relsi}{Rel}
         \newcommand{\relssi}{Rel$^{ai}$}
         \newcommand{\M}[1]{\mathbf{#1}}
                 

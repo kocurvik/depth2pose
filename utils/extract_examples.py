@@ -62,6 +62,8 @@ def get_worst_pairs(args):
     inliers_by_pair = {}
     for r in gt_results:
         if r['experiment'] == 'baseline_calib' and r['iterations'] == 1000:
+            if len(r['info']['inliers']) < 6:
+                continue
             pair = (r['image_name_1'], r['image_name_2'])
             err = max(r['R_err'], r['t_err'])
             baseline_by_pair[pair] = 180.0 if np.isnan(err) else err
@@ -95,8 +97,10 @@ def get_worst_pairs(args):
                          and r['experiment'] == 'calib']
 
         for r in iters_results:
-            p_err = max(r['R_err'], r['t_err'])
             pair = (r['image_name_1'], r['image_name_2'])
+            if pair not in pair_ids:
+                continue
+            p_err = max(r['R_err'], r['t_err'])
             pair_id = pair_ids[pair]
             r_inliers = r['info']['inliers']
             if np.isnan(p_errs[pair_id, mde_id]):
