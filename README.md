@@ -85,4 +85,4 @@ You add the following arg based on the name of the depth in ALL_MDEs_DICT:
 ```
 --model_name your_model_name
 ```
-This will run only the new model. You may run pose estimation with depth provided for only one model and then export the results with the same command as for the full evaluation.
+This will run only the new model. You may run pose estimation with depth provided for only one model and then export the results with the same command as for the full evaluation. 
