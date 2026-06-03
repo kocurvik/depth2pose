@@ -449,6 +449,10 @@ def eval_single_mde(args):
 def get_solvers(args):
     experiments = []
 
+    if args.depth == 'none' and args.explicit_solvers is not None:
+        experiments = args.explicit_solvers.split(',')
+        return [f'baseline_{x}' for x in experiments]
+
     if args.explicit_solvers is not None:
         experiments = args.explicit_solvers.split(',')
         return experiments
