@@ -22,6 +22,7 @@ def parse_args():
     parser.add_argument('-ed', '--eval_depth', action='store_true', default=False)
     parser.add_argument('--matches', type=str, default='splg_2048_noresize')
     parser.add_argument('--out_dir', type=str, default='csv_results')
+    parser.add_argument('--variance', action='store_true', default=False)
     parser.add_argument('-a', '--append', action='store_true', default=False,
                         help='Append to existing CSV instead of overwriting the whole file')
     parser.add_argument('-o', '--overwrite', action='store_true', default=False,
@@ -59,7 +60,7 @@ def save_csv(df, path, key_cols, append=False, overwrite=False, keep_slim_cols=N
 
 def process_single_dataset(args):
     all_metrics = merge_summary_results(args)
-    flat_pose_metrics = flatten_pose_metrics(all_metrics)
+    flat_pose_metrics = flatten_pose_metrics(all_metrics, variance=args.variance)
     if 'mean_inliers' in flat_pose_metrics.columns:
         flat_pose_metrics['mean_inliers'] *= 100
 
@@ -104,6 +105,8 @@ if __name__ == '__main__':
         # all_pose_df.insert(0, 'dataset', args.name)
         # if all_depth_df is not None:
         #     all_depth_df.insert(0, 'dataset', args.name)
+
+    args.prefix = f'variance_{args.prefix}'
 
     matches = args.matches.split('_')[0]
 

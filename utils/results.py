@@ -213,6 +213,8 @@ def save_variance_summary_results(experiments, seeds, full_results, mde_runtimes
 def merge_summary_results(args):
     """Read all per-depth JSONs and merge into a single unified dict."""
     results_dir = get_results_dir(args)
+    if args.variance:
+        results_dir = os.path.join(results_dir, 'variance')
     unified = {}
     for fname in sorted(os.listdir(results_dir)):
         if not fname.endswith('.json') or fname == 'all.json':
@@ -326,12 +328,15 @@ def flatten_depth_metrics(all_metrics):
     return pd.DataFrame(rows)
 
 
-def flatten_pose_metrics(all_metrics):
+def flatten_pose_metrics(all_metrics, variance=False):
     rows = []
+
+    top_level_name = 'seed' if variance else 'iters'
+
     for mde, mde_metrics in all_metrics.items():
         for iters, iter_metrics in mde_metrics.items():
             for solver, metrics in iter_metrics.items():
-                row = {'mde': mde, 'iters': int(iters), 'solver': solver}
+                row = {'mde': mde, top_level_name: int(iters), 'solver': solver}
                 row.update(metrics)
                 rows.append(row)
     return pd.DataFrame(rows)
