@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from utils.geometry import R_err_fun, t_err_fun, get_kp_depth, get_gt_inlier_mask
 from utils.mp import NoDaemonProcessPool
-from utils.results import save_summary_results, print_results_all, get_mde_list
+from utils.results import save_summary_results, print_results_all, get_mde_list, save_variance_summary_results
 from utils.storage import encode_result, save_full_results, get_full_results_h5_path, load_full_results
 
 MDE_K_WARNING_SHOWN = False
@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument('-vf',  '--include_varying_focal', action='store_true', default=False)
     parser.add_argument('-nro', '--no_reproj_only_ransac', action='store_true', default=False)
     parser.add_argument('-dr',  '--direct_read', action='store_true', default=False)
+    parser.add_argument('--variance',  type=int, default=None)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
     parser.add_argument('--recalc', action='store_true', default=False)
     parser.add_argument('-nw', '--num_workers', type=int, default=1)
@@ -83,7 +84,7 @@ def get_exception_result_dict(x):
 
 
 def eval_experiment(x):
-    (experiment, iters, kp1, kp2, d1, d2, K1_mde, K2_mde, pp_center_1, pp_center_2, R_gt, t_gt, cam1_gt, cam2_gt,
+    (experiment, seed, iters, kp1, kp2, d1, d2, K1_mde, K2_mde, pp_center_1, pp_center_2, R_gt, t_gt, cam1_gt, cam2_gt,
      img_name_1, img_name_2, gt_inlier_mask, t, r) = x
 
     f1_gt = (cam1_gt['params'][0] + cam1_gt['params'][1]) / 2
@@ -95,6 +96,9 @@ def eval_experiment(x):
 
     bundle_dict = {'max_iterations': 100, 'verbose': False, 'loss_type': 'TRUNCATED_CAUCHY'}
     ransac_dict = {'max_iterations': iters, 'min_iterations': iters, 'progressive_sampling': False}
+
+    if seed is not None:
+        ransac_dict['seed'] = seed
 
     if 'mdecalib' in experiment:
         camera1 = poselib.Camera({'model': 'PINHOLE', 'width': -1, 'height': -1,
@@ -170,6 +174,8 @@ def eval_experiment(x):
     result_dict['image_name_2'] = img_name_2
     result_dict['iterations'] = iters
     result_dict['encoded'] = encode_result(result_dict)
+    if seed is not None:
+        result_dict['seed'] = seed
 
     # test_dict = decode_result(result_dict['encoded'])
     # if runtime / 1e6 > 300:
@@ -247,7 +253,10 @@ def get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt):
 def eval_single_mde(args):
     experiments = get_solvers(args)
 
-    iters_list = [10, 100, 500, 1000]
+    if args.variance is None:
+        iters_list = [10, 100, 500, 1000]
+    else:
+        iters_list = [1000]
 
     print(f"Running: {experiments}")
 
@@ -261,6 +270,12 @@ def eval_single_mde(args):
     image_list_path = f'{name_path}_image_list.txt'
     with open(image_list_path, 'r') as f:
         image_list = [x.strip() for x in f.readlines()]
+
+    if args.variance is None:
+        seeds = [None]
+    else:
+        seeds = range(args.variance)
+
 
     if args.load:
         full_results = load_full_results(args)
@@ -400,12 +415,14 @@ def eval_single_mde(args):
                     mde_K1, mde_K2 = None, None
 
                 for experiment in experiments:
-                    for iters in iters_list:
-                        yield (experiment, iters, np.copy(kp1), np.copy(kp2), np.copy(d1), np.copy(d2),
-                               mde_K1, mde_K2, pp_center_1, pp_center_2, R_gt, t_gt, cam1_gt, cam2_gt,
-                               img_name_1, img_name_2, gt_inlier_mask, args.sampson_threshold, args.reprojection_threshold)
+                    for seed in seeds:
+                        for iters in iters_list:
+                            yield (experiment, seed, iters, np.copy(kp1), np.copy(kp2), np.copy(d1), np.copy(d2),
+                                   mde_K1, mde_K2, pp_center_1, pp_center_2, R_gt, t_gt, cam1_gt, cam2_gt,
+                                   img_name_1, img_name_2, gt_inlier_mask, args.sampson_threshold,
+                                   args.reprojection_threshold)
 
-        total_length = len(experiments) * len(pair_list) * len(iters_list)
+        total_length = len(experiments) * len(pair_list) * len(iters_list) * len(seeds)
 
         print(f"Total runs: {total_length} for {len(pair_list)} samples")
 
@@ -422,8 +439,11 @@ def eval_single_mde(args):
         if args.direct_read and f_depth is not None:
             f_depth.close()
 
-        save_full_results(args, full_results)
-        save_summary_results(experiments, full_results, mde_runtimes, args)
+        if args.variance is None:
+            save_full_results(args, full_results)
+            save_summary_results(experiments, full_results, mde_runtimes, args)
+        else:
+            save_variance_summary_results(experiments, seeds, full_results, mde_runtimes, args)
 
 
 def get_solvers(args):
