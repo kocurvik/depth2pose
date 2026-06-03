@@ -6,7 +6,7 @@ import submitit
 
 from eval_pose import eval_single_mde
 from utils.config import config_iterator
-from utils.results import get_basename, get_mde_list
+from utils.results import get_basename, get_mde_list, get_results_dir
 from utils.storage import get_full_results_h5_path
 
 
@@ -79,6 +79,15 @@ def main(args):
         if os.path.exists(h5_path) and not args.recalc and not args.variance:
             print(f"Results for {depth_name} already available at {h5_path}. Skipping.")
             continue
+
+        if args.variance:
+            results_dir = get_results_dir(job_args)
+            results_dir = os.path.join(results_dir, f'variance')
+            os.makedirs(results_dir, exist_ok=True)
+            json_path = os.path.join(results_dir, f'{args.depth}.json')
+            if os.path.exists(json_path):
+                continue
+
         job_args.depth = depth_name
         array_job_arguments.append(job_args)
 
