@@ -83,7 +83,6 @@ def main(args):
         if args.variance:
             results_dir = get_results_dir(job_args)
             results_dir = os.path.join(results_dir, f'variance')
-            os.makedirs(results_dir, exist_ok=True)
             json_path = os.path.join(results_dir, f'{job_args.depth}.json')
             if os.path.exists(json_path):
                 continue
