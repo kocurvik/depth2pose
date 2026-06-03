@@ -108,8 +108,12 @@ if __name__ == '__main__':
 
     if args.variance:
         args.prefix = f'variance_{args.prefix}'
+        keep_slim_cols = ['pose_mAA_10', 'mean_inliers']
+    else:
+        keep_slim_cols = ['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers']
 
     top_level_name = 'seed' if args.variance else 'iters'
+
 
     matches = args.matches.split('_')[0]
 
