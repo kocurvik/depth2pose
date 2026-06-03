@@ -122,10 +122,10 @@ if __name__ == '__main__':
              ['group', 'dataset', 'mde', top_level_name, 'solver'], args.append, args.overwrite)
     save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}_{matches}_slim_pose_results.csv'),
              ['group', 'dataset', 'mde', top_level_name, 'solver'], args.append, args.overwrite,
-             keep_slim_cols=['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers'])
+             keep_slim_cols=keep_slim_cols)
     save_csv(all_pose_df, os.path.join(args.out_dir, f'per_group_{args.prefix}_{matches}_slim_pose_results.csv'),
              ['group', 'dataset', 'mde', top_level_name, 'solver'], args.append, args.overwrite,
-             keep_slim_cols=['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers'], mean_over_groups=True)
+             keep_slim_cols=keep_slim_cols, mean_over_groups=True)
     if all_depth_df is not None:
         save_csv(all_depth_df, os.path.join(args.out_dir, f'{args.prefix}_depth_results.csv'), ['group', 'dataset', 'mde'], args.append, args.overwrite)
 
