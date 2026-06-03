@@ -76,7 +76,7 @@ def main(args):
         job_args = copy.copy(args)
         job_args.depth = depth_name
         h5_path = get_full_results_h5_path(job_args)
-        if os.path.exists(h5_path) and not args.recalc:
+        if os.path.exists(h5_path) and not args.recalc and not args.variance:
             print(f"Results for {depth_name} already available at {h5_path}. Skipping.")
             continue
         job_args.depth = depth_name
