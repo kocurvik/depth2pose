@@ -222,6 +222,20 @@ class VGGT(BaseDepthEstimator):
             intrinsic, extrinsic = intrinsic[0], extrinsic[0]
         return {"depth": depth_map, "K": intrinsic, "runtime": runtime}
 
+    def infer_pair(self, image1, image2, size1=None, size2=None, **kwargs):
+        tensor_images, orig_coords = load_and_preprocess_images([image1, image2], self.vggt_fixed_resolution)
+        tensor_images = tensor_images.cuda()
+        depth_map, depth_conf, intrinsic, extrinsic, runtime = self.run_VGGT(tensor_images, orig_coords)
+        return {
+            "depth1": depth_map[0],
+            "depth2": depth_map[1],
+            "K1": intrinsic[0],
+            "K2": intrinsic[1],
+            "extrinsic1": extrinsic[0],
+            "extrinsic2": extrinsic[1],
+            "runtime": runtime,
+        }
+
 
 def colorize_depth(depth: np.ndarray, mask: np.ndarray = None, normalize: bool = True, cmap: str = 'Spectral') -> np.ndarray:
     if mask is None:

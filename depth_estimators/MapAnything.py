@@ -40,15 +40,18 @@ def load_and_preprocess_images(image_paths: list[str | Path], require_intrinsics
         TF.ToTensor(),
         TF.Normalize(mean=img_norm.mean, std=img_norm.std)
     ])
-    K = None
     if require_intrinsics:
-        scale_x, scale_y = target_width / width, target_height / height
-        K = kwargs['K']
-        K[0, :] *= scale_x
-        K[1, :] *= scale_y
-        K = torch.from_numpy(K).float()[None]
+        if 'Ks' in kwargs:
+            Ks_in = kwargs['Ks']
+        elif 'K1' in kwargs and 'K2' in kwargs:
+            Ks_in = [kwargs['K1'], kwargs['K2']]
+        else:
+            Ks_in = [kwargs['K']]
+    else:
+        Ks_in = []
+
     views, orig_coords = [], []
-    for img_pil in sources:
+    for i, img_pil in enumerate(sources):
         width, height = img_pil.size
         orig_coords.append((height, width))
         resized_img = crop_resize_if_necessary(img_pil, resolution=target_size)[0]
@@ -58,7 +61,11 @@ def load_and_preprocess_images(image_paths: list[str | Path], require_intrinsics
             "data_norm_type": ["dinov2"],
         })
         if require_intrinsics:
-            views[-1]["intrinsics"] = K
+            scale_x, scale_y = target_width / width, target_height / height
+            K = np.array(Ks_in[i], dtype=np.float32, copy=True)
+            K[0, :] *= scale_x
+            K[1, :] *= scale_y
+            views[-1]["intrinsics"] = torch.from_numpy(K).float()[None]
     return views, orig_coords
 
 class MapAnything(BaseDepthEstimator):
@@ -123,6 +130,23 @@ class MapAnything(BaseDepthEstimator):
             depth_map, depth_conf = depth_map[0], depth_conf[0]
             intrinsic, extrinsic = intrinsic[0], extrinsic[0]
         return {"depth": depth_map, "K": intrinsic, "runtime": runtime}
+
+    def infer_pair(self, image1: str | Path, image2: str | Path, size1=None, size2=None, **kwargs):
+        tensor_images, orig_coords = load_and_preprocess_images(
+            [image1, image2],
+            self.requires_intrinsics,
+            **kwargs,
+        )
+        depth_map, depth_conf, intrinsic, extrinsic, runtime = self.run_model(tensor_images, orig_coords)
+        return {
+            "depth1": depth_map[0],
+            "depth2": depth_map[1],
+            "K1": intrinsic[0],
+            "K2": intrinsic[1],
+            "extrinsic1": extrinsic[0],
+            "extrinsic2": extrinsic[1],
+            "runtime": runtime,
+        }
 
 if __name__ == '__main__':
     image_path = "./assets/kitchen/images/00.png"

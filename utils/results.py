@@ -33,7 +33,7 @@ def compute_auc(errors, thresholds):
     return aucs
 
 
-def get_summary_metrics(experiments, results, iters_list = (10, 100, 500, 1000)):
+def get_summary_metrics(experiments, results, iters_list = (0, 10, 100, 500, 1000)):
     metrics = {}
     for iters in iters_list:
         iters_results = [x for x in results if x['iterations'] == iters]
@@ -194,6 +194,13 @@ def save_summary_results(experiments, full_results, mde_runtimes, args):
 
     print_results_focal(metrics)
 
+    metrics = json.loads(json.dumps(metrics))
+    if getattr(args, 'append', False) and os.path.exists(json_path):
+        with open(json_path, 'r') as f:
+            existing_metrics = json.load(f)
+        existing_metrics.update(metrics)
+        metrics = existing_metrics
+
     with open(json_path, 'w') as f:
         json.dump(metrics, f, indent=4)
 
@@ -213,7 +220,7 @@ def save_variance_summary_results(experiments, seeds, full_results, mde_runtimes
 def merge_summary_results(args):
     """Read all per-depth JSONs and merge into a single unified dict."""
     results_dir = get_results_dir(args)
-    if args.variance:
+    if getattr(args, 'variance', None):
         results_dir = os.path.join(results_dir, 'variance')
     unified = {}
     for fname in sorted(os.listdir(results_dir)):

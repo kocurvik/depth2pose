@@ -66,6 +66,10 @@ python eval_depth.py  --config_path datasets/d2p_benchmark.json
 python spawn_eval_pose.py  --config_path datasets/d2p_benchmark.json --matches loma_2048_noresize
 python spawn_eval_pose.py  --config_path datasets/standard_benchmark.json --matches loma_2048_noresize
 
+# eval methods that directly regress depth and relative pose
+python spawn_eval_regressed_pose.py --config_path datasets/d2p_benchmark.json
+python spawn_eval_regressed_pose.py --config_path datasets/standard_benchmark.json
+
 # finally extract results
 python utils/extract_results.py  --config_path datasets/d2p_benchmark.json --matches loma_2048_noresize
 python utils/extract_results.py  --config_path datasets/standard_benchmark.json --matches loma_2048_noresize

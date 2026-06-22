@@ -16,6 +16,9 @@ class BaseDepthEstimator(torch.nn.Module):
     def infer(self, image, **kwargs):
         raise NotImplementedError
 
+    def infer_pair(self, image1, image2, **kwargs):
+        raise NotImplementedError
+
 
 
 
