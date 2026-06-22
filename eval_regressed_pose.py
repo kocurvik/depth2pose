@@ -134,6 +134,9 @@ def _make_result(out_dict, img_name_1, img_name_2, R_gt, t_gt, K1_gt, K2_gt):
 
 def eval_single_model(model, args):
     args.full_results_type = 'regression_full'
+    print("Making dirs: ")
+    print(os.path.join(args.work_path, 'regression_full_results'))
+    print(os.path.join(args.work_path, 'summary_results'))
     os.makedirs(os.path.join(args.work_path, 'regression_full_results'), exist_ok=True)
     os.makedirs(os.path.join(args.work_path, 'summary_results'), exist_ok=True)
 
