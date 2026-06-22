@@ -1,7 +1,7 @@
 {
     "standard_benchmark": {
-        "path": "/projects/p1358-25-2/data/",
-        "work_path": "/projects/p1358-25-2/mdrpbench/",
+        "path": "/project/p1358-25-2/data/",
+        "work_path": "/project/p1358-25-2/mdrpbench/",
         "subsets": {
             "sintel": {
                 "width": 1024,
