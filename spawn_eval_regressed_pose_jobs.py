@@ -29,13 +29,13 @@ def parse_args():
     parser.add_argument('dataset_path', nargs='?', default=None)
     parser.add_argument('--account', type=str, default='p1358-25-2',
                         help='Slurm account name')
-    parser.add_argument('--queue', type=str, default='short',
+    parser.add_argument('--queue', type=str, default='gpu',
                         help='Slurm partition/queue name')
     parser.add_argument('--mem_gb', type=int, default=64,
                         help='Memory per job in GB')
     parser.add_argument('--timeout_min', type=int, default=60,
                         help='Expected max runtime per job in minutes')
-    parser.add_argument('--cpus_per_task', type=int, default=4)
+    parser.add_argument('--cpus_per_task', type=int, default=8)
     parser.add_argument('--gpus_per_node', type=int, default=1)
     parser.add_argument('--log_dir', type=str, default=None,
                         help='Directory for submitit logs (default: <work_path>/slurm_logs)')
