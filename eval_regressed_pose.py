@@ -14,12 +14,12 @@ from utils.storage import save_full_results, get_full_results_h5_path, load_full
 
 REGRESSED_POSE_MODELS = {
     'VGGT': ['VGGT-1B'],
-    'Pi3': ['Pi3X'],
+    # 'Pi3': ['Pi3X'],
     'Pi3Calib': ['Pi3X'],
-    'MapAnything': ['map-anything'],
+    # 'MapAnything': ['map-anything'],
     'MapAnythingCalib': ['map-anything'],
-    'DepthAnythingV3': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
-    'DepthAnythingV3Calib': ['DA3METRIC-LARGE', 'DA3MONO-LARGE'],
+    # 'DepthAnythingV3': ['DA3-LARGE-1.1', 'DA3-GIANT-1.1'],
+    'DepthAnythingV3Calib': ['DA3-LARGE-1.1', 'DA3-GIANT-1.1'],
 }
 
 
