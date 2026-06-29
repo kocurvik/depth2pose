@@ -76,7 +76,7 @@ class MapAnything(BaseDepthEstimator):
         self.use_multimodal = False
 
     def load_model(self):
-        self.model = MapAnythingModel.from_pretrained(f"facebook/{self.checkpoint_name}")
+        self.model = MapAnythingModel.from_pretrained(f"facebook/{self.checkpoint_name}").eval()
         self.model = self.model.cuda()
 
     @property
@@ -85,28 +85,29 @@ class MapAnything(BaseDepthEstimator):
         return f'MapAnything{intrinsics}-{self.checkpoint_name}'
 
     def run_model(self, images, orig_resolutions):
-        start_time = perf_counter_ns()
-        predictions = self.model.infer(
-            images,
-            memory_efficient_inference=True,
-            minibatch_size=None,
-            use_amp=True,
-            amp_dtype="bf16",
-            apply_mask=True,    # apply masking to dense geometry outputs
-            mask_edges=True,    # remove edge artifacts by using normals and depth
-            apply_confidence_mask=False,    # filter low confidence regions
-            confidence_percentile=10,       # remove bottom 10 percentile confidence pixels
-            use_multiview_confidence=False, # enable multi-view depth consistency based confidence in place of learning based one
-            ignore_calibration_inputs=not self.requires_intrinsics,
-        )
-        runtime = perf_counter_ns() - start_time
-        results = self._merge_predictions(predictions)
-        depth_maps, depth_confs = results['depth_z'].squeeze(-1), results['conf']
-        intrinsics = results['intrinsics']
-        camera_poses = results['camera_poses']  # in cam2world format
-        extrinsics = torch.inverse(camera_poses)
+        with torch.inference_mode():
+            start_time = perf_counter_ns()
+            predictions = self.model.infer(
+                images,
+                memory_efficient_inference=True,
+                minibatch_size=None,
+                use_amp=True,
+                amp_dtype="bf16",
+                apply_mask=True,    # apply masking to dense geometry outputs
+                mask_edges=True,    # remove edge artifacts by using normals and depth
+                apply_confidence_mask=False,    # filter low confidence regions
+                confidence_percentile=10,       # remove bottom 10 percentile confidence pixels
+                use_multiview_confidence=False, # enable multi-view depth consistency based confidence in place of learning based one
+                ignore_calibration_inputs=not self.requires_intrinsics,
+            )
+            runtime = perf_counter_ns() - start_time
+            results = self._merge_predictions(predictions)
+            depth_maps, depth_confs = results['depth_z'].squeeze(-1), results['conf']
+            intrinsics = results['intrinsics']
+            camera_poses = results['camera_poses']  # in cam2world format
+            extrinsics = torch.inverse(camera_poses)
 
-        depth_map, depth_conf, intrinsics = self.upsample_predictions(depth_maps, depth_confs, intrinsics.clone(), orig_resolutions)
+            depth_map, depth_conf, intrinsics = self.upsample_predictions(depth_maps, depth_confs, intrinsics.clone(), orig_resolutions)
         return depth_map.cpu().numpy(), depth_conf.cpu().numpy(), intrinsics.cpu().numpy(), extrinsics.cpu().numpy(), runtime
 
     def _merge_predictions(self, predictions):
