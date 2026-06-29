@@ -86,7 +86,7 @@ class MapAnything(BaseDepthEstimator):
 
     def run_model(self, images, orig_resolutions):
         start_time = perf_counter_ns()
-        results = self.model.infer(
+        predictions = self.model.infer(
             images,
             memory_efficient_inference=True,
             minibatch_size=None,
@@ -98,8 +98,9 @@ class MapAnything(BaseDepthEstimator):
             confidence_percentile=10,       # remove bottom 10 percentile confidence pixels
             use_multiview_confidence=False, # enable multi-view depth consistency based confidence in place of learning based one
             ignore_calibration_inputs=not self.requires_intrinsics,
-        )[0]
+        )
         runtime = perf_counter_ns() - start_time
+        results = self._merge_predictions(predictions)
         depth_maps, depth_confs = results['depth_z'].squeeze(-1), results['conf']
         intrinsics = results['intrinsics']
         camera_poses = results['camera_poses']  # in cam2world format
@@ -107,6 +108,18 @@ class MapAnything(BaseDepthEstimator):
 
         depth_map, depth_conf, intrinsics = self.upsample_predictions(depth_maps, depth_confs, intrinsics.clone(), orig_resolutions)
         return depth_map.cpu().numpy(), depth_conf.cpu().numpy(), intrinsics.cpu().numpy(), extrinsics.cpu().numpy(), runtime
+
+    def _merge_predictions(self, predictions):
+        if isinstance(predictions, dict):
+            return predictions
+        if len(predictions) == 1:
+            return predictions[0]
+
+        merged = {}
+        for key in ('depth_z', 'conf', 'intrinsics', 'camera_poses'):
+            values = [prediction[key] for prediction in predictions]
+            merged[key] = torch.cat(values, dim=0)
+        return merged
 
     def upsample_predictions(self, depth_maps, depth_confs, intrinsics, orig_coords):
         new_depth_maps, new_depth_confs = [], []
