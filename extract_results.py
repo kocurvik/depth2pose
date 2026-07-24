@@ -31,10 +31,12 @@ def parse_args():
     return args
 
 
-def save_csv(df, path, key_cols, append=False, overwrite=False, keep_slim_cols=None, mean_over_groups=False):
+def save_csv(df, path, key_cols, append=False, overwrite=False, keep_slim_cols=None, mean_over_groups=False, round=4):
     if keep_slim_cols is not None:
         cols = [c for c in key_cols + keep_slim_cols if c in df.columns]
         df = df[cols].round(2)
+    else:
+        df = df.round(round)
 
     if mean_over_groups:
         group_cols = [c for c in key_cols if c != 'dataset']

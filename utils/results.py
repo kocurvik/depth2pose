@@ -55,7 +55,7 @@ def get_summary_metrics(experiments, results, iters_list = (0, 10, 100, 500, 100
             times = np.array([x['runtime'] for x in exp_results])
             inliers = np.array([x['info']['inlier_ratio'] for x in exp_results])
 
-            pose_mAA_10, pose_mAA_5, pose_mAA_3 = compute_auc(p_errs, [10, 5, 3])
+            pose_mAAs = compute_auc(p_errs, list(range(1, 11)))
             f_mAA_10, f_mAA_5, f_mAA_3 = compute_auc(f_errs, [0.1, 0.05, 0.03])
 
             metrics[iters][exp] = {
@@ -67,15 +67,14 @@ def get_summary_metrics(experiments, results, iters_list = (0, 10, 100, 500, 100
                 'f_mAA_10_approx': 100 * np.mean(f_res),
                 'f_mAA_5_approx': 100 * np.mean(f_res[:5]),
                 'f_mAA_3_approx': 100 * np.mean(f_res[:3]),
-                'pose_mAA_10': 100 * pose_mAA_10,
-                'pose_mAA_5': 100 * pose_mAA_5,
-                'pose_mAA_3': 100 * pose_mAA_3,
                 'f_mAA_10': 100 * f_mAA_10,
-                'f_mAA_5_': 100 * f_mAA_5,
-                'f_mAA_3_': 100 * f_mAA_3,
+                'f_mAA_5': 100 * f_mAA_5,
+                'f_mAA_3': 100 * f_mAA_3,
                 'mean_runtime': np.mean(times) / 1e6,
                 'mean_inliers': np.mean(inliers)
             }
+            for t, pose_mAA in zip(range(1, 11), pose_mAAs):
+                metrics[iters][exp][f'pose_mAA_{t}'] = 100 * pose_mAA
     return metrics
 
 
@@ -100,7 +99,7 @@ def get_variance_summary_metrics(experiments, results, seeds):
             times = np.array([x['runtime'] for x in exp_results])
             inliers = np.array([x['info']['inlier_ratio'] for x in exp_results])
 
-            pose_mAA_10, pose_mAA_5, pose_mAA_3 = compute_auc(p_errs, [10, 5, 3])
+            pose_mAAs = compute_auc(p_errs, list(range(1, 11)))
             f_mAA_10, f_mAA_5, f_mAA_3 = compute_auc(f_errs, [0.1, 0.05, 0.03])
 
             metrics[seed][exp] = {
@@ -112,15 +111,14 @@ def get_variance_summary_metrics(experiments, results, seeds):
                 'f_mAA_10_approx': 100 * np.mean(f_res),
                 'f_mAA_5_approx': 100 * np.mean(f_res[:5]),
                 'f_mAA_3_approx': 100 * np.mean(f_res[:3]),
-                'pose_mAA_10': 100 * pose_mAA_10,
-                'pose_mAA_5': 100 * pose_mAA_5,
-                'pose_mAA_3': 100 * pose_mAA_3,
                 'f_mAA_10': 100 * f_mAA_10,
                 'f_mAA_5_': 100 * f_mAA_5,
                 'f_mAA_3_': 100 * f_mAA_3,
                 'mean_runtime': np.mean(times) / 1e6,
                 'mean_inliers': np.mean(inliers)
             }
+            for t, pose_mAA in zip(range(1, 11), pose_mAAs):
+                metrics[seed][exp][f'pose_mAA_{t}'] = 100 * pose_mAA
     return metrics
 
 
