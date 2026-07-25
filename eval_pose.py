@@ -280,7 +280,7 @@ def eval_single_mde(args):
     if args.load:
         full_results = load_full_results(args)
 
-        if args.depth == 'gt':
+        if args.depth == 'gt' or args.depth == 'none':
             mde_runtimes = [0 for x in image_list]
         else:
             with h5py.File(f'{name_path}_depth_{args.depth}.h5', 'r') as f_depth_h5:
