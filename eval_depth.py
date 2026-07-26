@@ -29,7 +29,8 @@ def parse_args():
                         help='cuda or cpu to be used for extraction')
     parser.add_argument('--recalc', action='store_true', default = False,
                         help='whether to recalculate even previously calculated depths')
-
+    parser.add_argument('--depth_gt_dir', type=str, default='depths_gt',
+                        help='depth gt dir name, default: depths_gt, gs_depths for 3DGS')
     parser.add_argument('--account', type=str, default='p1358-25-2',
                         help='Slurm account name')
     parser.add_argument('--queue', type=str, default='gpu',
@@ -55,7 +56,8 @@ def get_depth_from_h5(f_depth_h5, scene_name, file_name):
     depth[depth <= 0] = np.inf
     return depth
 
-def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work_dir=False, recalc=False):
+def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work_dir=False, recalc=False,
+                   depth_gt_dir='depths_gt'):
     metric_fn = DepthMetrics()
 
     if 'contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth']:
@@ -79,7 +81,7 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
         with (
             EvalDataLoaderPipeline(benchmark_config['path'], benchmark_config['work_path'],
                                    width=benchmark_config['width'], height=benchmark_config['height'],
-                                   depth_unit=benchmark_config['depth_unit']) as eval_data_pipe,
+                                   depth_unit=benchmark_config['depth_unit'], depth_gt_dir=depth_gt_dir) as eval_data_pipe,
             tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
             h5py.File(h5_depth_path,
                       'r') as f_depth_h5
@@ -148,7 +150,7 @@ def main():
                 print(f"Skipping: {name} - {mde_model} since the results already exists in {single_results_path}")
                 continue
 
-            job_args.append((mde_model, name, config, device, args.work_dir, args.recalc))
+            job_args.append((mde_model, name, config, device, args.work_dir, args.recalc, args.depth_gt_dir))
 
         log_dir = os.path.join(config['work_path'], 'slurm_logs')
         os.makedirs(log_dir, exist_ok=True)

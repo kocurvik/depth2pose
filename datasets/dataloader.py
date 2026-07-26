@@ -6,6 +6,7 @@ import numpy as np
 import pipeline
 import torch
 import utils3d
+from InfiniDepth.utils.io_utils import depth2pcd
 from PIL import Image
 
 from .io import read_depth, read_depth_npz, read_image, read_json
@@ -35,6 +36,7 @@ class EvalDataLoaderPipeline:
         num_load_workers: int = 4,
         num_process_workers: int = 8,
         depth_unit: str = None,
+        depth_gt_dir = 'depths_gt',
         **kwargs,
     ):
         self.width, self.height = width, height
@@ -43,6 +45,7 @@ class EvalDataLoaderPipeline:
         self.filenames = self.read_filenames()
         self.depth_unit = depth_unit
         self.depth_path = depth
+        self.depth_gt_dir_name = depth_gt_dir
 
         self.rng = np.random.default_rng(seed=0)
 
@@ -81,7 +84,7 @@ class EvalDataLoaderPipeline:
 
         image = read_image(self.path / scene / "images" / f"{filename}.jpg")
         # depth = read_depth(self.path / scene / "depths" / f"{filename}.png")
-        depth = read_depth_npz(self.path / scene / "depths_gt" / f"{filename}.npz")
+        depth = read_depth_npz(self.path / scene / self.depth_gt_dir_name / f"{filename}.npz")
         # meta = read_json(self.path / scene / "intrinsics" / f"{filename}.json")
         depth_mask = np.isfinite(depth) & (depth > 0)
         instance = {
