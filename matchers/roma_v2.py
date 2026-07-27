@@ -21,7 +21,7 @@ from romav2 import RoMaV2
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--max_features', type=int, default=2048*4)
+    parser.add_argument('-m', '--max_features', type=int, default=2048*8)
     parser.add_argument('-r', '--resize', type=int, default=None)
     parser.add_argument('--recalc_features', action='store_true', default=False)
     parser.add_argument('--name', type=str, default='dataset')
