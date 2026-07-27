@@ -51,7 +51,10 @@ def parse_args():
 
 
 def get_depth_from_h5(f_depth_h5, scene_name, file_name):
-    depth_key_name = f"{scene_name}\\images\\{file_name}_depth"
+    if scene_name is None:
+        depth_key_name = f"images\\{file_name}_depth"
+    else:
+        depth_key_name = f"{scene_name}\\images\\{file_name}_depth"
     depth = np.array(f_depth_h5[depth_key_name])
     depth[depth <= 0] = np.inf
     return depth
@@ -60,9 +63,17 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
                    depth_gt_dir='depths_gt'):
     metric_fn = DepthMetrics()
 
-    if 'contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth']:
+    if (depth_gt_dir == 'depths_gt' and
+            ('contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth'])):
         return
     single_results_path = Path(benchmark_config['work_path']) / 'depth_results' / f'{mde_model}.json'
+
+    if 'width' not in benchmark_config:
+        benchmark_config['width'] = None
+    if 'height' not in benchmark_config:
+        benchmark_config['height'] = None
+    if 'depth_unit' not in benchmark_config:
+        benchmark_config['depth_unit'] = 1
 
     if os.path.exists(single_results_path) and not recalc:
         print(f"{single_results_path} exists, skipping")
@@ -81,7 +92,8 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
         with (
             EvalDataLoaderPipeline(benchmark_config['path'], benchmark_config['work_path'],
                                    width=benchmark_config['width'], height=benchmark_config['height'],
-                                   depth_unit=benchmark_config['depth_unit'], depth_gt_dir=depth_gt_dir) as eval_data_pipe,
+                                   depth_unit=benchmark_config['depth_unit'], depth_gt_dir=depth_gt_dir,
+                                   multiple_scenes = depth_gt_dir == 'depths_gt') as eval_data_pipe,
             tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
             h5py.File(h5_depth_path,
                       'r') as f_depth_h5
@@ -93,8 +105,7 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
                     for k, v in sample.items()
                 }
                 scenename, filename = sample["scenename"], sample["filename"]
-                _, gt_depth, depth_mask = (
-                    sample["image"],
+                gt_depth, depth_mask = (
                     sample["depth"],
                     sample["depth_mask"]
                 )
@@ -134,13 +145,12 @@ def main():
 
     device = torch.device(args.device)
 
-    first_dataset_name = list(dataset_config.keys())[0]
-    first_subset_name = list(dataset_config[first_dataset_name]['subsets'].keys())[0]
-    depth_models = get_mde_list(first_dataset_name, os.path.join(dataset_config['work_path'], first_subset_name))
-
     for name, config in config_iterator(config_path):
+        print(config)
+        depth_models = get_mde_list(name, config['work_path'])
+
         job_args = []
-        if 'contains_gt_depth' not in config or not config['contains_gt_depth']:
+        if 'depths_gt' == args.depth_gt_dir and ('contains_gt_depth' not in config or not config['contains_gt_depth']):
             continue
 
         for mde_model in depth_models:
