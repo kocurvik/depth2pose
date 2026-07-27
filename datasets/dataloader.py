@@ -42,12 +42,12 @@ class EvalDataLoaderPipeline:
     ):
         self.width, self.height = width, height
         self.drop_max_depth = drop_max_depth
+        self.depth_gt_dir_name = depth_gt_dir
+        self.multiple_scenes = multiple_scenes
         self.path = Path(path)
         self.filenames = self.read_filenames()
         self.depth_unit = depth_unit
         self.depth_path = depth
-        self.depth_gt_dir_name = depth_gt_dir
-        self.multiple_scenes = multiple_scenes
 
         self.rng = np.random.default_rng(seed=0)
 
@@ -61,7 +61,7 @@ class EvalDataLoaderPipeline:
         )
 
     def read_filenames(self):
-        if self.depth_gt_dir_name == 'depths_gt':
+        if self.multiple_scenes:
             scenes = sorted(list(self.path.glob("*")))
             scenes = [scene.stem for scene in scenes if scene.is_dir()]
 
