@@ -114,8 +114,7 @@ class EvalDataLoaderPipeline:
         if instance is None:
             return None
 
-        image, depth, depth_mask, intrinsics = (
-            instance["image"],
+        depth, depth_mask, intrinsics = (
             instance["depth"],
             instance["depth_mask"],
             instance["intrinsics"],
