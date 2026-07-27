@@ -6,7 +6,6 @@ import numpy as np
 import pipeline
 import torch
 import utils3d
-from InfiniDepth.utils.io_utils import depth2pcd
 from PIL import Image
 
 from .io import read_depth, read_depth_npz, read_image, read_json
@@ -36,14 +35,10 @@ class EvalDataLoaderPipeline:
         num_load_workers: int = 4,
         num_process_workers: int = 8,
         depth_unit: str = None,
-        depth_gt_dir = 'depths_gt',
-        multiple_scenes = True,
         **kwargs,
     ):
         self.width, self.height = width, height
         self.drop_max_depth = drop_max_depth
-        self.depth_gt_dir_name = depth_gt_dir
-        self.multiple_scenes = multiple_scenes
         self.path = Path(path)
         self.filenames = self.read_filenames()
         self.depth_unit = depth_unit
@@ -61,20 +56,15 @@ class EvalDataLoaderPipeline:
         )
 
     def read_filenames(self):
-        if self.multiple_scenes:
-            scenes = sorted(list(self.path.glob("*")))
-            scenes = [scene.stem for scene in scenes if scene.is_dir()]
+        scenes = sorted(list(self.path.glob("*")))
+        scenes = [scene.stem for scene in scenes if scene.is_dir()]
 
-            filenames = []
-            for scene in scenes:
-                files = sorted(list((self.path / scene / "images").glob("*.jpg")))
-                files = [f"{scene}/{file.stem}" for file in files]
-                filenames.extend(files)
-            return filenames
-        else:
-            files = sorted(list((self.path / "images").glob("*.png")))
-            return [f"{x.stem}" for x in files]
-
+        filenames = []
+        for scene in scenes:
+            files = sorted(list((self.path / scene / "images").glob("*.jpg")))
+            files = [f"{scene}/{file.stem}" for file in files]
+            filenames.extend(files)
+        return filenames
 
     def __len__(self):
         return math.ceil(len(self.filenames))
@@ -87,22 +77,20 @@ class EvalDataLoaderPipeline:
         if idx >= len(self.filenames):
             return None
 
-        try:
-            scene, filename = self.filenames[idx].split("/")
-            # depth = read_depth(self.path / scene / "depths" / f"{filename}.png")
-            depth = read_depth_npz(self.path / scene / self.depth_gt_dir_name / f"{filename}.npz")
-            # meta = read_json(self.path / scene / "intrinsics" / f"{filename}.json")
-        except Exception as e:
-            filename = self.filenames[idx]
-            depth = read_depth_npz(self.path / self.depth_gt_dir_name / f"{filename}.npz")
-            scene = 'whatever'
+        scene, filename = self.filenames[idx].split("/")
 
+        image = read_image(self.path / scene / "images" / f"{filename}.jpg")
+        # depth = read_depth(self.path / scene / "depths" / f"{filename}.png")
+        depth = read_depth_npz(self.path / scene / "depths_gt" / f"{filename}.npz")
+        # meta = read_json(self.path / scene / "intrinsics" / f"{filename}.json")
         depth_mask = np.isfinite(depth) & (depth > 0)
         instance = {
-            "scenename": None,
-            "filename": f"{filename}.png",
+            "scenename": scene,
+            "filename": f"{filename}.jpg",
             "width": self.width,
             "height": self.height,
+            "image": image,
+            # "depth": np.nan_to_num(depth, nan=1, posinf=1, neginf=1),
             "depth": depth,
             "depth_mask": depth_mask,
             # "intrinsics": np.array(meta["intrinsics"], dtype=np.float32),
@@ -114,7 +102,8 @@ class EvalDataLoaderPipeline:
         if instance is None:
             return None
 
-        depth, depth_mask, intrinsics = (
+        image, depth, depth_mask, intrinsics = (
+            instance["image"],
             instance["depth"],
             instance["depth_mask"],
             instance["intrinsics"],
