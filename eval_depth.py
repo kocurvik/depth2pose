@@ -51,7 +51,10 @@ def parse_args():
 
 
 def get_depth_from_h5(f_depth_h5, scene_name, file_name):
-    depth_key_name = f"{scene_name}\\images\\{file_name}_depth"
+    if scene_name is None:
+        depth_key_name = f"images\\{file_name}_depth"
+    else:
+        depth_key_name = f"{scene_name}\\images\\{file_name}_depth"
     depth = np.array(f_depth_h5[depth_key_name])
     depth[depth <= 0] = np.inf
     return depth
@@ -102,8 +105,7 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
                     for k, v in sample.items()
                 }
                 scenename, filename = sample["scenename"], sample["filename"]
-                _, gt_depth, depth_mask = (
-                    sample["image"],
+                gt_depth, depth_mask = (
                     sample["depth"],
                     sample["depth_mask"]
                 )

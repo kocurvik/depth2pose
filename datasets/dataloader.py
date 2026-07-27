@@ -89,25 +89,20 @@ class EvalDataLoaderPipeline:
 
         try:
             scene, filename = self.filenames[idx].split("/")
-
-            image = read_image(self.path / scene / "images" / f"{filename}.jpg")
             # depth = read_depth(self.path / scene / "depths" / f"{filename}.png")
             depth = read_depth_npz(self.path / scene / self.depth_gt_dir_name / f"{filename}.npz")
             # meta = read_json(self.path / scene / "intrinsics" / f"{filename}.json")
         except Exception as e:
             filename = self.filenames[idx]
-            image = read_image(self.path / "images" / f"{filename}.png")
             depth = read_depth_npz(self.path / self.depth_gt_dir_name / f"{filename}.npz")
             scene = 'whatever'
 
         depth_mask = np.isfinite(depth) & (depth > 0)
         instance = {
-            "scenename": scene,
-            "filename": f"{filename}.jpg",
+            "scenename": None,
+            "filename": f"{filename}.png",
             "width": self.width,
             "height": self.height,
-            "image": image,
-            # "depth": np.nan_to_num(depth, nan=1, posinf=1, neginf=1),
             "depth": depth,
             "depth_mask": depth_mask,
             # "intrinsics": np.array(meta["intrinsics"], dtype=np.float32),
