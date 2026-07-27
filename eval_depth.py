@@ -82,7 +82,7 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
 
 
         if gs_depth:
-            gs_depth_path = Path(benchmark_config['work_path']) / f'{benchmark_name}_depth_{mde_model}.h5'
+            gs_depth_path = Path(benchmark_config['work_path']) / f'{benchmark_name}_depth_3DGS.h5'
             if use_work_dir:
                 gs_tmp_path = Path(work_dir) / f'{benchmark_name}_depth_3DGS.h5'
                 print(f"Copying {gs_depth_path} to {gs_tmp_path}")
