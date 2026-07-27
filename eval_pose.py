@@ -40,6 +40,7 @@ def parse_args():
     parser.add_argument('-f', '--first', type=int, default=None)
     parser.add_argument('--depth', type=str, default=None)
     parser.add_argument('--explicit_solvers', type=str, default=None)
+    parser.add_argument('--max_iters_only', action='store_true', default=False)
     parser.add_argument('--work_path')
     parser.add_argument('--name')
     parser.add_argument('--matches', type=str, default='splg_2048_noresize')
@@ -253,7 +254,7 @@ def get_gt_depth(kp1, kp2, R_gt, t_gt, K1_gt, K2_gt):
 def eval_single_mde(args):
     experiments = get_solvers(args)
 
-    if args.variance is None:
+    if args.variance is None or args.max_iters_only:
         iters_list = [10, 100, 500, 1000]
     else:
         iters_list = [1000]

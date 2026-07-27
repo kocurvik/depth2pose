@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument('--work_path', type=str, default=None)
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--matches', type=str, default='splg_2048_noresize')
+    parser.add_argument('--max_iters_only', action='store_true', default=False)
     # --- slurm-specific args ---
     parser.add_argument('--account', type=str, default='p1358-25-2',
                         help='Slurm account name')
