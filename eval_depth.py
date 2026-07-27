@@ -191,7 +191,7 @@ def main():
                 print(f"Skipping: {name} - {mde_model} since the results already exists in {single_results_path}")
                 continue
 
-            job_args.append((mde_model, name, config, device, args.work_dir, args.recalc))
+            job_args.append((mde_model, name, config, device, args.work_dir, args.recalc, args.gs_depth))
 
         log_dir = os.path.join(config['work_path'], 'slurm_logs')
         os.makedirs(log_dir, exist_ok=True)
