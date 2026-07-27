@@ -73,7 +73,7 @@ class EvalDataLoaderPipeline:
             return filenames
         else:
             files = sorted(list((self.path / "images").glob("*.png")))
-            return [f"{x}" for x in files]
+            return [f"{x.stem}" for x in files]
 
 
     def __len__(self):
@@ -87,12 +87,18 @@ class EvalDataLoaderPipeline:
         if idx >= len(self.filenames):
             return None
 
-        scene, filename = self.filenames[idx].split("/")
+        try:
+            scene, filename = self.filenames[idx].split("/")
 
-        image = read_image(self.path / scene / "images" / f"{filename}.jpg")
-        # depth = read_depth(self.path / scene / "depths" / f"{filename}.png")
-        depth = read_depth_npz(self.path / scene / self.depth_gt_dir_name / f"{filename}.npz")
-        # meta = read_json(self.path / scene / "intrinsics" / f"{filename}.json")
+            image = read_image(self.path / scene / "images" / f"{filename}.jpg")
+            # depth = read_depth(self.path / scene / "depths" / f"{filename}.png")
+            depth = read_depth_npz(self.path / scene / self.depth_gt_dir_name / f"{filename}.npz")
+            # meta = read_json(self.path / scene / "intrinsics" / f"{filename}.json")
+        except Exception as e:
+            filename = self.filenames[idx]
+            image = read_image(self.path / "images" / f"{filename}.png")
+            depth = read_depth_npz(self.path / self.depth_gt_dir_name / f"{filename}.npz")
+
         depth_mask = np.isfinite(depth) & (depth > 0)
         instance = {
             "scenename": scene,
