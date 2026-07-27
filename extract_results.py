@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
             single_args = copy.copy(args)
             single_args.name = name
-            single_args.eval_depth = args.eval_depth and "contains_gt_depth" in config and config["contains_gt_depth"]
+            single_args.eval_depth = args.eval_depth #and "contains_gt_depth" in config and config["contains_gt_depth"]
             single_args.work_path = config["work_path"]
             flat_pose_results, flat_depth_results = process_single_dataset(single_args)
             flat_pose_results.insert(0, 'dataset', name)
