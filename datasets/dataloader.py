@@ -73,7 +73,7 @@ class EvalDataLoaderPipeline:
             return filenames
         else:
             files = sorted(list((self.path / "images").glob("*.png")))
-            return files
+            return [f"{x}" for x in files]
 
 
     def __len__(self):
