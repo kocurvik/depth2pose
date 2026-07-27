@@ -13,8 +13,9 @@ class NPZReader(BaseDepthEstimator):
     def load_model(self):
         return
 
+    @property
     def name(self):
-        return "3DGS"
+        return f'3DGS'
 
     def infer(self, image, **kwargs):
         gs_depth_path = str(image).replace('images', self.weights).replace('png', 'npz')
