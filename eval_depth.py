@@ -60,9 +60,17 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
                    depth_gt_dir='depths_gt'):
     metric_fn = DepthMetrics()
 
-    if 'contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth']:
+    if (depth_gt_dir == 'depths_gt' and
+            ('contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth'])):
         return
     single_results_path = Path(benchmark_config['work_path']) / 'depth_results' / f'{mde_model}.json'
+
+    if 'width' not in benchmark_config:
+        benchmark_config['width'] = None
+    if 'height' not in benchmark_config:
+        benchmark_config['height'] = None
+    if 'depth_unit' not in benchmark_config:
+        benchmark_config['depth_unit'] = 1
 
     if os.path.exists(single_results_path) and not recalc:
         print(f"{single_results_path} exists, skipping")
