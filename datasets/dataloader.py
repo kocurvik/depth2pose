@@ -61,7 +61,7 @@ class EvalDataLoaderPipeline:
         )
 
     def read_filenames(self):
-        if self.depth_gt_dir == 'depths_gt':
+        if self.depth_gt_dir_name == 'depths_gt':
             scenes = sorted(list(self.path.glob("*")))
             scenes = [scene.stem for scene in scenes if scene.is_dir()]
 
