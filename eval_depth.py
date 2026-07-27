@@ -70,7 +70,7 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
     if 'height' not in benchmark_config:
         benchmark_config['height'] = None
     if 'depth_unit' not in benchmark_config:
-        benchmark_config['depth_unit'] = 1
+        benchmark_config['depth_unit'] = 'm'
 
     if os.path.exists(single_results_path) and not recalc:
         print(f"{single_results_path} exists, skipping")
@@ -89,7 +89,8 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
         with (
             EvalDataLoaderPipeline(benchmark_config['path'], benchmark_config['work_path'],
                                    width=benchmark_config['width'], height=benchmark_config['height'],
-                                   depth_unit=benchmark_config['depth_unit'], depth_gt_dir=depth_gt_dir) as eval_data_pipe,
+                                   depth_unit=benchmark_config['depth_unit'], depth_gt_dir=depth_gt_dir,
+                                   multiple_scenes = depth_gt_dir == 'depths_gt') as eval_data_pipe,
             tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
             h5py.File(h5_depth_path,
                       'r') as f_depth_h5

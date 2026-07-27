@@ -37,6 +37,7 @@ class EvalDataLoaderPipeline:
         num_process_workers: int = 8,
         depth_unit: str = None,
         depth_gt_dir = 'depths_gt',
+        multiple_scenes = True,
         **kwargs,
     ):
         self.width, self.height = width, height
@@ -46,6 +47,7 @@ class EvalDataLoaderPipeline:
         self.depth_unit = depth_unit
         self.depth_path = depth
         self.depth_gt_dir_name = depth_gt_dir
+        self.multiple_scenes = multiple_scenes
 
         self.rng = np.random.default_rng(seed=0)
 
@@ -59,15 +61,20 @@ class EvalDataLoaderPipeline:
         )
 
     def read_filenames(self):
-        scenes = sorted(list(self.path.glob("*")))
-        scenes = [scene.stem for scene in scenes if scene.is_dir()]
+        if self.multiple_scenes:
+            scenes = sorted(list(self.path.glob("*")))
+            scenes = [scene.stem for scene in scenes if scene.is_dir()]
 
-        filenames = []
-        for scene in scenes:
-            files = sorted(list((self.path / scene / "images").glob("*.jpg")))
-            files = [f"{scene}/{file.stem}" for file in files]
-            filenames.extend(files)
-        return filenames
+            filenames = []
+            for scene in scenes:
+                files = sorted(list((self.path / scene / "images").glob("*.jpg")))
+                files = [f"{scene}/{file.stem}" for file in files]
+                filenames.extend(files)
+            return filenames
+        else:
+            files = sorted(list((self.path / "images").glob("*.png")))
+            return files
+
 
     def __len__(self):
         return math.ceil(len(self.filenames))
