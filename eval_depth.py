@@ -140,7 +140,7 @@ def main():
 
     for name, config in config_iterator(config_path):
         job_args = []
-        if 'contains_gt_depth' not in config or not config['contains_gt_depth']:
+        if 'depths_gt' == args.depth_gt_dir and ('contains_gt_depth' not in config or not config['contains_gt_depth']):
             continue
 
         for mde_model in depth_models:
