@@ -134,11 +134,9 @@ def main():
 
     device = torch.device(args.device)
 
-    first_dataset_name = list(dataset_config.keys())[0]
-    first_subset_name = list(dataset_config[first_dataset_name]['subsets'].keys())[0]
-    depth_models = get_mde_list(first_dataset_name, os.path.join(dataset_config['work_path'], first_subset_name))
-
     for name, config in config_iterator(config_path):
+        depth_models = get_mde_list(name, config['work_path'])
+
         job_args = []
         if 'depths_gt' == args.depth_gt_dir and ('contains_gt_depth' not in config or not config['contains_gt_depth']):
             continue
