@@ -70,7 +70,7 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
     if 'height' not in benchmark_config:
         benchmark_config['height'] = None
     if 'depth_unit' not in benchmark_config:
-        benchmark_config['depth_unit'] = 'm'
+        benchmark_config['depth_unit'] = 1
 
     if os.path.exists(single_results_path) and not recalc:
         print(f"{single_results_path} exists, skipping")
