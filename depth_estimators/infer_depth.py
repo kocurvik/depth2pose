@@ -65,7 +65,7 @@ def get_mde_model(model_name, weights):
     if model_name == '3DGS':
         from depth_estimators.NPZReader import NPZReader
         # weights is actually path here
-        return NPZReader(weights, 'gs_depths')
+        return NPZReader('gs_depths')
 
     if model_name in ('MoGeV1', 'MoGeV2', 'MoGeV1Calib', 'MoGeV2Calib'):
         from depth_estimators.MoGe import MoGe
