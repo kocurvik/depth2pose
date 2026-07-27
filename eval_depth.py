@@ -135,6 +135,7 @@ def main():
     device = torch.device(args.device)
 
     for name, config in config_iterator(config_path):
+        print(config)
         depth_models = get_mde_list(name, config['work_path'])
 
         job_args = []
