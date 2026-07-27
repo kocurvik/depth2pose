@@ -171,17 +171,18 @@ def main():
 
     device = torch.device(args.device)
 
-    first_dataset_name = list(dataset_config.keys())[0]
-    first_subset_name = list(dataset_config[first_dataset_name]['subsets'].keys())[0]
-    depth_models = get_mde_list(first_dataset_name, os.path.join(dataset_config['work_path'], first_subset_name))
-
-    if args.gs_depth:
-        depth_models = [x for x in depth_models if '3DGS' not in x]
+    # first_dataset_name = list(dataset_config.keys())[0]
+    # first_subset_name = list(dataset_config[first_dataset_name]['subsets'].keys())[0]
 
     for name, config in config_iterator(config_path):
         job_args = []
-        if 'contains_gt_depth' not in config or not config['contains_gt_depth']:
+        if not args.gs_depth and ('contains_gt_depth' not in config or not config['contains_gt_depth']):
             continue
+
+        depth_models = get_mde_list(name, config['work_path'])
+
+        if args.gs_depth:
+            depth_models = [x for x in depth_models if '3DGS' not in x]
 
         for mde_model in depth_models:
             single_results_path = Path(config['work_path']) / 'depth_results' / f'{mde_model}.json'
