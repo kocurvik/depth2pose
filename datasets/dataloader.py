@@ -98,6 +98,7 @@ class EvalDataLoaderPipeline:
             filename = self.filenames[idx]
             image = read_image(self.path / "images" / f"{filename}.png")
             depth = read_depth_npz(self.path / self.depth_gt_dir_name / f"{filename}.npz")
+            scene = 'whatever'
 
         depth_mask = np.isfinite(depth) & (depth > 0)
         instance = {
