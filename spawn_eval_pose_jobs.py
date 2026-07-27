@@ -70,6 +70,8 @@ def main(args):
 
     depths_to_run = ['none', 'gt'] + mde_list
 
+    print(depths_to_run)
+
     array_job_arguments = []
 
     for depth_name in depths_to_run:
