@@ -78,6 +78,8 @@ def main(args):
 
     array_job_arguments = []
 
+    depths_ran = []
+
     for depth_name in depths_to_run:
         job_args = copy.copy(args)
         job_args.depth = depth_name
@@ -96,7 +98,7 @@ def main(args):
         if args.fix:
             if not args.include_shared_focal:
                 continue
-            if 'Calib' in depth_name:
+            if 'Calib' in depth_name or 'none' == depth_name:
                 continue
             job_args.append = True
             job_args.overwrite = True
@@ -104,11 +106,12 @@ def main(args):
 
         job_args.depth = depth_name
         array_job_arguments.append(job_args)
+        depths_ran.append(depth_name)
 
     jobs = executor.map_array(run_for_depth, array_job_arguments)
 
     print(f"\nSubmitted {len(jobs)} job(s) with log dir {log_dir}:")
-    for depth_name, job in zip(depths_to_run, jobs):
+    for depth_name, job in zip(depths_ran, jobs):
         print(f"Depth: {depth_name} job_id={job.job_id}")
 
 
