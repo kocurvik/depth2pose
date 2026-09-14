@@ -35,6 +35,8 @@ def parse_args():
     parser.add_argument('--variance',  type=int, default=None)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
     parser.add_argument('--recalc', action='store_true', default=False)
+    parser.add_argument('--overwrite', action='store_true', default=False)
+    parser.add_argument('--append', action='store_true', default=False)
     parser.add_argument('-nw', '--num_workers', type=int, default=1)
     parser.add_argument('-l', '--load', action='store_true', default=False)
     parser.add_argument('-f', '--first', type=int, default=None)
@@ -278,7 +280,7 @@ def eval_single_mde(args):
         seeds = range(args.variance)
 
 
-    if args.load:
+    if args.load or args.append:
         full_results = load_full_results(args)
 
         if args.depth == 'gt' or args.depth == 'none':
@@ -290,8 +292,15 @@ def eval_single_mde(args):
 
                 mde_runtimes = [f_depth_h5[f'{x}_runtime'][()] / 1e6 for x in image_list]
 
-        save_summary_results(experiments, full_results, mde_runtimes, args)
+        if not args.append:
+            save_summary_results(experiments, full_results, mde_runtimes, args)
+
+        if args.overwrite:
+            full_results = [x for x in full_results if x['experiment'] not in experiments]
     else:
+        full_results = []
+
+    if not args.load:
         image_pair_list_path = f'{name_path}_image_pairs.txt'
         with open(image_pair_list_path, 'r') as f:
             pair_list = [x.strip().split(',')[:2] for x in f.readlines()]
@@ -428,15 +437,16 @@ def eval_single_mde(args):
         print(f"Total runs: {total_length} for {len(pair_list)} samples")
 
         if args.num_workers == 1:
-            full_results = [eval_experiment(x) for x in tqdm(gen_data(), total=total_length)]
+            new_full_results = [eval_experiment(x) for x in tqdm(gen_data(), total=total_length)]
         else:
             if args.timeout_pool:
                 pool = NoDaemonProcessPool(args.num_workers)
-                full_results = [x for x in pool.imap(run_with_timeout, tqdm(gen_data(), total=total_length))]
+                new_full_results = [x for x in pool.imap(run_with_timeout, tqdm(gen_data(), total=total_length))]
             else:
                 pool = Pool(args.num_workers)
-                full_results = [x for x in pool.imap(eval_experiment, tqdm(gen_data(), total=total_length))]
+                new_full_results = [x for x in pool.imap(eval_experiment, tqdm(gen_data(), total=total_length))]
 
+        full_results.extend(new_full_results)
         if args.direct_read and f_depth is not None:
             f_depth.close()
 

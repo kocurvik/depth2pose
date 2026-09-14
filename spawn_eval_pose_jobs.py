@@ -25,6 +25,9 @@ def parse_args():
     parser.add_argument('-nro', '--no_reproj_only_ransac', action='store_true', default=False)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
     parser.add_argument('--recalc', action='store_true', default=False)
+    parser.add_argument('--fix', action='store_true', default=False)
+    parser.add_argument('--overwrite', action='store_true', default=False)
+    parser.add_argument('--append', action='store_true', default=False)
     parser.add_argument('-nw', '--num_workers', type=int, default=1)
     parser.add_argument('-l', '--load', action='store_true', default=False)
     parser.add_argument('-f', '--first', type=int, default=None)
@@ -79,7 +82,7 @@ def main(args):
         job_args = copy.copy(args)
         job_args.depth = depth_name
         h5_path = get_full_results_h5_path(job_args)
-        if os.path.exists(h5_path) and not args.recalc and not args.variance:
+        if os.path.exists(h5_path) and not args.recalc and not args.variance and not args.fix:
             print(f"Results for {depth_name} already available at {h5_path}. Skipping.")
             continue
 
@@ -89,6 +92,15 @@ def main(args):
             json_path = os.path.join(results_dir, f'{job_args.depth}.json')
             if os.path.exists(json_path):
                 continue
+
+        if args.fix:
+            if not args.include_shared_focal:
+                continue
+            if 'Calib' in depth_name:
+                continue
+            job_args.append = True
+            job_args.overwrite = True
+            job_args.explicit_solvers = 'sf_shift'
 
         job_args.depth = depth_name
         array_job_arguments.append(job_args)
