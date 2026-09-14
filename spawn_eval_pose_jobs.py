@@ -100,9 +100,9 @@ def main(args):
                 continue
             if 'Calib' in depth_name or 'none' == depth_name:
                 continue
-            # job_args.append = True
-            # job_args.overwrite = True
-            # job_args.explicit_solvers = 'sf_shift'
+            job_args.append = True
+            job_args.overwrite = True
+            job_args.explicit_solvers = 'sf_shift'
 
         job_args.depth = depth_name
         array_job_arguments.append(job_args)
