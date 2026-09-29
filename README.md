@@ -18,7 +18,7 @@
   </p>
   <div align="center">
 
-  [![arXiv](https://img.shields.io/badge/arXiv-tba.tba-b31b1b.svg)](https://arxiv.org/abs/tba)
+  [![arXiv](https://img.shields.io/badge/arXiv-2605.19797-b31b1b.svg)](https://arxiv.org/abs/2605.19797)
   [![Project Page](https://img.shields.io/static/v1?label=Project&message=Website&color=red)](https://kocurvik.github.io/depth2pose)
   [![Project Page](https://img.shields.io/static/v1?label=D2P&message=Dataset(Sample)&color=blue)](https://huggingface.co/datasets/floodgab/d2p_dataset_example)
   [![Project Page](https://img.shields.io/static/v1?label=D2P&message=Dataset&color=blue)](https://huggingface.co/datasets/floodgab/d2p_dataset)
@@ -27,7 +27,7 @@
 </p>
 
 # About
-This repository contains the full evalautation code the depth2pose framework for estimting monocular depth estimators.
+This repository contains the full evalautation code the depth2pose framework for estimting monocular depth estimators. Our [paper](https://arxiv.org/abs/2605.19797) was accepted in the E&D track of NeurIPS 2026.
 
 ## Dataset download
 
