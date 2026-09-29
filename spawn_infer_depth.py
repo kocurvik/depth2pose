@@ -15,6 +15,8 @@ def parse_args():
     # --- same args as infer_depth.py ---
     parser.add_argument('--recalc', action='store_true', default=False,
                         help='Force recalculation even if output already exists')
+    parser.add_argument('--npz_loader', action='store_true', default=False,
+                        help='Load 3DGS npz files')
     parser.add_argument('--device', type=str, default='cuda',
                         help='Device to run inference on')
     parser.add_argument('--name', type=str, default='dataset')
@@ -88,24 +90,41 @@ def main(args):
     name_path = os.path.join(args.out_path, args.name)
     array_job_arguments = []
 
-    for model_name, weight_list in ALL_MDEs.items():
-        for weights in weight_list:
-            model = get_mde_model(model_name, weights)
-            f_depth_path = f'{name_path}_depth_{model.name}.h5'
-            if os.path.exists(f_depth_path) and not args.recalc:
-                try:
-                    with h5py.File(f_depth_path, 'r') as f_check:
-                        if 'completed' in f_check:
-                            print(f"Output for {model_name} ({weights}) already complete at {f_depth_path}. Skipping.")
-                            continue
-                        print(f"Output for {model_name} ({weights}) exists but is incomplete. Resubmitting.")
-                except Exception:
-                    print(f"Output for {model_name} ({weights}) exists but is broken. Resubmitting.")
+    if args.npz_loader is not None:
+        f_depth_path = f'{name_path}_depth_3DGS.h5'
+        if os.path.exists(f_depth_path) and not args.recalc:
+            try:
+                with h5py.File(f_depth_path, 'r') as f_check:
+                    if 'completed' in f_check:
+                        print(f"Output for 3DGS already complete at {f_depth_path}. Skipping.")
+                        return
+                    print(f"Output for 3DGS exists but is incomplete. Resubmitting.")
+            except Exception:
+                print(f"Output for 3DGS exists but is broken. Resubmitting.")
 
-            job_args = copy.copy(args)
-            job_args.model_name = model_name
-            job_args.pretrained_weights = weights
-            array_job_arguments.append(job_args)
+        job_args = copy.copy(args)
+        job_args.model_name = '3DGS'
+        job_args.pretrained_weights = None
+        array_job_arguments.append(job_args)
+    else:
+        for model_name, weight_list in ALL_MDEs.items():
+            for weights in weight_list:
+                model = get_mde_model(model_name, weights)
+                f_depth_path = f'{name_path}_depth_{model.name}.h5'
+                if os.path.exists(f_depth_path) and not args.recalc:
+                    try:
+                        with h5py.File(f_depth_path, 'r') as f_check:
+                            if 'completed' in f_check:
+                                print(f"Output for {model_name} ({weights}) already complete at {f_depth_path}. Skipping.")
+                                continue
+                            print(f"Output for {model_name} ({weights}) exists but is incomplete. Resubmitting.")
+                    except Exception:
+                        print(f"Output for {model_name} ({weights}) exists but is broken. Resubmitting.")
+
+                job_args = copy.copy(args)
+                job_args.model_name = model_name
+                job_args.pretrained_weights = weights
+                array_job_arguments.append(job_args)
 
     jobs = executor.map_array(run_for_model, array_job_arguments)
 

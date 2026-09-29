@@ -198,10 +198,14 @@ def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
     ordered_first = ['sintel', 'scannetpp', 'eth3d', 'lamar']
     remaining = [d for d in maa_dicts if d not in ordered_first]
     # Sort remaining by descending average mAA
+    def lf(d):
+        vals = np.array([x for x in maa_dicts[d].values()])
+        return np.max(vals)
+
     if maa_dicts is not None:
         remaining.sort(
             #key=lambda d: np.mean(list(maa_dicts[d].values())),
-            key=lambda d: np.max(list(maa_dicts[d].values())),
+            key=lambda d: lf(d),
             reverse=True
         )
     dataset_names = ordered_first + remaining
@@ -210,6 +214,7 @@ def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
     # Find common models AFTER filtering
     models = set.intersection(*(set(d.keys()) for d in maa_dicts.values()))
     models = ['MoGeV2', 'UniK3D', 'Pi3', 'MapAnything', 'DepthAnythingV2']
+    models = ['MoGeV2', 'UniK3D', 'Pi3', 'MapAnything']
     models_nicknames = {
         'DepthAnythingV2': 'DAv3',
         'MapAnything': 'Map Anything',
@@ -226,12 +231,26 @@ def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
 
     for model in models:
         color, linestyle = next(style_cycle)
-        y = [maa_dicts[d][model] for d in dataset_names]
+        y = np.array([maa_dicts[d][model] for d in dataset_names])
 
         #plt.plot(x, y, marker='o', linestyle=linestyle, color=color, label=model)
         style = get_mde_marker(model,model)
         style['markersize'] = 10
-        plt.plot(x, y, linestyle=linestyle, **style, label=models_nicknames[model])
+
+        if len(y.shape) > 1:
+            y_means = np.mean(y, axis=1)
+            y_std = np.std(y, axis=1)
+
+            # Calculate upper and lower bounds
+            lower_bound = y_means - y_std
+            upper_bound = y_means + y_std
+
+            plt.plot(x, y_means, linestyle=linestyle, **style, label=models_nicknames[model])
+            # Convert color to RGBA with 0.5 alpha
+            alpha_color = plt.matplotlib.colors.to_rgba(style['color'], alpha=0.5)
+            plt.fill_between(x, lower_bound, upper_bound, color=alpha_color)
+        else:
+            plt.plot(x, y, linestyle=linestyle, **style, label=models_nicknames[model])
 
 
     split_idx = 4
@@ -255,30 +274,29 @@ def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
         linestyle='--',
         linewidth=1
     )
-    
+
+    plt.gca().tick_params(axis='both', which='major', labelsize=24)
+    plt.gca().yaxis.label.set_size(24)
+    plt.gca().xaxis.label.set_size(24)
+
+    plt.legend(loc='lower center', ncol=5, fontsize=20)
+    # for text in legend.get_texts():
+    #     text.set_fontsize(20)
+
+
     #plt.xticks(x, dataset_names, rotation=90)
     plt.xticks(x, dataset_nicknames)
     plt.yticks(np.asarray([70,80,90]))
     #plt.gca().invert_yaxis()
     #plt.xlabel("Dataset")
-    plt.ylim(61,94)
+    # plt.ylim(61,94)
     plt.xlim(-0.3,10.3)
     # HARDCODED \calib TODO: fix
     plt.ylabel("\\mAA")
     #plt.title("Model Rankings " + title_ending)
     
-    plt.rcParams.update({        # Use LaTeX to render text
-        # "font.family": "serif",
-        'font.size': 24,          # base size for everything
-        'axes.titlesize': 24,
-        'axes.labelsize': 24,
-        'xtick.labelsize': 24,
-        'ytick.labelsize': 24,
-        'legend.fontsize': 20
-    }) 
-
     #plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.legend(loc='lower center', ncol=5)
+    # plt.legend(loc='lower center', ncol=5)
 
     plt.tight_layout()
 
@@ -341,7 +359,10 @@ def plot_maa_lineplot(maa_dicts, output_path, plot_with_avg):
         save_path = output_path / f"{category}_maa_subset_lineplot.pdf"
         #save_path = output_path / f"{category}_maa_statues_lineplot.png"
 
-        plot_maa(maa_dict, save_path, title_ending=' '+category, nicknames=nicknames)
+        try:
+            plot_maa(maa_dict, save_path, title_ending=' '+category, nicknames=nicknames)
+        except Exception:
+            ...
 
         '''
         if plot_with_avg:
@@ -446,7 +467,7 @@ def plot_rankings_paper(dicts, output_file, title_ending='', maa_dicts=None):
                     plt.text(
                         x[i],
                         y[i] - 0.1,  # slightly above point (since inverted y-axis)
-                        f"{maa_val:.2f}",
+                        f"{np.mean(maa_val):.2f}",
                         ha='center',
                         va='bottom',
                         fontsize=8,
@@ -595,10 +616,19 @@ def find_best(sub_df, variants, solver_group, metric_cols):
     #if 'gt' in variants:
     sub = sub_df[sub_df['mde'].isin(variants)]
     sub = sub[sub['solver_group'] == solver_group]
+    # if 'seed' in sub:
+        # mean all metric col sub entries over different seed values
+    sub = sub.groupby(['mde', 'solver', 'solver_group'])[metric_cols].mean().reset_index()
+
+
     if sub.empty:
         print("find_best empty!", variants, solver_group)
         return None
     best_row = sub.loc[sub['pose_mAA_10'].idxmax()]
+    # print(best_row)
+
+    print(best_row['solver'])
+
     return best_row['mde'], best_row['solver'], best_row[metric_cols]
 
 def build_data_from_df(df, metric_cols):
@@ -656,22 +686,44 @@ def build_data_from_df(df, metric_cols):
                             'inliers': float(metrics['mean_inliers']),
                         }
                     '''
-                    if best:
-                        _, _, metrics = best
-                        # just make sure all levels of dict exist
-                        if category not in data:
-                            data[category] = {}
-                        if solver_group not in data[category]:
-                            data[category][solver_group] = {}
-                        if dataset not in data[category][solver_group]:
-                            data[category][solver_group][dataset] = {}
 
-                        # final assignment
-                        data[category][solver_group][dataset][base_mde] = {
-                            'mAA': float(metrics['pose_mAA_10']),
-                            'runtime': float(metrics['mean_mde_runtime']),
-                            'inliers': float(metrics['mean_inliers']),
-                        }
+
+                    if best:
+                        if 'seed' in sub_df:
+                            mde, solver, metrics = best
+
+                            best_df = sub_df[(sub_df['mde'] == mde) & (sub_df['solver'] == solver)]
+
+                            if category not in data:
+                                data[category] = {}
+                            if solver_group not in data[category]:
+                                data[category][solver_group] = {}
+                            if dataset not in data[category][solver_group]:
+                                data[category][solver_group][dataset] = {}
+
+                            data[category][solver_group][dataset][base_mde] = {
+                                'mAA': best_df['pose_mAA_10'].tolist(),
+                                'inliers': best_df['mean_inliers'].tolist(),
+                            }
+
+                        else:
+                            _, _, metrics = best
+                            # just make sure all levels of dict exist
+                            if category not in data:
+                                data[category] = {}
+                            if solver_group not in data[category]:
+                                data[category][solver_group] = {}
+                            if dataset not in data[category][solver_group]:
+                                data[category][solver_group][dataset] = {}
+
+                            # final assignment
+                            data[category][solver_group][dataset][base_mde] = {
+                                'mAA': float(metrics['pose_mAA_10']),
+                                'inliers': float(metrics['mean_inliers']),
+                            }
+
+                            if 'mean_mde_runtime' in metric_cols:
+                                data[category][solver_group][dataset][base_mde]['runtime'] = float(metrics['mean_mde_runtime'])
             # manually add the no_depth, once for each solver_group
             # breakpoint()
             #dataset_df[dataset_df['solver'] == 'baseline_calib']
@@ -723,7 +775,8 @@ def parse_csv_file(
         df = df_orig
 
     # filter by iterations
-    df = df[df['iters'] == nbr_iters].copy()
+    if 'iters' in df:
+        df = df[df['iters'] == nbr_iters].copy()
     # if a solver type is submitted, use only this, by filtering #gabbi
     if solver_type: #gabbi
         # get solver group
@@ -773,6 +826,8 @@ def parse_csv_file(
     df = df[df['solver_group'].notna()]
 
     metric_cols = ["pose_mAA_10", "mean_mde_runtime", "mean_inliers"]
+
+    metric_cols = [x for x in metric_cols if x in df]
 
     data = build_data_from_df(df, metric_cols)
 
@@ -923,8 +978,8 @@ def plot_heatmaps(data, rankings, output_path, mode, coloring_base, use_green_ra
                         mAA = data[category][solver_group][scene][model]["mAA"]
                         inliers = data[category][solver_group][scene][model]["inliers"]
                         
-                        maa_matrix[i, j] = mAA
-                        inliers_matrix[i,j] = inliers
+                        maa_matrix[i, j] = np.mean(mAA)
+                        inliers_matrix[i,j] = np.mean(inliers)
 
                         if coloring_base == 'rank':
                             if use_green_ranking:
@@ -1139,6 +1194,6 @@ if __name__ == "__main__":
     if args.save_lineplot:   
         plot_with_avg = True
         #plot_lineplot(rank_dicts, args.output_path, plot_with_avg, maa_dicts)
+
         plot_lineplot_paper(rank_dicts, args.output_path, plot_with_avg, maa_dicts)
         plot_maa_lineplot(maa_dicts, args.output_path, plot_with_avg)
-    

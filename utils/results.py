@@ -33,7 +33,7 @@ def compute_auc(errors, thresholds):
     return aucs
 
 
-def get_summary_metrics(experiments, results, iters_list = (10, 100, 500, 1000)):
+def get_summary_metrics(experiments, results, iters_list = (0, 10, 100, 500, 1000)):
     metrics = {}
     for iters in iters_list:
         iters_results = [x for x in results if x['iterations'] == iters]
@@ -55,7 +55,7 @@ def get_summary_metrics(experiments, results, iters_list = (10, 100, 500, 1000))
             times = np.array([x['runtime'] for x in exp_results])
             inliers = np.array([x['info']['inlier_ratio'] for x in exp_results])
 
-            pose_mAA_10, pose_mAA_5, pose_mAA_3 = compute_auc(p_errs, [10, 5, 3])
+            pose_mAAs = compute_auc(p_errs, list(range(1, 11)))
             f_mAA_10, f_mAA_5, f_mAA_3 = compute_auc(f_errs, [0.1, 0.05, 0.03])
 
             metrics[iters][exp] = {
@@ -67,15 +67,58 @@ def get_summary_metrics(experiments, results, iters_list = (10, 100, 500, 1000))
                 'f_mAA_10_approx': 100 * np.mean(f_res),
                 'f_mAA_5_approx': 100 * np.mean(f_res[:5]),
                 'f_mAA_3_approx': 100 * np.mean(f_res[:3]),
-                'pose_mAA_10': 100 * pose_mAA_10,
-                'pose_mAA_5': 100 * pose_mAA_5,
-                'pose_mAA_3': 100 * pose_mAA_3,
+                'f_mAA_10': 100 * f_mAA_10,
+                'f_mAA_5': 100 * f_mAA_5,
+                'f_mAA_3': 100 * f_mAA_3,
+                'mean_runtime': np.mean(times) / 1e6,
+                'mean_inliers': np.mean(inliers)
+            }
+            for t, pose_mAA in zip(range(1, 11), pose_mAAs):
+                metrics[iters][exp][f'pose_mAA_{t}'] = 100 * pose_mAA
+    return metrics
+
+
+def get_variance_summary_metrics(experiments, results, seeds):
+
+    metrics = {}
+    for seed in seeds:
+        metrics[seed] = {}
+        seed_results = [x for x in results if x['seed'] == seed]
+        for exp in experiments:
+            exp_results = [x for x in seed_results if x['experiment'] == exp]
+
+            p_errs = np.array([max(r['R_err'], r['t_err']) for r in exp_results])
+            f_errs = np.array([r['f_err'] for r in exp_results])
+
+            p_errs[np.isnan(p_errs)] = 180
+            f_errs[np.isnan(f_errs)] = 1.0
+
+            p_res = np.array([np.sum(p_errs < t) / len(p_errs) for t in range(1, 11)])
+            f_res = np.array([np.sum(f_errs < t/100) / len(f_errs) for t in range(1, 11)])
+
+            times = np.array([x['runtime'] for x in exp_results])
+            inliers = np.array([x['info']['inlier_ratio'] for x in exp_results])
+
+            pose_mAAs = compute_auc(p_errs, list(range(1, 11)))
+            f_mAA_10, f_mAA_5, f_mAA_3 = compute_auc(f_errs, [0.1, 0.05, 0.03])
+
+            metrics[seed][exp] = {
+                'median_pose_err': np.median(p_errs),
+                'median_f_err': np.median(f_errs),
+                'pose_mAA_10_approx': 100 * np.mean(p_res),
+                'pose_mAA_5_approx': 100 * np.mean(p_res[:5]),
+                'pose_mAA_3_approx': 100 * np.mean(p_res[:3]),
+                'f_mAA_10_approx': 100 * np.mean(f_res),
+                'f_mAA_5_approx': 100 * np.mean(f_res[:5]),
+                'f_mAA_3_approx': 100 * np.mean(f_res[:3]),
                 'f_mAA_10': 100 * f_mAA_10,
                 'f_mAA_5_': 100 * f_mAA_5,
                 'f_mAA_3_': 100 * f_mAA_3,
                 'mean_runtime': np.mean(times) / 1e6,
                 'mean_inliers': np.mean(inliers)
             }
+            for t, pose_mAA in zip(range(1, 11), pose_mAAs):
+                metrics[seed][exp][f'pose_mAA_{t}'] = 100 * pose_mAA
     return metrics
 
 
@@ -149,6 +192,25 @@ def save_summary_results(experiments, full_results, mde_runtimes, args):
 
     print_results_focal(metrics)
 
+    metrics = json.loads(json.dumps(metrics))
+    if getattr(args, 'append', False) and os.path.exists(json_path):
+        with open(json_path, 'r') as f:
+            existing_metrics = json.load(f)
+        existing_metrics.update(metrics)
+        metrics = existing_metrics
+
+    with open(json_path, 'w') as f:
+        json.dump(metrics, f, indent=4)
+
+def save_variance_summary_results(experiments, seeds, full_results, mde_runtimes, args):
+    results_dir = get_results_dir(args)
+    results_dir = os.path.join(results_dir, f'variance')
+    os.makedirs(results_dir, exist_ok=True)
+    json_path = os.path.join(results_dir, f'{args.depth}.json')
+    print("Saving to: ", json_path)
+
+    metrics = get_variance_summary_metrics(experiments, full_results, seeds)
+
     with open(json_path, 'w') as f:
         json.dump(metrics, f, indent=4)
 
@@ -156,6 +218,8 @@ def save_summary_results(experiments, full_results, mde_runtimes, args):
 def merge_summary_results(args):
     """Read all per-depth JSONs and merge into a single unified dict."""
     results_dir = get_results_dir(args)
+    if getattr(args, 'variance', None):
+        results_dir = os.path.join(results_dir, 'variance')
     unified = {}
     for fname in sorted(os.listdir(results_dir)):
         if not fname.endswith('.json') or fname == 'all.json':
@@ -269,12 +333,15 @@ def flatten_depth_metrics(all_metrics):
     return pd.DataFrame(rows)
 
 
-def flatten_pose_metrics(all_metrics):
+def flatten_pose_metrics(all_metrics, variance=False):
     rows = []
+
+    top_level_name = 'seed' if variance else 'iters'
+
     for mde, mde_metrics in all_metrics.items():
         for iters, iter_metrics in mde_metrics.items():
             for solver, metrics in iter_metrics.items():
-                row = {'mde': mde, 'iters': int(iters), 'solver': solver}
+                row = {'mde': mde, top_level_name: int(iters), 'solver': solver}
                 row.update(metrics)
                 rows.append(row)
     return pd.DataFrame(rows)

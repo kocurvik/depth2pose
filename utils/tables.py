@@ -410,8 +410,10 @@ def print_combined_pivot_latex_table(depth_pivot, pose_pivot, depth_cols, solver
 
 
 def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='scale', iters=1000, include_ro=True,
-                         keep_only=None, best_only=False, dataset=None):
+                         keep_only=None, best_only=False, dataset=None, mAA_threshold=10):
     baseline, depth_cols, solvers = get_solvers_depths(cal_type, depth_type, include_ro)
+
+    mAA_metric_str = f'pose_mAA_{mAA_threshold}'
 
     if isinstance(dataset, (list, tuple)):
         depth_cols = ['d1_si']
@@ -438,10 +440,10 @@ def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='sca
         baselines = {'name': baseline}
         for d in datasets:
             b_df = results_df[(results_df['solver'] == baseline) & (results_df['dataset'] == d)]
-            baselines[d] = b_df['pose_mAA_10'].mean() if not b_df.empty else None
+            baselines[d] = b_df[mAA_metric_str].mean() if not b_df.empty else None
 
-        grouped = results_df.groupby(['mde', 'solver', 'dataset'])['pose_mAA_10'].mean().reset_index()
-        pose_pivot = grouped.pivot(index='mde', columns=['dataset', 'solver'], values='pose_mAA_10')
+        grouped = results_df.groupby(['mde', 'solver', 'dataset'])[mAA_metric_str].mean().reset_index()
+        pose_pivot = grouped.pivot(index='mde', columns=['dataset', 'solver'], values=mAA_metric_str)
         pose_pivot = pose_pivot.reindex(columns=pd.MultiIndex.from_product([datasets, solvers]))
 
         sort_metric = 'd1_ssi' if depth_type == 'affine' else 'd1_si'
@@ -486,11 +488,11 @@ def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='sca
         depth_df = depth_df[~depth_df['mde'].str.contains('Calib')]
         results_df = results_df[~results_df['mde'].str.contains('Calib')]
 
-    results_df = results_df.groupby(['solver', 'mde'])['pose_mAA_10'].mean().reset_index()
-    baseline_pose_mAA = results_df[results_df['solver'] == baseline]['pose_mAA_10'].values[0]
+    results_df = results_df.groupby(['solver', 'mde'])[mAA_metric_str].mean().reset_index()
+    baseline_pose_mAA = results_df[results_df['solver'] == baseline][mAA_metric_str].values[0]
     baseline = (baseline, baseline_pose_mAA)
 
-    pivot_df = results_df.pivot(index='mde', columns='solver', values='pose_mAA_10')[solvers]
+    pivot_df = results_df.pivot(index='mde', columns='solver', values=mAA_metric_str)[solvers]
     combined_df = depth_df[['mde'] + depth_cols].merge(pivot_df, on='mde', how='left')
     combined_df = combined_df.fillna(-1.0)
 
@@ -513,7 +515,7 @@ def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='sca
     print_combined_latex_table(combined_df, baseline=baseline, include_calib_col=cal_type == 'calib')
 
 
-def print_pose_latex_table(pivot, baselines=None, include_calib_col=True):
+def print_pose_latex_table(pivot, baselines=None, include_calib_col=True, mAA_threshold=10):
     # pivot: index=mde, columns=MultiIndex(group, solver)
     groups = list(dict.fromkeys(pivot.columns.get_level_values(0)))
     solvers = list(dict.fromkeys(pivot.columns.get_level_values(1)))
@@ -550,7 +552,7 @@ def print_pose_latex_table(pivot, baselines=None, include_calib_col=True):
     maa_start = extra_cols + 1
 
     row1 = [' '] * extra_cols
-    row1.append('\\multicolumn{' + str(total_solver_cols) + '}{c}{\\mAA}')
+    row1.append('\\multicolumn{' + str(total_solver_cols) + '}{c}{mAA(' + str(mAA_threshold) + '$^\\circ$)}')
     maa_cmidrule = f'\\cmidrule(lr){{{maa_start}-{num_cols}}}'
 
     group_cmidrules = []
@@ -810,8 +812,11 @@ def print_join_table(standard_results_df, d2p_results_df, depth_df, cal_type='ca
                            include_calib_col=cal_type == 'calib')
 
 
-def print_pose_table(results_df, cal_type='calib', depth_type='scale', iters=1000, include_ro=True, best_only=True):
+def print_pose_table(results_df, cal_type='calib', depth_type='scale', iters=1000, include_ro=True, best_only=True, mAA_threshold=10,
+    groups = ('mean', 'statues', 'vegetation'), columns_by = 'group'):
     baseline_name, depth_cols, solvers = get_solvers_depths(cal_type, depth_type, include_ro)
+
+    mAA_metric_str = f'pose_mAA_{mAA_threshold}'
 
     solvers = [x for x in solvers if 'mde' not in x]
 
@@ -821,39 +826,37 @@ def print_pose_table(results_df, cal_type='calib', depth_type='scale', iters=100
     if cal_type == 'uncal':
         results_df = results_df[~results_df['mde'].str.contains('Calib')]
 
-    groups = ['mean', 'statues', 'vegetation']
-
     baselines = {'name': baseline_name}
     for group in groups:
         if group == 'mean':
             b_df = results_df[results_df['solver'] == baseline_name]
         else:
-            b_df = results_df[(results_df['solver'] == baseline_name) & (results_df['group'] == group)]
-        baselines[group] = b_df['pose_mAA_10'].mean() if not b_df.empty else None
+            b_df = results_df[(results_df['solver'] == baseline_name) & (results_df[columns_by] == group)]
+        baselines[group] = b_df[mAA_metric_str].mean() if not b_df.empty else None
 
-    group_results_df = results_df.groupby(['solver', 'mde', 'group'])['pose_mAA_10'].mean().reset_index()
-    mean_results_df = results_df.groupby(['solver', 'mde'])['pose_mAA_10'].mean().reset_index()
-    mean_results_df['group'] = 'mean'
+    group_results_df = results_df.groupby(['solver', 'mde', columns_by])[mAA_metric_str].mean().reset_index()
+    mean_results_df = results_df.groupby(['solver', 'mde'])[mAA_metric_str].mean().reset_index()
+    mean_results_df[columns_by] = 'mean'
 
     all_results_df = pd.concat([group_results_df, mean_results_df], axis=0)
 
     if best_only:
-        mean_first = all_results_df[(all_results_df['group'] == 'mean') &
+        mean_first = all_results_df[(all_results_df[columns_by] == 'mean') &
                                     (all_results_df['solver'] == solvers[0])].copy()
         mean_first['basename'] = mean_first['mde'].apply(get_mde_basename)
-        idx = mean_first.groupby('basename')['pose_mAA_10'].idxmax()
+        idx = mean_first.groupby('basename')[mAA_metric_str].idxmax()
         keep_mdes = mean_first.loc[idx, 'mde'].values
         all_results_df = all_results_df[all_results_df['mde'].isin(keep_mdes)]
 
-    pivot = all_results_df[all_results_df['group'].isin(groups)].pivot(
-        index='mde', columns=['group', 'solver'], values='pose_mAA_10')
+    pivot = all_results_df[all_results_df[columns_by].isin(groups)].pivot(
+        index='mde', columns=[columns_by, 'solver'], values=mAA_metric_str)
     pivot = pivot.reindex(columns=pd.MultiIndex.from_product([groups, solvers]))
     pivot = pivot.dropna(how='all')
     pivot = pivot.sort_values(by=('mean', solvers[0]), ascending=False)
     if 'gt' in pivot.index:
         pivot = pd.concat([pivot.drop(index='gt'), pivot.loc[['gt']]])
 
-    print_pose_latex_table(pivot, baselines=baselines, include_calib_col=cal_type == 'calib')
+    print_pose_latex_table(pivot, baselines=baselines, include_calib_col=cal_type == 'calib', mAA_threshold=mAA_threshold)
 
 
 
@@ -883,9 +886,31 @@ if __name__ == '__main__':
         # print_combined_table(standard_results, depth_df, cal_type='calib', depth_type='both', include_ro=True)
         # print("-------APPENDIX TABLE ------")
         # print_combined_table(standard_results, depth_df, cal_type='uncal', depth_type='both', include_ro=True)
-        print("-------APPENDIX TABLE ------")
-        print_combined_table(standard_results, depth_df, cal_type='calib', depth_type='scale', include_ro=False, dataset=['eth3d', 'scannetpp', 'lamar', 'sintel'])
+        # print("-------APPENDIX TABLE ------")
+        # print_combined_table(standard_results, depth_df, cal_type='calib', depth_type='scale', include_ro=False, dataset=['eth3d', 'scannetpp', 'lamar', 'sintel'])
 
+    for matches in matches_list:
+        full_d2p_results = pd.read_csv(f'csv_results/d2p_{matches}_pose_results.csv')
+        full_standard_results = pd.read_csv(f'csv_results/standard_{matches}_pose_results.csv')
 
+        for pose_mAA_t in range(1, 11):
+            print('\\begin{table}[h]')
+            print('\\resizebox{\\linewidth}{!}{')
+            print_pose_table(full_d2p_results, cal_type='calib', depth_type='both', include_ro=True,
+                             best_only=False, mAA_threshold=pose_mAA_t)
+            print('}')
+            print(f'\\caption{{pose mAA@{pose_mAA_t} for the d2p dataset using {matches} matches}}')
+            print('\\end{table}')
+
+        for pose_mAA_t in range(1, 11):
+            print('\\begin{table}[h]')
+            print('\\resizebox{\\linewidth}{!}{')
+            print_pose_table(full_standard_results, cal_type='calib', depth_type='both', include_ro=True,
+                             best_only=False, mAA_threshold=pose_mAA_t, groups = ('mean', 'eth3d', 'scannetpp', 'lamar', 'sintel'), columns_by='dataset')
+            # print_combined_table(full_standard_results, depth_df, cal_type='calib', depth_type='scale', include_ro=True,
+            #                      dataset=['eth3d', 'scannetpp', 'lamar', 'sintel'], mAA_threshold=pose_mAA_t)
+            print('}')
+            print(f'\\caption{{pose mAA@{pose_mAA_t} for the standard dataset using {matches} matches}}')
+            print('\\end{table}')
 
 

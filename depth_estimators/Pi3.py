@@ -51,15 +51,24 @@ def load_and_preprocess_images(image_paths: list[str | Path], require_intrinsics
         img_tensor = TF_transform(resized_img)
         tensor_list.append(img_tensor)
 
+    images_tensor = torch.stack(tensor_list, dim=0)
     K = None
     if require_intrinsics:
-        scale_x, scale_y = target_width / width, target_height / height
-        K = kwargs['K']
-        K[0, :] *= scale_x
-        K[1, :] *= scale_y
-        K = torch.from_numpy(K).float()[None]
+        if 'Ks' in kwargs:
+            Ks_in = kwargs['Ks']
+        elif 'K1' in kwargs and 'K2' in kwargs:
+            Ks_in = [kwargs['K1'], kwargs['K2']]
+        else:
+            Ks_in = [kwargs['K']]
 
-    images_tensor = torch.stack(tensor_list, dim=0)
+        Ks = []
+        for K_in, (height, width) in zip(Ks_in, orig_coords):
+            scale_x, scale_y = target_width / width, target_height / height
+            K_scaled = np.array(K_in, dtype=np.float32, copy=True)
+            K_scaled[0, :] *= scale_x
+            K_scaled[1, :] *= scale_y
+            Ks.append(K_scaled)
+        K = torch.from_numpy(np.stack(Ks, axis=0)).float()
 
     return images_tensor, orig_coords, K
 
@@ -99,7 +108,7 @@ class Pi3(BaseDepthEstimator):
         intrinsics = recover_intrinsic_from_rays_d(rays_d, force_center_principal_point=True)
         depth_map = results['local_points'][..., 2]
         depth_conf = results['conf'][..., 0]
-        extrinsics = results['camera_poses']
+        extrinsics = torch.inverse(results['camera_poses'])
 
         depth_map, depth_conf = depth_map.squeeze(0), depth_conf.squeeze(0)
         intrinsics, extrinsics = intrinsics.squeeze(0), extrinsics.squeeze(0)
@@ -134,6 +143,26 @@ class Pi3(BaseDepthEstimator):
             depth_map, depth_conf = depth_map[0], depth_conf[0]
             intrinsic, extrinsic = intrinsic[0], extrinsic[0]
         return {"depth": depth_map, "K": intrinsic, "runtime": runtime}
+
+    def infer_pair(self, image1: str | Path, image2: str | Path, size1=None, size2=None, **kwargs):
+        tensor_images, orig_coords, intrinsics = load_and_preprocess_images(
+            [image1, image2],
+            self.requires_intrinsics,
+            **kwargs,
+        )
+        tensor_images = tensor_images.cuda()
+        if intrinsics is not None:
+            intrinsics = intrinsics.cuda()[None]
+        depth_map, depth_conf, intrinsic, extrinsic, runtime = self.run_model(tensor_images, orig_coords, intrinsics)
+        return {
+            "depth1": depth_map[0],
+            "depth2": depth_map[1],
+            "K1": intrinsic[0],
+            "K2": intrinsic[1],
+            "extrinsic1": extrinsic[0],
+            "extrinsic2": extrinsic[1],
+            "runtime": runtime,
+        }
 
 if __name__ == '__main__':
     image_path = "./assets/kitchen/images/00.png"

@@ -66,6 +66,10 @@ python eval_depth.py  --config_path datasets/d2p_benchmark.json
 python spawn_eval_pose.py  --config_path datasets/d2p_benchmark.json --matches loma_2048_noresize
 python spawn_eval_pose.py  --config_path datasets/standard_benchmark.json --matches loma_2048_noresize
 
+# eval methods that directly regress depth and relative pose
+python spawn_eval_regressed_pose.py --config_path datasets/d2p_benchmark.json
+python spawn_eval_regressed_pose.py --config_path datasets/standard_benchmark.json
+
 # finally extract results
 python utils/extract_results.py  --config_path datasets/d2p_benchmark.json --matches loma_2048_noresize
 python utils/extract_results.py  --config_path datasets/standard_benchmark.json --matches loma_2048_noresize
@@ -85,4 +89,4 @@ You add the following arg based on the name of the depth in ALL_MDEs_DICT:
 ```
 --model_name your_model_name
 ```
-This will run only the new model. You may run pose estimation with depth provided for only one model and then export the results with the same command as for the full evaluation.
+This will run only the new model. You may run pose estimation with depth provided for only one model and then export the results with the same command as for the full evaluation. 

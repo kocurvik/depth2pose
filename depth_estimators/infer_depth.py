@@ -36,7 +36,7 @@ ALL_MDEs = {
     'Pi3': ['Pi3X'],
     'Pi3Calib': ['Pi3X'],
     'MapAnything': ['map-anything'],
-    'MapAnythingCalib': ['map-anything'],
+    'MapAnythingCalib': ['map-anything']
     }
 
 
@@ -61,6 +61,11 @@ def get_mde_model(model_name, weights):
     # if model_name == 'InfiniDepth':
     #     from depth_estimators.InfiniDepthWrapper import InfiniDepth
     #     return InfiniDepth(weights, requires_intrinsics=False)
+
+    if model_name == '3DGS':
+        from depth_estimators.NPZReader import NPZReader
+        # weights is actually path here
+        return NPZReader('gs_depths')
 
     if model_name in ('MoGeV1', 'MoGeV2', 'MoGeV1Calib', 'MoGeV2Calib'):
         from depth_estimators.MoGe import MoGe
@@ -100,6 +105,9 @@ def get_mde_model(model_name, weights):
     elif model_name == 'MapAnything' or model_name == 'MapAnythingCalib':
         from depth_estimators.MapAnything import MapAnything
         return MapAnything(weights, requires_intrinsics='Calib' in model_name)
+    elif model_name == '3DGS':
+        from depth_estimators.NPZReader import NPZReader
+        return NPZReader()
 
     else:
         raise NotImplementedError(f"Model {model_name} not implemented")

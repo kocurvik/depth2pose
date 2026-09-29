@@ -29,6 +29,8 @@ def parse_args():
                         help='cuda or cpu to be used for extraction')
     parser.add_argument('--recalc', action='store_true', default = False,
                         help='whether to recalculate even previously calculated depths')
+    parser.add_argument('--gs_depth', action='store_true', default = False,
+                        help='whether to recalculate even previously calculated depths')
 
     parser.add_argument('--account', type=str, default='p1358-25-2',
                         help='Slurm account name')
@@ -55,10 +57,11 @@ def get_depth_from_h5(f_depth_h5, scene_name, file_name):
     depth[depth <= 0] = np.inf
     return depth
 
-def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work_dir=False, recalc=False):
+def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work_dir=False, recalc=False,
+                   gs_depth=False):
     metric_fn = DepthMetrics()
 
-    if 'contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth']:
+    if not gs_depth and ('contains_gt_depth' not in benchmark_config or not benchmark_config['contains_gt_depth']):
         return
     single_results_path = Path(benchmark_config['work_path']) / 'depth_results' / f'{mde_model}.json'
 
@@ -66,6 +69,8 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
         print(f"{single_results_path} exists, skipping")
         return
     else:
+        metric_result_list, scale_result_list, affine_result_list = [], [], []
+
         h5_depth_path = Path(benchmark_config['work_path']) / f'{benchmark_name}_depth_{mde_model}.h5'
         if use_work_dir:
             job_id = os.environ.get('SLURM_JOB_ID', 'local')
@@ -75,41 +80,75 @@ def evaluate_model(mde_model, benchmark_name, benchmark_config, device, use_work
             shutil.copy(h5_depth_path, tmp_path)
             h5_depth_path = tmp_path
 
-        metric_result_list, scale_result_list, affine_result_list = [], [], []
-        with (
-            EvalDataLoaderPipeline(benchmark_config['path'], benchmark_config['work_path'],
-                                   width=benchmark_config['width'], height=benchmark_config['height'],
-                                   depth_unit=benchmark_config['depth_unit']) as eval_data_pipe,
-            tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
-            h5py.File(h5_depth_path,
-                      'r') as f_depth_h5
-        ):
-            for i in range(len(eval_data_pipe)):
-                sample = eval_data_pipe.get()
-                sample = {
-                    k: v.to(device) if isinstance(v, torch.Tensor) else v
-                    for k, v in sample.items()
-                }
-                scenename, filename = sample["scenename"], sample["filename"]
-                _, gt_depth, depth_mask = (
-                    sample["image"],
-                    sample["depth"],
-                    sample["depth_mask"]
-                )
-                # pd_depth_data = np.load(eval_data_pipe.path / scenename / mde_model / f"{filename}.npz")
-                # pd_depth, pd_intrinsic = pd_depth_data["depth"], pd_depth_data["K"]
 
-                pd_depth = get_depth_from_h5(f_depth_h5, scenename, filename)
-                pd_depth = torch.from_numpy(pd_depth).to(torch.float32).to(device)
+        if gs_depth:
+            gs_depth_path = Path(benchmark_config['work_path']) / f'{benchmark_name}_depth_3DGS.h5'
+            if use_work_dir:
+                gs_tmp_path = Path(work_dir) / f'{benchmark_name}_depth_3DGS.h5'
+                print(f"Copying {gs_depth_path} to {gs_tmp_path}")
+                shutil.copy(gs_depth_path, gs_tmp_path)
+                gs_depth_path = gs_tmp_path
 
-                metric_results = metric_fn.compute_metric_depth(gt_depth, pd_depth, depth_mask)
-                scale_results = metric_fn.compute_scale_inv_depth(gt_depth, pd_depth, depth_mask)
-                affine_results = metric_fn.compute_affine_inv_depth(gt_depth, pd_depth, depth_mask)
-                metric_result_list.append(metric_results)
-                scale_result_list.append(scale_results)
-                affine_result_list.append(affine_results)
 
-                pbar.update(1)
+            with(h5py.File(h5_depth_path,'r') as f_depth_h5,
+                 h5py.File(gs_depth_path, 'r') as gs_depth_h5):
+                entries = [x for x in gs_depth_h5.keys() if '_depth' in x]
+
+                for entry in tqdm(entries):
+                    depth = np.array(f_depth_h5[entry])
+                    depth[depth <= 0] = np.inf
+                    pd_depth = torch.from_numpy(depth).to(torch.float32).to(device)
+
+                    gs_depth = np.array(gs_depth_h5[entry])
+                    gs_depth[depth <= 0] = np.inf
+                    depth_mask = np.isfinite(depth) & (depth > 0)
+
+                    gs_depth = torch.from_numpy(gs_depth).to(torch.float32).to(device)
+                    depth_mask = torch.from_numpy(depth_mask).bool().to(device)
+
+                    metric_results = metric_fn.compute_metric_depth(gs_depth, pd_depth, depth_mask)
+                    scale_results = metric_fn.compute_scale_inv_depth(gs_depth, pd_depth, depth_mask)
+                    affine_results = metric_fn.compute_affine_inv_depth(gs_depth, pd_depth, depth_mask)
+                    metric_result_list.append(metric_results)
+                    scale_result_list.append(scale_results)
+                    affine_result_list.append(affine_results)
+
+
+        else:
+            with (
+                EvalDataLoaderPipeline(benchmark_config['path'], benchmark_config['work_path'],
+                                       width=benchmark_config['width'], height=benchmark_config['height'],
+                                       depth_unit=benchmark_config['depth_unit']) as eval_data_pipe,
+                tqdm(total=len(eval_data_pipe), desc=benchmark_name, leave=False) as pbar,
+                h5py.File(h5_depth_path,
+                          'r') as f_depth_h5
+            ):
+                for i in range(len(eval_data_pipe)):
+                    sample = eval_data_pipe.get()
+                    sample = {
+                        k: v.to(device) if isinstance(v, torch.Tensor) else v
+                        for k, v in sample.items()
+                    }
+                    scenename, filename = sample["scenename"], sample["filename"]
+                    _, gt_depth, depth_mask = (
+                        sample["image"],
+                        sample["depth"],
+                        sample["depth_mask"]
+                    )
+                    # pd_depth_data = np.load(eval_data_pipe.path / scenename / mde_model / f"{filename}.npz")
+                    # pd_depth, pd_intrinsic = pd_depth_data["depth"], pd_depth_data["K"]
+
+                    pd_depth = get_depth_from_h5(f_depth_h5, scenename, filename)
+                    pd_depth = torch.from_numpy(pd_depth).to(torch.float32).to(device)
+
+                    metric_results = metric_fn.compute_metric_depth(gt_depth, pd_depth, depth_mask)
+                    scale_results = metric_fn.compute_scale_inv_depth(gt_depth, pd_depth, depth_mask)
+                    affine_results = metric_fn.compute_affine_inv_depth(gt_depth, pd_depth, depth_mask)
+                    metric_result_list.append(metric_results)
+                    scale_result_list.append(scale_results)
+                    affine_result_list.append(affine_results)
+
+                    pbar.update(1)
 
         single_results = {'metric': key_average(metric_result_list), 'scale': key_average(scale_result_list),
                           'affine': key_average(affine_result_list)}
@@ -132,14 +171,18 @@ def main():
 
     device = torch.device(args.device)
 
-    first_dataset_name = list(dataset_config.keys())[0]
-    first_subset_name = list(dataset_config[first_dataset_name]['subsets'].keys())[0]
-    depth_models = get_mde_list(first_dataset_name, os.path.join(dataset_config['work_path'], first_subset_name))
+    # first_dataset_name = list(dataset_config.keys())[0]
+    # first_subset_name = list(dataset_config[first_dataset_name]['subsets'].keys())[0]
 
     for name, config in config_iterator(config_path):
         job_args = []
-        if 'contains_gt_depth' not in config or not config['contains_gt_depth']:
+        if not args.gs_depth and ('contains_gt_depth' not in config or not config['contains_gt_depth']):
             continue
+
+        depth_models = get_mde_list(name, config['work_path'])
+
+        if args.gs_depth:
+            depth_models = [x for x in depth_models if '3DGS' not in x]
 
         for mde_model in depth_models:
             single_results_path = Path(config['work_path']) / 'depth_results' / f'{mde_model}.json'
@@ -148,7 +191,7 @@ def main():
                 print(f"Skipping: {name} - {mde_model} since the results already exists in {single_results_path}")
                 continue
 
-            job_args.append((mde_model, name, config, device, args.work_dir, args.recalc))
+            job_args.append((mde_model, name, config, device, args.work_dir, args.recalc, args.gs_depth))
 
         log_dir = os.path.join(config['work_path'], 'slurm_logs')
         os.makedirs(log_dir, exist_ok=True)

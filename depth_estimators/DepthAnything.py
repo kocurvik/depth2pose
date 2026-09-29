@@ -18,6 +18,23 @@ dav2_model_configs = {
 }
 
 
+def _prediction_get(prediction, *names):
+    for name in names:
+        if hasattr(prediction, name):
+            return getattr(prediction, name)
+        if isinstance(prediction, dict) and name in prediction:
+            return prediction[name]
+    return None
+
+
+def _as_numpy(x):
+    if x is None:
+        return None
+    if torch.is_tensor(x):
+        return x.detach().cpu().numpy()
+    return np.asarray(x)
+
+
 class DepthAnything(BaseDepthEstimator):
     def __init__(self, checkpoint_name, *args, version=2, requires_intrinsics=False, **kwargs):
         super().__init__(*args, requires_intrinsics=requires_intrinsics, **kwargs)
@@ -82,6 +99,55 @@ class DepthAnything(BaseDepthEstimator):
             runtime = perf_counter_ns() - start_time
 
             return {'depth': 1.0 / depth, 'runtime': runtime}
+
+    def infer_pair(self, image1, image2, size1=None, size2=None, **kwargs):
+        if self.version != 3:
+            raise NotImplementedError("Pairwise pose regression is only implemented for DepthAnything V3")
+        if self.requires_intrinsics and ('K1' not in kwargs.keys() or 'K2' not in kwargs.keys()):
+            raise ValueError("Intrinsics K1 and K2 are required for calibrated DepthAnything V3 pair inference")
+
+        input_images = []
+        for image, size in ((image1, size1), (image2, size2)):
+            input_image = cv2.cvtColor(cv2.imread(image), cv2.COLOR_BGR2RGB)
+            if size is not None:
+                input_image = cv2.resize(input_image, (int(size[0]), int(size[1])))
+            input_images.append(Image.fromarray(input_image))
+
+        start_time = perf_counter_ns()
+        if self.requires_intrinsics:
+            intrinsics_in = np.stack([kwargs['K1'], kwargs['K2']], axis=0)
+            prediction = self.model.inference(input_images, intrinsics=intrinsics_in)
+        else:
+            prediction = self.model.inference(input_images)
+        runtime = perf_counter_ns() - start_time
+
+        depth = _prediction_get(prediction, 'depth', 'depths')
+        intrinsics = _prediction_get(prediction, 'intrinsics', 'K')
+        extrinsics = _prediction_get(prediction, 'extrinsics', 'extrinsic')
+        camera_poses = _prediction_get(prediction, 'camera_poses', 'poses', 'cam2world')
+
+        if depth is None:
+            raise ValueError("DepthAnything V3 prediction did not return depth")
+        depth = _as_numpy(depth)
+        intrinsics = _as_numpy(intrinsics)
+        if intrinsics is None:
+            intrinsics = np.stack([kwargs.get('K1'), kwargs.get('K2')], axis=0) if self.requires_intrinsics else None
+        if extrinsics is None:
+            if camera_poses is None:
+                raise ValueError("DepthAnything V3 prediction did not return camera poses")
+            extrinsics = np.linalg.inv(_as_numpy(camera_poses))
+        else:
+            extrinsics = _as_numpy(extrinsics)
+
+        return {
+            "depth1": depth[0],
+            "depth2": depth[1],
+            "K1": None if intrinsics is None else np.asarray(intrinsics)[0],
+            "K2": None if intrinsics is None else np.asarray(intrinsics)[1],
+            "extrinsic1": extrinsics[0],
+            "extrinsic2": extrinsics[1],
+            "runtime": runtime,
+        }
 
 
 

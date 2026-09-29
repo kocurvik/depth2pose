@@ -113,7 +113,7 @@ def save_full_results(args, full_results):
 
 
 def get_full_results_h5_path(args):
-    results_dir = get_results_dir(args, 'full')
+    results_dir = get_results_dir(args, getattr(args, 'full_results_type', 'full'))
     os.makedirs(results_dir, exist_ok=True)
     h5_path = os.path.join(results_dir, f'{args.depth}.h5')
     return h5_path

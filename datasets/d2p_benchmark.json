@@ -1,8 +1,8 @@
 {
     "vegetation": {
         "single_scene_subsets": true,
-        "path": "/projects/p1358-25-2/data/d2p/vegetation",
-        "work_path": "/projects/p1358-25-2/mdrpbench/vegetation",
+        "path": "/project/p1358-25-2/data/d2p/vegetation",
+        "work_path": "/project/p1358-25-2/mdrpbench/vegetation",
         "subsets": {
             "dresden_1": {
                 "max_pairs": 250,
@@ -56,8 +56,8 @@
     },
     "statues": {
         "single_scene_subsets": true,
-        "path": "/projects/p1358-25-2/data/d2p/statues",
-        "work_path": "/projects/p1358-25-2/mdrpbench/statues",
+        "path": "/project/p1358-25-2/data/d2p/statues",
+        "work_path": "/project/p1358-25-2/mdrpbench/statues",
         "subsets": {
             "babies_cerny": {
                 "max_pairs": 250,

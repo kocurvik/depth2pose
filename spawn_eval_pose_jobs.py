@@ -6,7 +6,7 @@ import submitit
 
 from eval_pose import eval_single_mde
 from utils.config import config_iterator
-from utils.results import get_basename, get_mde_list
+from utils.results import get_basename, get_mde_list, get_results_dir
 from utils.storage import get_full_results_h5_path
 
 
@@ -25,14 +25,19 @@ def parse_args():
     parser.add_argument('-nro', '--no_reproj_only_ransac', action='store_true', default=False)
     parser.add_argument('--timeout_pool', action='store_true', default=False)
     parser.add_argument('--recalc', action='store_true', default=False)
+    parser.add_argument('--fix', action='store_true', default=False)
+    parser.add_argument('--overwrite', action='store_true', default=False)
+    parser.add_argument('--append', action='store_true', default=False)
     parser.add_argument('-nw', '--num_workers', type=int, default=1)
     parser.add_argument('-l', '--load', action='store_true', default=False)
     parser.add_argument('-f', '--first', type=int, default=None)
     parser.add_argument('--explicit_solvers', type=str, default=None)
+    parser.add_argument('--variance',  type=int, default=None)
     parser.add_argument('--config_path', type=str, default=None)
     parser.add_argument('--work_path', type=str, default=None)
     parser.add_argument('--name', type=str, default=None)
     parser.add_argument('--matches', type=str, default='splg_2048_noresize')
+    parser.add_argument('--max_iters_only', action='store_true', default=False)
     # --- slurm-specific args ---
     parser.add_argument('--account', type=str, default='p1358-25-2',
                         help='Slurm account name')
@@ -69,22 +74,44 @@ def main(args):
 
     depths_to_run = ['none', 'gt'] + mde_list
 
+    print(depths_to_run)
+
     array_job_arguments = []
+
+    depths_ran = []
 
     for depth_name in depths_to_run:
         job_args = copy.copy(args)
         job_args.depth = depth_name
         h5_path = get_full_results_h5_path(job_args)
-        if os.path.exists(h5_path) and not args.recalc:
+        if os.path.exists(h5_path) and not args.recalc and not args.variance and not args.fix:
             print(f"Results for {depth_name} already available at {h5_path}. Skipping.")
             continue
+
+        if args.variance:
+            results_dir = get_results_dir(job_args)
+            results_dir = os.path.join(results_dir, f'variance')
+            json_path = os.path.join(results_dir, f'{job_args.depth}.json')
+            if os.path.exists(json_path):
+                continue
+
+        if args.fix:
+            if not args.include_shared_focal:
+                continue
+            if 'Calib' in depth_name or 'none' == depth_name:
+                continue
+            job_args.append = True
+            job_args.overwrite = True
+            job_args.explicit_solvers = 'sf_shift_ro'
+
         job_args.depth = depth_name
         array_job_arguments.append(job_args)
+        depths_ran.append(depth_name)
 
     jobs = executor.map_array(run_for_depth, array_job_arguments)
 
     print(f"\nSubmitted {len(jobs)} job(s) with log dir {log_dir}:")
-    for depth_name, job in zip(depths_to_run, jobs):
+    for depth_name, job in zip(depths_ran, jobs):
         print(f"Depth: {depth_name} job_id={job.job_id}")
 
 

@@ -22,6 +22,7 @@ def parse_args():
     parser.add_argument('-ed', '--eval_depth', action='store_true', default=False)
     parser.add_argument('--matches', type=str, default='splg_2048_noresize')
     parser.add_argument('--out_dir', type=str, default='csv_results')
+    parser.add_argument('--variance', action='store_true', default=False)
     parser.add_argument('-a', '--append', action='store_true', default=False,
                         help='Append to existing CSV instead of overwriting the whole file')
     parser.add_argument('-o', '--overwrite', action='store_true', default=False,
@@ -30,10 +31,12 @@ def parse_args():
     return args
 
 
-def save_csv(df, path, key_cols, append=False, overwrite=False, keep_slim_cols=None, mean_over_groups=False):
+def save_csv(df, path, key_cols, append=False, overwrite=False, keep_slim_cols=None, mean_over_groups=False, round=4):
     if keep_slim_cols is not None:
         cols = [c for c in key_cols + keep_slim_cols if c in df.columns]
         df = df[cols].round(2)
+    else:
+        df = df.round(round)
 
     if mean_over_groups:
         group_cols = [c for c in key_cols if c != 'dataset']
@@ -59,7 +62,7 @@ def save_csv(df, path, key_cols, append=False, overwrite=False, keep_slim_cols=N
 
 def process_single_dataset(args):
     all_metrics = merge_summary_results(args)
-    flat_pose_metrics = flatten_pose_metrics(all_metrics)
+    flat_pose_metrics = flatten_pose_metrics(all_metrics, variance=args.variance)
     if 'mean_inliers' in flat_pose_metrics.columns:
         flat_pose_metrics['mean_inliers'] *= 100
 
@@ -85,7 +88,7 @@ if __name__ == '__main__':
 
             single_args = copy.copy(args)
             single_args.name = name
-            single_args.eval_depth = args.eval_depth and "contains_gt_depth" in config and config["contains_gt_depth"]
+            single_args.eval_depth = args.eval_depth #and "contains_gt_depth" in config and config["contains_gt_depth"]
             single_args.work_path = config["work_path"]
             flat_pose_results, flat_depth_results = process_single_dataset(single_args)
             flat_pose_results.insert(0, 'dataset', name)
@@ -105,17 +108,26 @@ if __name__ == '__main__':
         # if all_depth_df is not None:
         #     all_depth_df.insert(0, 'dataset', args.name)
 
+    if args.variance:
+        args.prefix = f'variance_{args.prefix}'
+        keep_slim_cols = ['pose_mAA_10', 'mean_inliers']
+    else:
+        keep_slim_cols = ['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers']
+
+    top_level_name = 'seed' if args.variance else 'iters'
+
+
     matches = args.matches.split('_')[0]
 
     os.makedirs(args.out_dir, exist_ok=True)
     save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}_{matches}_pose_results.csv'),
-             ['group', 'dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite)
+             ['group', 'dataset', 'mde', top_level_name, 'solver'], args.append, args.overwrite)
     save_csv(all_pose_df, os.path.join(args.out_dir, f'{args.prefix}_{matches}_slim_pose_results.csv'),
-             ['group', 'dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite,
-             keep_slim_cols=['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers'])
+             ['group', 'dataset', 'mde', top_level_name, 'solver'], args.append, args.overwrite,
+             keep_slim_cols=keep_slim_cols)
     save_csv(all_pose_df, os.path.join(args.out_dir, f'per_group_{args.prefix}_{matches}_slim_pose_results.csv'),
-             ['group', 'dataset', 'mde', 'iters', 'solver'], args.append, args.overwrite,
-             keep_slim_cols=['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers'], mean_over_groups=True)
+             ['group', 'dataset', 'mde', top_level_name, 'solver'], args.append, args.overwrite,
+             keep_slim_cols=keep_slim_cols, mean_over_groups=True)
     if all_depth_df is not None:
         save_csv(all_depth_df, os.path.join(args.out_dir, f'{args.prefix}_depth_results.csv'), ['group', 'dataset', 'mde'], args.append, args.overwrite)
 
