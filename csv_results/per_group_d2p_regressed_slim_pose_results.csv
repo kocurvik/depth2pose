@@ -1,0 +1,11 @@
+dataset,mde,iters,solver,pose_mAA_10,f_mAA_10,mean_mde_runtime
+statues,DepthAnythingV3Calib-DA3-GIANT-1.1,0,regressed_pose,78.71,0.0,150.15
+statues,DepthAnythingV3Calib-DA3-LARGE-1.1,0,regressed_pose,79.01,0.0,113.81
+statues,MapAnythingCalib-map-anything,0,regressed_pose,74.12,89.02,351.14
+statues,Pi3Calib-Pi3X,0,regressed_pose,86.58,97.58,163.4
+statues,VGGT-VGGT-1B,0,regressed_pose,76.39,55.71,134.92
+vegetation,DepthAnythingV3Calib-DA3-GIANT-1.1,0,regressed_pose,75.1,0.0,163.78
+vegetation,DepthAnythingV3Calib-DA3-LARGE-1.1,0,regressed_pose,73.37,0.0,129.42
+vegetation,MapAnythingCalib-map-anything,0,regressed_pose,74.04,86.2,366.11
+vegetation,Pi3Calib-Pi3X,0,regressed_pose,86.46,95.58,165.73
+vegetation,VGGT-VGGT-1B,0,regressed_pose,75.59,42.62,136.82
