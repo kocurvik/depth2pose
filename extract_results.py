@@ -6,7 +6,7 @@ import pandas as pd
 
 from utils.config import config_iterator
 from utils.results import merge_summary_results, print_results_all, merge_summary_depth_results, \
-    flatten_pose_metrics, flatten_depth_metrics
+    flatten_pose_metrics, flatten_depth_metrics, get_results_dir
 
 
 def parse_args():
@@ -27,7 +27,13 @@ def parse_args():
                         help='Append to existing CSV instead of overwriting the whole file')
     parser.add_argument('-o', '--overwrite', action='store_true', default=False,
                         help='When used with --append, overwrite existing rows matching the key columns')
+    parser.add_argument('-r', '--regressed', action='store_true', default=False,
+                        help='Extract results produced by (spawn_)eval_regressed_pose(_jobs).py')
     args = parser.parse_args()
+    if args.regressed:
+        if args.variance:
+            parser.error('--variance is not supported with --regressed')
+        args.matches = 'regressed_pose'
     return args
 
 
@@ -63,7 +69,10 @@ def save_csv(df, path, key_cols, append=False, overwrite=False, keep_slim_cols=N
 def process_single_dataset(args):
     all_metrics = merge_summary_results(args)
     flat_pose_metrics = flatten_pose_metrics(all_metrics, variance=args.variance)
-    if 'mean_inliers' in flat_pose_metrics.columns:
+    if args.regressed:
+        # regressed pose has no RANSAC, the inlier ratio is only a placeholder
+        flat_pose_metrics = flat_pose_metrics.drop(columns='mean_inliers', errors='ignore')
+    elif 'mean_inliers' in flat_pose_metrics.columns:
         flat_pose_metrics['mean_inliers'] *= 100
 
     if args.eval_depth:
@@ -90,6 +99,9 @@ if __name__ == '__main__':
             single_args.name = name
             single_args.eval_depth = args.eval_depth #and "contains_gt_depth" in config and config["contains_gt_depth"]
             single_args.work_path = config["work_path"]
+            if not os.path.isdir(get_results_dir(single_args)):
+                print(f"No summary results found for {name} at {get_results_dir(single_args)}. Skipping.")
+                continue
             flat_pose_results, flat_depth_results = process_single_dataset(single_args)
             flat_pose_results.insert(0, 'dataset', name)
             flat_pose_results.insert(0, 'group', scene_group)
@@ -111,6 +123,8 @@ if __name__ == '__main__':
     if args.variance:
         args.prefix = f'variance_{args.prefix}'
         keep_slim_cols = ['pose_mAA_10', 'mean_inliers']
+    elif args.regressed:
+        keep_slim_cols = ['pose_mAA_10', 'f_mAA_10', 'mean_mde_runtime']
     else:
         keep_slim_cols = ['pose_mAA_10', 'mean_mde_runtime', 'mean_inliers']
 
