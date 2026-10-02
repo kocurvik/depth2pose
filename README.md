@@ -29,6 +29,8 @@
 # About
 This repository contains the full evalautation code the depth2pose framework for estimting monocular depth estimators. Our [paper](https://arxiv.org/abs/2605.19797) was accepted in the E&D track of NeurIPS 2026.
 
+*TLDR:* Using standard metrics to evaluate MDEs requires known ground truth depth, which may be hard to acquire. In the Depth2Pose framework we evaluate the depth via two-view relative pose accuracy using the [RePoseD framework](https://kocurvik.github.io/reposed/). This approach only requires a collection of images from which a COLMAP reconstruction can be obtained. By design, depth2pose focuses its evaluation on the quality of geometrically relevant parts of the images and thus captures the usefulness of the estimated depth for downstream geometric tasks.
+
 ## Dataset download
 
 You can download the full D2P dataset used in the paper from [hugging face](https://huggingface.co/datasets/floodgab/d2p_dataset)
