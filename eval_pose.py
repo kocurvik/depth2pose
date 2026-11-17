@@ -20,7 +20,7 @@ from utils.storage import encode_result, save_full_results, get_full_results_h5_
 
 MDE_K_WARNING_SHOWN = False
 
-def parse_args():
+def build_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-st',  '--sampson_threshold', type=float, default=2.0)
     parser.add_argument('-sw',  '--sampson_weight', type=float, default=1.0)
@@ -47,8 +47,22 @@ def parse_args():
     parser.add_argument('--name')
     parser.add_argument('--matches', type=str, default='splg_2048_noresize')
 
+    return parser
 
-    return parser.parse_args()
+
+def parse_args(argv=None):
+    return build_parser().parse_args(argv)
+
+
+def get_default_args(**overrides):
+    """Namespace with the command line defaults of this script, updated with overrides (for calling
+    eval_single_mde from other scripts)."""
+    args = parse_args([])
+    for k, v in overrides.items():
+        if not hasattr(args, k):
+            raise AttributeError(f'Unknown eval_pose argument: {k}')
+        setattr(args, k, v)
+    return args
 
 def get_result_dict(info, monodepth_pose, R_gt, t_gt, f1_gt, f2_gt):
     out = {}
@@ -440,11 +454,11 @@ def eval_single_mde(args):
             new_full_results = [eval_experiment(x) for x in tqdm(gen_data(), total=total_length)]
         else:
             if args.timeout_pool:
-                pool = NoDaemonProcessPool(args.num_workers)
-                new_full_results = [x for x in pool.imap(run_with_timeout, tqdm(gen_data(), total=total_length))]
+                with NoDaemonProcessPool(args.num_workers) as pool:
+                    new_full_results = [x for x in pool.imap(run_with_timeout, tqdm(gen_data(), total=total_length))]
             else:
-                pool = Pool(args.num_workers)
-                new_full_results = [x for x in pool.imap(eval_experiment, tqdm(gen_data(), total=total_length))]
+                with Pool(args.num_workers) as pool:
+                    new_full_results = [x for x in pool.imap(eval_experiment, tqdm(gen_data(), total=total_length))]
 
         full_results.extend(new_full_results)
         if args.direct_read and f_depth is not None:
