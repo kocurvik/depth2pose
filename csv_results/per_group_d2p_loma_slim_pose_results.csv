@@ -2639,3 +2639,7 @@ vegetation,none,500,baseline_calib,85.96,0.0,75.43
 vegetation,none,500,baseline_sf,75.78,0.0,75.92
 vegetation,none,1000,baseline_calib,86.31,0.0,75.5
 vegetation,none,1000,baseline_sf,76.09,0.0,76.05
+statues,MoGeV3Calib-moge-3-vitl,1000,calib,84.65,629.73,71.43
+statues,MoGeV3Calib-moge-3-vitl,1000,calib_ro,71.93,629.73,68.53
+vegetation,MoGeV3Calib-moge-3-vitl,1000,calib,73.4,726.66,73.1
+vegetation,MoGeV3Calib-moge-3-vitl,1000,calib_ro,51.31,726.66,60.78

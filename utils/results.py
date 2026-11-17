@@ -7,6 +7,9 @@ from matplotlib import pyplot as plt
 from prettytable import PrettyTable
 from matplotlib.lines import Line2D
 
+# np.trapz was renamed to np.trapezoid in numpy 2.0 and removed in numpy 2.4
+trapezoid = getattr(np, 'trapezoid', None) or np.trapz
+
 
 def compute_recall(errors):
     num_elements = len(errors)
@@ -28,7 +31,7 @@ def compute_auc(errors, thresholds):
         last_index = np.searchsorted(errors, t, side="right")
         r = np.r_[recall[:last_index], recall[last_index - 1]]
         e = np.r_[errors[:last_index], t]
-        auc = np.trapz(r, x=e) / t
+        auc = trapezoid(r, x=e) / t
         aucs.append(auc)
     return aucs
 
