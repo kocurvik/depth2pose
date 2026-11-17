@@ -214,13 +214,16 @@ def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
     # Find common models AFTER filtering
     models = set.intersection(*(set(d.keys()) for d in maa_dicts.values()))
     models = ['MoGeV2', 'UniK3D', 'Pi3', 'MapAnything', 'DepthAnythingV2']
-    models = ['MoGeV2', 'UniK3D', 'Pi3', 'MapAnything']
+    models = ['MoGeV2', 'Pi3', 'MapAnything', 'DepthPro']
     models_nicknames = {
         'DepthAnythingV2': 'DAv3',
-        'MapAnything': 'Map Anything',
+        'MapAnything': 'MapAnything',
         'MoGeV2': 'MoGeV2',
+        'MoGeV1': 'MoGeV1',
         'Pi3': 'Pi3',
-        'UniK3D': 'UniK3D'
+        'Metric3DV2': 'Metric3D',
+        'UniK3D': 'UniK3D',
+        'DepthPro': 'DepthPro'
     }
 
     x = np.arange(len(dataset_names))
@@ -286,7 +289,7 @@ def plot_maa(maa_dicts, output_file, title_ending='',nicknames=''):
 
     #plt.xticks(x, dataset_names, rotation=90)
     plt.xticks(x, dataset_nicknames)
-    plt.yticks(np.asarray([70,80,90]))
+    plt.yticks(np.asarray([60,70,80,90]))
     #plt.gca().invert_yaxis()
     #plt.xlabel("Dataset")
     # plt.ylim(61,94)
@@ -328,7 +331,7 @@ def filter_scenes(dicts, remove_scenes):
 def plot_maa_lineplot(maa_dicts, output_path, plot_with_avg):
     
     # manually prune data
-    remove_mdes = ['gt','none','VGGT','Metric3DV2','DepthAnythingV3','MoGeV1','UniDepth2','UniDepth1','DepthPro']
+    remove_mdes = ['gt','none','VGGT','DepthAnythingV3','UniDepth2','UniDepth1','MoGeV1']#,'DepthPro']
     
     statues_scenes = ['babies_cerny','giant_chair_vltava','kyoto_nakagawahigashiyama_statue','niemand_statue','r2d2_folimanka','yvr_huge_chair','franz_kafka','hanging_girl','memorial_victims_of_communism','prague_castle_statue','spejbl_hurvinek','zlata_kasna_chrt']
     remove_statues = ['babies_cerny','giant_chair_vltava','niemand_statue','r2d2_folimanka','yvr_huge_chair','hanging_girl','prague_castle_statue','spejbl_hurvinek']
@@ -491,7 +494,7 @@ def plot_rankings_paper(dicts, output_file, title_ending='', maa_dicts=None):
 def plot_lineplot_paper(rank_dicts, output_path, plot_with_avg, maa_dicts):
 
     # manually prune data
-    remove_mdes = ['gt','none','VGGT','Metric3DV2','DepthAnythingV3','MoGeV1','UniDepth2','UniDepth1','DepthPro']
+    remove_mdes = ['gt','none','VGGT','Metric3DV2','DepthAnythingV3','MoGeV1','UniDepth2','UniDepth1']
     
     statues_scenes = ['babies_cerny','giant_chair_vltava','kyoto_nakagawahigashiyama_statue','niemand_statue','r2d2_folimanka','yvr_huge_chair','franz_kafka','hanging_girl','memorial_victims_of_communism','prague_castle_statue','spejbl_hurvinek','zlata_kasna_chrt']
     remove_statues = ['babies_cerny','giant_chair_vltava','niemand_statue','r2d2_folimanka','yvr_huge_chair','hanging_girl','prague_castle_statue','spejbl_hurvinek']

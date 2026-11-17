@@ -195,7 +195,7 @@ def df_vals_to_latex_string(combined_df):
             max_digits = max(max_digits, digits)
 
         def format_cell(val, rank, max_d, max_r):
-            if pd.isna(val) or val < 0.0:
+            if pd.isna(val) or val <= 0.0:
                 return ' '
 
             res = f"{val:.2f}"
@@ -410,7 +410,7 @@ def print_combined_pivot_latex_table(depth_pivot, pose_pivot, depth_cols, solver
 
 
 def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='scale', iters=1000, include_ro=True,
-                         keep_only=None, best_only=False, dataset=None, mAA_threshold=10):
+                         keep_only=None, best_only=False, dataset=None, mAA_threshold=10, group_by='dataset'):
     baseline, depth_cols, solvers = get_solvers_depths(cal_type, depth_type, include_ro)
 
     mAA_metric_str = f'pose_mAA_{mAA_threshold}'
@@ -419,8 +419,8 @@ def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='sca
         depth_cols = ['d1_si']
         solvers = ['calib']
         datasets = list(dataset)
-        results_df = results_df[results_df['dataset'].isin(datasets)]
-        depth_df = depth_df[depth_df['dataset'].isin(datasets)]
+        results_df = results_df[results_df[group_by].isin(datasets)]
+        depth_df = depth_df[depth_df[group_by].isin(datasets)]
 
         results_df = results_df.copy()[results_df['iters'] == iters]
 
@@ -428,8 +428,8 @@ def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='sca
             depth_df = depth_df[~depth_df['mde'].str.contains('Calib')]
             results_df = results_df[~results_df['mde'].str.contains('Calib')]
 
-        depth_long = depth_df.groupby(['mde', 'dataset'])[depth_cols].mean().reset_index()
-        depth_pivot = depth_long.pivot(index='mde', columns='dataset', values=depth_cols)
+        depth_long = depth_df.groupby(['mde', group_by])[depth_cols].mean().reset_index()
+        depth_pivot = depth_long.pivot(index='mde', columns=group_by, values=depth_cols)
         depth_pivot = depth_pivot.swaplevel(axis=1).sort_index(axis=1)
         depth_pivot = depth_pivot.reindex(columns=pd.MultiIndex.from_product([datasets, depth_cols]))
 
@@ -439,11 +439,11 @@ def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='sca
 
         baselines = {'name': baseline}
         for d in datasets:
-            b_df = results_df[(results_df['solver'] == baseline) & (results_df['dataset'] == d)]
+            b_df = results_df[(results_df['solver'] == baseline) & (results_df[group_by] == d)]
             baselines[d] = b_df[mAA_metric_str].mean() if not b_df.empty else None
 
-        grouped = results_df.groupby(['mde', 'solver', 'dataset'])[mAA_metric_str].mean().reset_index()
-        pose_pivot = grouped.pivot(index='mde', columns=['dataset', 'solver'], values=mAA_metric_str)
+        grouped = results_df.groupby(['mde', 'solver', group_by])[mAA_metric_str].mean().reset_index()
+        pose_pivot = grouped.pivot(index='mde', columns=[group_by, 'solver'], values=mAA_metric_str)
         pose_pivot = pose_pivot.reindex(columns=pd.MultiIndex.from_product([datasets, solvers]))
 
         sort_metric = 'd1_ssi' if depth_type == 'affine' else 'd1_si'
@@ -473,8 +473,8 @@ def print_combined_table(results_df, depth_df, cal_type='calib', depth_type='sca
         return
 
     if dataset is not None:
-        results_df = results_df[results_df['dataset'] == dataset]
-        depth_df = depth_df[depth_df['dataset'] == dataset]
+        results_df = results_df[results_df[group_by] == dataset]
+        depth_df = depth_df[depth_df[group_by] == dataset]
 
     depth_df = depth_df.groupby('mde')[depth_cols].mean().reset_index().copy()
 
@@ -538,7 +538,7 @@ def print_pose_latex_table(pivot, baselines=None, include_calib_col=True, mAA_th
     formatted = pivot.copy().astype(object)
     for col in pivot.columns:
         vals = pd.to_numeric(pivot[col], errors='coerce')
-        rank_mask = pivot.index != 'gt'
+        rank_mask = ~pivot.index.isin(['gt', '3DGS'])
         max_rank = int(rank_mask.sum())
         ranks = vals[rank_mask].rank(ascending=False, method='min').reindex(pivot.index)
         max_digits = max((len(str(int(abs(v)))) for v in vals if not pd.isna(v) and v >= 0), default=1)
@@ -576,13 +576,17 @@ def print_pose_latex_table(pivot, baselines=None, include_calib_col=True, mAA_th
     print(' & '.join(row2) + ' \\\\ ' + ' '.join(group_cmidrules))
     print(' & '.join(row3) + '\\\\ \\midrule')
 
+    prev_mde = None
     for mde, row in formatted.iterrows():
-        if mde == 'gt':
-            mde_name = '\\midrule GT'
+        if mde == '3DGS':
+            mde_name = '\\midrule 3DGS'
+        elif mde == 'gt':
+            mde_name = 'GT' if prev_mde == '3DGS' else '\\midrule GT'
         else:
             basename = get_mde_basename(mde)
             backbone = get_backbone_name(mde, short=True)
             mde_name = f'{basename}-{backbone}'
+        prev_mde = mde
 
         cells = [mde_name]
         if include_calib_col:
@@ -629,7 +633,7 @@ def print_join_latex_table(depth_df, standard_pivot, d2p_pivot, depth_cols, solv
 
     def format_column(series, higher_is_better):
         vals = pd.to_numeric(series, errors='coerce')
-        rank_mask = series.index != 'gt'
+        rank_mask = ~series.index.isin(['gt', '3DGS'])
         max_rank = rank_mask.sum()
         ranks = vals[rank_mask].rank(ascending=not higher_is_better, method='min').reindex(series.index)
         max_digits = max((len(str(int(abs(v)))) for v in vals if not pd.isna(v) and v >= 0), default=1)
@@ -700,13 +704,17 @@ def print_join_latex_table(depth_df, standard_pivot, d2p_pivot, depth_cols, solv
     print(' & '.join(row2) + ' \\\\ ' + cmid_row2)
     print(' & '.join(row3) + ' \\\\ \\midrule')
 
+    prev_mde = None
     for mde in depth_df.index:
-        if mde == 'gt':
-            mde_name = '\\midrule GT'
+        if mde == '3DGS':
+            mde_name = '\\midrule 3DGS'
+        elif mde == 'gt':
+            mde_name = 'GT' if prev_mde == '3DGS' else '\\midrule GT'
         else:
             basename = get_mde_basename(mde)
             backbone = get_backbone_name(mde, short=True)
             mde_name = f'{basename}-{backbone}'
+        prev_mde = mde
 
         cells = [mde_name]
         if include_calib_col:
@@ -746,15 +754,17 @@ def print_join_latex_table(depth_df, standard_pivot, d2p_pivot, depth_cols, solv
 
 
 def print_join_table(standard_results_df, d2p_results_df, depth_df, cal_type='calib',
-                     depth_type='both', iters=1000, include_ro=True, keep_only=None, best_only=True):
+                     depth_type='both', iters=1000, include_ro=True, keep_only=None, best_only=True, sort_metric='d1_si'):
     baseline_name, depth_cols, solvers = get_solvers_depths(cal_type, depth_type, include_ro)
 
-    sort_metric = 'd1_si'
-    agg_cols = list(depth_cols) + ([sort_metric] if sort_metric not in depth_cols else [])
+    reference_mdes = ['3DGS', 'gt']
+
+    agg_cols = list(depth_cols)
     depth_df = depth_df.groupby('mde')[agg_cols].mean().reset_index().copy()
-    new_row = {col: -1.0 for col in agg_cols}
-    new_row['mde'] = 'gt'
-    depth_df = pd.concat([depth_df, pd.DataFrame([new_row])], ignore_index=True)
+    missing_refs = [mde for mde in reference_mdes if mde not in depth_df['mde'].values]
+    if missing_refs:
+        extra_rows = pd.DataFrame([{**{col: -1.0 for col in agg_cols}, 'mde': mde} for mde in missing_refs])
+        depth_df = pd.concat([depth_df, extra_rows], ignore_index=True)
 
     standard_results_df = standard_results_df.copy()[standard_results_df['iters'] == iters]
     d2p_results_df = d2p_results_df.copy()[d2p_results_df['iters'] == iters]
@@ -789,17 +799,31 @@ def print_join_table(standard_results_df, d2p_results_df, depth_df, cal_type='ca
 
     combined = depth_df.set_index('mde')
 
-    if best_only:
-        combined['_basename'] = combined.index.to_series().apply(get_mde_basename)
-        idx = combined.groupby('_basename')[sort_metric].idxmax()
-        combined = combined.loc[idx].drop(columns=['_basename'])
+    if sort_metric in depth_cols:
+        combined['_sort'] = combined[sort_metric]
+    else:
+        # sort_metric is expected to be a metric column from d2p_results_df (e.g. 'pose_mAA_10'),
+        # averaged per mde over the primary solver so each mde gets a single sort value.
+        sort_source = d2p_results_df[d2p_results_df['solver'] == solvers[0]]
+        sort_vals = sort_source.groupby('mde')[sort_metric].mean()
+        combined['_sort'] = combined.index.to_series().map(sort_vals)
 
-    combined = combined.sort_values(by=sort_metric, ascending=False)
+    refs_present = [mde for mde in reference_mdes if mde in combined.index]
+
+    if best_only:
+        non_ref = combined.drop(index=refs_present).copy()
+        non_ref['_basename'] = non_ref.index.to_series().apply(get_mde_basename)
+        idx = non_ref.groupby('_basename')['_sort'].idxmax().dropna()
+        non_ref = non_ref.loc[idx].drop(columns=['_basename'])
+        combined = pd.concat([non_ref, combined.loc[refs_present]]) if refs_present else non_ref
+
+    combined = combined.sort_values(by='_sort', ascending=False).drop(columns=['_sort'])
     if keep_only is not None:
         combined = combined.head(keep_only)
 
-    if 'gt' in combined.index:
-        combined = pd.concat([combined.drop(index='gt'), combined.loc[['gt']]])
+    refs_present = [mde for mde in reference_mdes if mde in combined.index]
+    if refs_present:
+        combined = pd.concat([combined.drop(index=refs_present), combined.loc[refs_present]])
 
     selected_mdes = list(combined.index)
     standard_pivot = standard_pivot.reindex(selected_mdes)
@@ -840,12 +864,16 @@ def print_pose_table(results_df, cal_type='calib', depth_type='scale', iters=100
 
     all_results_df = pd.concat([group_results_df, mean_results_df], axis=0)
 
+    reference_mdes = ['3DGS', 'gt']
+
     if best_only:
         mean_first = all_results_df[(all_results_df[columns_by] == 'mean') &
-                                    (all_results_df['solver'] == solvers[0])].copy()
+                                    (all_results_df['solver'] == solvers[0]) &
+                                    (~all_results_df['mde'].isin(reference_mdes))].copy()
         mean_first['basename'] = mean_first['mde'].apply(get_mde_basename)
-        idx = mean_first.groupby('basename')[mAA_metric_str].idxmax()
-        keep_mdes = mean_first.loc[idx, 'mde'].values
+        idx = mean_first.groupby('basename')[mAA_metric_str].idxmax().dropna()
+        keep_mdes = list(mean_first.loc[idx, 'mde'].values) + [
+            mde for mde in reference_mdes if mde in all_results_df['mde'].values]
         all_results_df = all_results_df[all_results_df['mde'].isin(keep_mdes)]
 
     pivot = all_results_df[all_results_df[columns_by].isin(groups)].pivot(
@@ -853,8 +881,9 @@ def print_pose_table(results_df, cal_type='calib', depth_type='scale', iters=100
     pivot = pivot.reindex(columns=pd.MultiIndex.from_product([groups, solvers]))
     pivot = pivot.dropna(how='all')
     pivot = pivot.sort_values(by=('mean', solvers[0]), ascending=False)
-    if 'gt' in pivot.index:
-        pivot = pd.concat([pivot.drop(index='gt'), pivot.loc[['gt']]])
+    refs_present = [mde for mde in reference_mdes if mde in pivot.index]
+    if refs_present:
+        pivot = pd.concat([pivot.drop(index=refs_present), pivot.loc[refs_present]])
 
     print_pose_latex_table(pivot, baselines=baselines, include_calib_col=cal_type == 'calib', mAA_threshold=mAA_threshold)
 
@@ -863,54 +892,74 @@ def print_pose_table(results_df, cal_type='calib', depth_type='scale', iters=100
 
 
 if __name__ == '__main__':
-    depth_df = pd.read_csv('csv_results/standard_depth_results.csv')
+    standard_depth_df = pd.read_csv('csv_results/standard_depth_results.csv')
 
-    matches_list = ['loma', 'splg']
+    matches_list = ['loma', 'splg', 'roma']
+    # matches_list = ['loma', 'splg']
+    # matches_list = ['roma']
 
     for matches in matches_list:
         d2p_results = pd.read_csv(f'csv_results/d2p_{matches}_slim_pose_results.csv')
-        standard_results = pd.read_csv(f'csv_results/standard_{matches}_slim_pose_results.csv')
 
-        # print("-------MAIN PAPER TABLE ------")
-        # print()
-        # print_join_table(standard_results, d2p_results, depth_df, cal_type='calib', depth_type='scale', include_ro=True, keep_only=None, best_only=True)
+        if matches != 'roma':
+            standard_results = pd.read_csv(f'csv_results/standard_{matches}_slim_pose_results.csv')
 
+            # print("-------MAIN PAPER TABLE ------")
+            # print()
+            # print_join_table(standard_results, d2p_results, standard_depth_df, cal_type='calib', depth_type='scale',
+            #                  include_ro=True, keep_only=None, best_only=True, sort_metric='pose_mAA_10')
+
+            print("-------APPENDIX TABLE ------")
+            print_combined_table(standard_results, standard_depth_df, cal_type='calib', depth_type='both',
+                                 include_ro=True)
+            print("-------APPENDIX TABLE ------")
+            print_combined_table(standard_results, standard_depth_df, cal_type='uncal', depth_type='both',
+                                 include_ro=True)
+            print("-------APPENDIX TABLE ------")
+            print_combined_table(standard_results, standard_depth_df, cal_type='calib', depth_type='scale',
+                                 include_ro=False, dataset=['eth3d', 'scannetpp', 'lamar', 'sintel'])
 
         # appendix
-        # print("-------- D2P Appendix Table ---------")
-        # print_pose_table(d2p_results, cal_type='calib', depth_type='both', include_ro=True, best_only=False)
-
-        # main paper
-        # appendix
-        # print("-------APPENDIX TABLE ------")
-        # print_combined_table(standard_results, depth_df, cal_type='calib', depth_type='both', include_ro=True)
-        # print("-------APPENDIX TABLE ------")
-        # print_combined_table(standard_results, depth_df, cal_type='uncal', depth_type='both', include_ro=True)
-        # print("-------APPENDIX TABLE ------")
-        # print_combined_table(standard_results, depth_df, cal_type='calib', depth_type='scale', include_ro=False, dataset=['eth3d', 'scannetpp', 'lamar', 'sintel'])
-
-    for matches in matches_list:
-        full_d2p_results = pd.read_csv(f'csv_results/d2p_{matches}_pose_results.csv')
-        full_standard_results = pd.read_csv(f'csv_results/standard_{matches}_pose_results.csv')
-
-        for pose_mAA_t in range(1, 11):
-            print('\\begin{table}[h]')
-            print('\\resizebox{\\linewidth}{!}{')
-            print_pose_table(full_d2p_results, cal_type='calib', depth_type='both', include_ro=True,
-                             best_only=False, mAA_threshold=pose_mAA_t)
-            print('}')
-            print(f'\\caption{{pose mAA@{pose_mAA_t} for the d2p dataset using {matches} matches}}')
-            print('\\end{table}')
-
-        for pose_mAA_t in range(1, 11):
-            print('\\begin{table}[h]')
-            print('\\resizebox{\\linewidth}{!}{')
-            print_pose_table(full_standard_results, cal_type='calib', depth_type='both', include_ro=True,
-                             best_only=False, mAA_threshold=pose_mAA_t, groups = ('mean', 'eth3d', 'scannetpp', 'lamar', 'sintel'), columns_by='dataset')
-            # print_combined_table(full_standard_results, depth_df, cal_type='calib', depth_type='scale', include_ro=True,
-            #                      dataset=['eth3d', 'scannetpp', 'lamar', 'sintel'], mAA_threshold=pose_mAA_t)
-            print('}')
-            print(f'\\caption{{pose mAA@{pose_mAA_t} for the standard dataset using {matches} matches}}')
-            print('\\end{table}')
+        print("-------- D2P Appendix Table ---------")
+        print_pose_table(d2p_results, cal_type='calib', depth_type='both', include_ro=True, best_only=False)
+        print_pose_table(d2p_results, cal_type='uncal', depth_type='both', include_ro=True, best_only=False)
 
 
+    # d2p_depth_df = pd.read_csv('csv_results/d2p_depth_results.csv')
+    #
+    # for matches in matches_list:
+    #     full_d2p_results = pd.read_csv(f'csv_results/d2p_{matches}_pose_results.csv')
+    #     try:
+    #         full_standard_results = pd.read_csv(f'csv_results/standard_{matches}_pose_results.csv')
+    #     except FileNotFoundError:
+    #         full_standard_results = None
+    #
+    #     print('\\begin{table}[t]')
+    #     # print('\\resizebox{\\linewidth}{!}{')
+    #     print_combined_table(full_d2p_results, d2p_depth_df, cal_type='calib', depth_type='scale', include_ro=True,
+    #                          dataset=['vegetation', 'statues'], group_by='group')
+    #     # print('}')
+    #     print(f'\\caption{{pose mAA@10 for the d2p dataset using {matches} matches with 3DGS depth for comparison}}')
+    #     print('\\end{table}')
+    #     print('\\clearpage')
+    #
+    #     for pose_mAA_t in range(1, 11):
+    #         print('\\begin{table}[t]')
+    #         print('\\resizebox{\\linewidth}{!}{')
+    #         print_pose_table(full_d2p_results, cal_type='calib', depth_type='both', include_ro=True,
+    #                          best_only=False, mAA_threshold=pose_mAA_t)
+    #         print('}')
+    #         print(f'\\caption{{pose mAA@{pose_mAA_t} for the d2p dataset using {matches} matches}}')
+    #         print('\\end{table}')
+    #         print('\\clearpage')
+    #
+    #     if full_standard_results is not None:
+    #         for pose_mAA_t in range(1, 11):
+    #             print('\\begin{table}[t]')
+    #             print('\\resizebox{\\linewidth}{!}{')
+    #             print_pose_table(full_standard_results, cal_type='calib', depth_type='both', include_ro=True,
+    #                              best_only=False, mAA_threshold=pose_mAA_t, groups = ('mean', 'eth3d', 'scannetpp', 'lamar', 'sintel'), columns_by='dataset')
+    #             print('}')
+    #             print(f'\\caption{{pose mAA@{pose_mAA_t} for the standard dataset using {matches} matches}}')
+    #             print('\\end{table}')
+    #             print('\\clearpage')

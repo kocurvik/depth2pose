@@ -216,3 +216,6 @@ weights/*
 ORBvoc.txt
 exp.sh
 launch.json
+
+# D2P dataset downloaded from hugging face (see README, used by datasets/d2p_hf.json)
+/d2p/
