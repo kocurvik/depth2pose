@@ -95,7 +95,7 @@ Depth maps and pose results are stored per scene in `--data_path`. If the script
 
 ## Submitting your results
 
-The results are appended to `csv_results/d2p_<matches>_slim_pose_results.csv` (per scene) and `csv_results/per_group_d2p_<matches>_slim_pose_results.csv` (mean over the statues and vegetation scenes), which contain the results of all MDEs evaluated in the paper. To add your MDE to the results table, open a pull request with the updated CSV files and a link to your MDE.
+The results are appended to `csv_results/d2p_<matches>_slim_pose_results.csv` (per scene) and `csv_results/per_group_d2p_<matches>_slim_pose_results.csv` (mean over the statues and vegetation scenes), which contain the results of all MDEs evaluated in the paper. To add your MDE to the results table, open a pull request with the updated CSV files and a link to your MDE. See [#2](https://github.com/kocurvik/depth2pose/pull/2) (SurGe) for an example of such a pull request.
 
 If an MDE with the same name already is in the table, the script stops before running anything. Choose a different name, use `--overwrite` to replace its results (e.g. after fixing a bug in your MDE), or use `--out_dir` to write the results elsewhere.
 

@@ -2655,3 +2655,11 @@ vegetation,SurGe-surge-large,1000,calib,78.06,385.96,73.39
 vegetation,SurGe-surge-large,1000,calib_ro,56.59,385.96,63.42
 vegetation,SurGe-surge-large,1000,mdecalib,38.64,385.96,61.31
 vegetation,SurGe-surge-large,1000,mdecalib_ro,30.42,385.96,59.2
+statues,VGGTOmega-1b-416,1000,calib,82.66,153.07,71.12
+statues,VGGTOmega-1b-416,1000,calib_ro,67.85,153.07,64.72
+statues,VGGTOmega-1b-416,1000,mdecalib,33.22,153.07,57.64
+statues,VGGTOmega-1b-416,1000,mdecalib_ro,30.1,153.07,61.15
+vegetation,VGGTOmega-1b-416,1000,calib,79.28,150.43,73.51
+vegetation,VGGTOmega-1b-416,1000,calib_ro,58.95,150.43,64.22
+vegetation,VGGTOmega-1b-416,1000,mdecalib,31.72,150.43,59.33
+vegetation,VGGTOmega-1b-416,1000,mdecalib_ro,22.96,150.43,54.85
