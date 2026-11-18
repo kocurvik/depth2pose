@@ -80,6 +80,14 @@ const dict = {
 		description: 'Number of rows displayed per page.'
 	},
 	'controls.label.filters': { label: 'Filters' },
+	'controls.moreOptions': {
+		label: 'More options',
+		description: 'Benchmark, match type, evaluation case, depth type, iterations, page size and filters.'
+	},
+	'controls.moreOptions.disclaimer': {
+		label: 'Not all methods are available in all variants. Some combinations of options show only a subset of methods, or no rows at all.',
+		description: null
+	},
 
 	// Select options: benchmark mode
 
@@ -174,7 +182,7 @@ const dict = {
 
 	'controls.filter.hideGtOnly': {
 		label: 'Hide <code>gt</code> / oracle rows',
-		description: 'Exclude ground-truth / oracle depth entries from the table.'
+		description: 'Exclude ground-truth / oracle depth entries (e.g. gt, 3DGS) from the table.'
 	},
 	'controls.filter.bestMdeOnly': {
 		label: 'Show only best row per MDE family',

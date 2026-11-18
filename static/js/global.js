@@ -26,10 +26,12 @@ export function attachCardToggle(cardId, buttonId, contentId, showLang, hideLang
 }
 
 
+/** MDE names (normalized) treated as ground-truth / oracle depth rather than a monocular estimator. */
+const GT_ORACLE_MDES = new Set(['gt', 'ground-truth', 'ground_truth', 'none', '3dgs']);
+
 /** Check if an MDE name represents a ground-truth/oracle result. */
 export function isGtMde(value) {
-	const normalized = normalizeForSearch(value);
-	return normalized === 'gt' || normalized === 'ground-truth' || normalized === 'ground_truth' || normalized === 'none';
+	return GT_ORACLE_MDES.has(normalizeForSearch(value));
 }
 
 /** Check if an MDE name indicates that it is a calibrated method, based on the presence of 'Calib' in the name. */

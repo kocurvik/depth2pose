@@ -249,6 +249,7 @@ function populateControls() {
 	els.itersSelect.value = state.currentIters;
 	els.evaluationCaseSelect.value = state.mode;
 	els.solverVariantSelect.value = state.roVariant;
+	els.depthTypeSelect.value = state.depthType;
 	els.pageSizeSelect.value = String(state.pageSize);
 	els.hideGtOnly.checked = state.hideGtOnly;
 	els.bestMdeOnly.checked = state.bestMdeOnly;

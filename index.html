@@ -142,40 +142,12 @@
 				<!-- Controls Stack -->
 				<div class="controls-stack" id="controlsContent">
 
-					<!-- Controls for dataset, iterations, evaluation case, solver variant, search, page size -->
+					<!-- Primary controls: group/scene, estimator variant, search -->
 					<div class="top-controls-grid row-content">
-						<div class="field mb-0">
-							<label class="label" data-i18n="controls.label.benchmark"></label>
-							<div class="select is-fullwidth">
-								<select id="benchmarkModeSelect"></select>
-							</div>
-						</div>
-
-						<div class="field mb-0">
-							<label class="label" data-i18n="controls.label.source"></label>
-							<div class="select is-fullwidth">
-								<select id="sourceSelect"></select>
-							</div>
-						</div>
-
 						<div class="field mb-0">
 							<label class="label" id="datasetLabel" data-i18n="controls.label.dataset"></label>
 							<div class="select is-fullwidth">
 								<select id="datasetSelect"></select>
-							</div>
-						</div>
-
-						<div class="field mb-0">
-							<label class="label" data-i18n="controls.label.iters"></label>
-							<div class="select is-fullwidth">
-								<select id="itersSelect"></select>
-							</div>
-						</div>
-
-						<div class="field mb-0">
-							<label class="label" data-i18n="controls.label.evaluationCase"></label>
-							<div class="select is-fullwidth">
-								<select id="evaluationCaseSelect"></select>
 							</div>
 						</div>
 
@@ -186,50 +158,90 @@
 							</div>
 						</div>
 
-						<div class="field mb-0">
-							<label class="label" data-i18n="controls.label.depthType"></label>
-							<div class="select is-fullwidth">
-								<select id="depthTypeSelect"></select>
-							</div>
-						</div>
-
-						<div class="control-row-break"></div>
-
 						<div class="field mb-0 field-wide">
 							<label class="label" data-i18n="controls.label.search"></label>
 							<input id="searchInput" class="input" type="text" data-i18n="controls.search.placeholder" data-i18n-attr="placeholder" />
 						</div>
-
-						<div class="field mb-0">
-							<label class="label" data-i18n="controls.label.pageSize"></label>
-							<div class="select is-fullwidth">
-								<select id="pageSizeSelect">
-									<option value="10">10</option>
-									<option value="25" selected>25</option>
-									<option value="50">50</option>
-									<option value="100">100</option>
-								</select>
-							</div>
-						</div>
 					</div>
 
-					<!-- Filters -->
-					<div class="control-row">
-						<div class="row-label" data-i18n="controls.label.filters"></div>
-						<div class="row-content">
-							<div class="inline-checkboxes">
-								<label class="checkbox">
-									<input type="checkbox" id="hideGtOnly" checked />
-									<span data-i18n="controls.filter.hideGtOnly"></span>
-								</label>
+					<!-- Secondary controls, collapsed by default -->
+					<details class="more-options" id="moreOptions">
+						<summary class="more-options-summary">
+							<i class="pi pi-sliders-h" aria-hidden="true"></i>
+							<span data-i18n="controls.moreOptions"></span>
+						</summary>
 
-								<label class="checkbox">
-									<input type="checkbox" id="bestMdeOnly" />
-									<span data-i18n="controls.filter.bestMdeOnly"></span>
-								</label>
+						<div class="more-options-body">
+							<p class="more-options-note" data-i18n="controls.moreOptions.disclaimer"></p>
+
+							<div class="top-controls-grid row-content">
+								<div class="field mb-0">
+									<label class="label" data-i18n="controls.label.benchmark"></label>
+									<div class="select is-fullwidth">
+										<select id="benchmarkModeSelect"></select>
+									</div>
+								</div>
+
+								<div class="field mb-0">
+									<label class="label" data-i18n="controls.label.source"></label>
+									<div class="select is-fullwidth">
+										<select id="sourceSelect"></select>
+									</div>
+								</div>
+
+								<div class="field mb-0">
+									<label class="label" data-i18n="controls.label.evaluationCase"></label>
+									<div class="select is-fullwidth">
+										<select id="evaluationCaseSelect"></select>
+									</div>
+								</div>
+
+								<div class="field mb-0">
+									<label class="label" data-i18n="controls.label.depthType"></label>
+									<div class="select is-fullwidth">
+										<select id="depthTypeSelect"></select>
+									</div>
+								</div>
+
+								<div class="field mb-0">
+									<label class="label" data-i18n="controls.label.iters"></label>
+									<div class="select is-fullwidth">
+										<select id="itersSelect"></select>
+									</div>
+								</div>
+
+								<div class="field mb-0">
+									<label class="label" data-i18n="controls.label.pageSize"></label>
+									<div class="select is-fullwidth">
+										<select id="pageSizeSelect">
+											<option value="10">10</option>
+											<option value="25" selected>25</option>
+											<option value="50">50</option>
+											<option value="100">100</option>
+										</select>
+									</div>
+								</div>
+							</div>
+
+							<!-- Filters -->
+							<div class="control-row">
+								<div class="row-label" data-i18n="controls.label.filters"></div>
+								<div class="row-content">
+									<div class="inline-checkboxes">
+										<label class="checkbox">
+											<input type="checkbox" id="hideGtOnly" checked />
+											<span data-i18n="controls.filter.hideGtOnly"></span>
+										</label>
+
+										<label class="checkbox">
+											<input type="checkbox" id="bestMdeOnly" />
+											<span data-i18n="controls.filter.bestMdeOnly"></span>
+										</label>
+									</div>
+								</div>
 							</div>
 						</div>
-					</div>
+					</details>
 
 				</div>
 

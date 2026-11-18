@@ -124,6 +124,73 @@
 	min-width: 0;
 }
 
+/* More options (collapsible secondary controls) */
+
+.more-options {
+	margin-top: 1rem;
+	border-top: 1px solid #e8edf4;
+	padding-top: 0.75rem;
+}
+
+.more-options-summary {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	font-weight: 600;
+	color: #1f2937;
+	list-style: none;
+	user-select: none;
+	padding: 0.25rem 0;
+}
+
+.more-options-summary::-webkit-details-marker {
+	display: none;
+}
+
+.more-options-summary::after {
+	content: '';
+	width: 0.45rem;
+	height: 0.45rem;
+	border-right: 2px solid currentColor;
+	border-bottom: 2px solid currentColor;
+	transform: rotate(45deg) translateY(-2px);
+	transition: transform 0.15s ease;
+	margin-left: 0.15rem;
+}
+
+.more-options[open] > .more-options-summary::after {
+	transform: rotate(-135deg) translateY(-2px);
+}
+
+.more-options-summary:hover {
+	color: #485fc7;
+}
+
+.more-options-summary:focus-visible {
+	outline: 2px solid #485fc7;
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
+.more-options-body {
+	/* Chrome renders <details> content inside ::details-content, which Bulma's
+	   `*, ::before, ::after { box-sizing: inherit }` does not cover, so children
+	   would fall back to content-box and selects overflow their columns. */
+	box-sizing: border-box;
+	padding-top: 0.75rem;
+}
+
+.more-options-note {
+	font-size: 0.9rem;
+	color: #5b6574;
+	background: #f6f8fb;
+	border-left: 3px solid #f0b429;
+	border-radius: 4px;
+	padding: 0.5rem 0.75rem;
+	margin-bottom: 1rem;
+}
+
 /* Filters */
 
 .inline-checkboxes {
