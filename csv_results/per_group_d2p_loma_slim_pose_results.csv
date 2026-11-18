@@ -2643,3 +2643,15 @@ statues,MoGeV3Calib-moge-3-vitl,1000,calib,84.65,629.73,71.43
 statues,MoGeV3Calib-moge-3-vitl,1000,calib_ro,71.93,629.73,68.53
 vegetation,MoGeV3Calib-moge-3-vitl,1000,calib,73.4,726.66,73.1
 vegetation,MoGeV3Calib-moge-3-vitl,1000,calib_ro,51.31,726.66,60.78
+statues,SurGeCalib-surge-large,1000,calib,84.78,387.53,71.23
+statues,SurGeCalib-surge-large,1000,calib_ro,74.15,387.53,70.48
+vegetation,SurGeCalib-surge-large,1000,calib,75.57,388.17,72.84
+vegetation,SurGeCalib-surge-large,1000,calib_ro,52.45,388.17,61.33
+statues,SurGe-surge-large,1000,calib,82.14,449.48,71.03
+statues,SurGe-surge-large,1000,calib_ro,70.78,449.48,68.66
+statues,SurGe-surge-large,1000,mdecalib,45.91,449.48,61.05
+statues,SurGe-surge-large,1000,mdecalib_ro,43.64,449.48,68.81
+vegetation,SurGe-surge-large,1000,calib,78.06,385.96,73.39
+vegetation,SurGe-surge-large,1000,calib_ro,56.59,385.96,63.42
+vegetation,SurGe-surge-large,1000,mdecalib,38.64,385.96,61.31
+vegetation,SurGe-surge-large,1000,mdecalib_ro,30.42,385.96,59.2

@@ -60,7 +60,7 @@ Implement the `MyMDE` class at the top of `eval_my_mde.py`:
 | `name` | Name of your MDE in the results table, e.g. `MyMDE` or `MyMDE-vitl` for a specific variant. When run with `--use_gt_K`, `Calib` is added (`MyMDECalib-vitl`). |
 | `infer(image, K=None, size=None)` | Predicts depth for the image at path `image`. `K` is the ground-truth 3x3 intrinsic matrix (in pixels), passed only with `--use_gt_K`. Returns a dict with `depth` (HxW depth map at the full image resolution, metric or up to scale), `runtime` (inference time in nanoseconds) and optionally `K` (3x3 intrinsics predicted by the MDE, in pixels). |
 
-Complete examples are in [`example_scripts/`](example_scripts): [`eval_moge_v2.py`](example_scripts/eval_moge_v2.py) for MoGe-2 and [`eval_moge_v3.py`](example_scripts/eval_moge_v3.py) for MoGe-3. They can be run in the same way as `eval_my_mde.py`.
+Complete examples are in [`example_scripts/`](example_scripts): [`eval_moge_v2.py`](example_scripts/eval_moge_v2.py) for MoGe-2, [`eval_moge_v3.py`](example_scripts/eval_moge_v3.py) for MoGe-3 and [`eval_surge.py`](example_scripts/eval_surge.py) for [SurGe](https://github.com/karimknaebel/surge). They can be run in the same way as `eval_my_mde.py`.
 
 ## Running the evaluation
 
