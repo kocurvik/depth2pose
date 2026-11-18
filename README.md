@@ -36,6 +36,16 @@ There are two ways to use this repository:
 - **[Evaluating your MDE on D2P](#evaluating-your-mde-on-d2p)**: a single script, `eval_my_mde.py`, that runs on one machine with a GPU. It downloads the D2P dataset, runs your MDE, estimates the relative poses and adds your results to the results table. This is the recommended way to evaluate a new MDE.
 - **[Running the full benchmark](#running-the-full-benchmark)**: the complete pipeline used for the paper (pair extraction, matching, depth inference and pose estimation for all MDEs and datasets), designed for SLURM clusters.
 
+If you find this work useful please consider citing:
+```
+@inproceedings{kocur2026depth2pose,
+  title={Depth2Pose: A Pose-Based Benchmark for Monocular Depth Estimation without Ground-Truth Depth},
+  author={Kocur, Viktor and Aung, Sithu and Flood, Gabrielle and Ding, Yaqing and Bujnak, Lukas and Sattler, Torsten and Kukelova, Zuzana},
+  booktitle={Advances in Neural Information Processing Systems},
+  year={2026}
+}
+```
+
 # Evaluating your MDE on D2P
 
 ## Installation
